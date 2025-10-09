@@ -1,11 +1,12 @@
-const jwt = require('jsonwebtoken');
-const fs = require('fs');
+import jwt from 'jsonwebtoken'
+import fs from "fs"
+import axios from "axios";
+
 const publicKey = fs.readFileSync(process.env.PUBLIC_KEY_PATH, 'utf8');
 const serviceKey = process.env.SERVICE_KEY;
-const axios = require('axios');
 
 
-const authenticateService = () => async (req, res, next) => {
+export const authenticateService = () => async (req, res, next) => {
     try {
         const apiKey = req.headers["x-api-key"];
         const authToken = req.header('Authorization') || req.query.token;
@@ -59,5 +60,3 @@ const authenticateService = () => async (req, res, next) => {
         return res.status(401).json({ message: 'Authentication failed', error: error.message });
     }
 };
-
-module.exports = { authenticateService };
