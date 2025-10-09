@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const rawRequestSchema = new mongoose.Schema(
   {
-    organizationId: {
+    orgId: {
       type: String,
       required: true,
       index: true,

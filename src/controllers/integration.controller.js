@@ -18,7 +18,7 @@ class IntegrationController {
 
     async createIntegration(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { apiKey, name, description, workspaceIds, environment } = req.body;
 
             const result = await this.service.createIntegration({
@@ -26,7 +26,7 @@ class IntegrationController {
                 name,
                 description,
                 workspaceIds,
-                organizationId,
+                orgId,
                 environment
             });
 
@@ -38,11 +38,11 @@ class IntegrationController {
 
     async getIntegrations(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { page = 1, limit = 10 } = req.query;
 
             const result = await this.service.getIntegrations(
-                organizationId,
+                orgId,
                 parseInt(page),
                 parseInt(limit)
             );
@@ -66,10 +66,10 @@ class IntegrationController {
 
     async getIntegration(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { id } = req.params;
 
-            const result = await this.service.getIntegration(id, organizationId);
+            const result = await this.service.getIntegration(id, orgId);
 
             res.sendApiResponse(ApiResponse.success('Integration retrieved successfully', result));
         } catch (error) {
@@ -79,11 +79,11 @@ class IntegrationController {
 
     async updateIntegration(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { id } = req.params;
             const { name, description } = req.body;
 
-            const result = await this.service.updateIntegration(id, organizationId, {
+            const result = await this.service.updateIntegration(id, orgId, {
                 name,
                 description
             });
@@ -96,10 +96,10 @@ class IntegrationController {
 
     async deleteIntegration(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { id } = req.params;
 
-            await this.service.deleteIntegration(id, organizationId);
+            await this.service.deleteIntegration(id, orgId);
 
             res.sendApiResponse(ApiResponse.success('Integration deleted successfully'));
         } catch (error) {
@@ -109,10 +109,10 @@ class IntegrationController {
 
     async refreshIntegration(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { id } = req.params;
 
-            const result = await this.service.refreshIntegration(id, organizationId);
+            const result = await this.service.refreshIntegration(id, orgId);
 
             res.sendApiResponse(ApiResponse.success('Integration refreshed successfully', result));
         } catch (error) {
@@ -122,6 +122,7 @@ class IntegrationController {
 
     async getWorkspaces(req, res, next) {
         try {
+            const { orgId } = req.authenticatedService;
             const { apiKey } = req.body;
 
             const workspaces = await this.service.getWorkspaces(apiKey);

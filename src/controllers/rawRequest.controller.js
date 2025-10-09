@@ -18,10 +18,10 @@ class RawRequestController {
 
   async createRawRequest(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const result = await this.service.create({
         ...req.body,
-        organizationId,
+        orgId,
       });
       res.sendApiResponse(ApiResponse.created('Raw request created successfully', result));
     } catch (error) {
@@ -31,11 +31,11 @@ class RawRequestController {
 
   async getRawRequests(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { page = 1, limit = 10, method, collectionName, integrationId } = req.query;
       
       const filters = {
-        organizationId,
+        orgId,
         ...(method && { method: method.toUpperCase() }),
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
@@ -65,10 +65,10 @@ class RawRequestController {
 
   async getRawRequest(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { id } = req.params;
       
-      const result = await this.service.findOne(id, organizationId);
+      const result = await this.service.findOne(id, orgId);
       res.sendApiResponse(ApiResponse.success('Raw request retrieved successfully', result));
     } catch (error) {
       next(error);
@@ -77,10 +77,10 @@ class RawRequestController {
 
   async updateRawRequest(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { id } = req.params;
       
-      const result = await this.service.update(id, req.body, organizationId);
+      const result = await this.service.update(id, req.body, orgId);
       res.sendApiResponse(ApiResponse.success('Raw request updated successfully', result));
     } catch (error) {
       next(error);
@@ -89,10 +89,10 @@ class RawRequestController {
 
   async deleteRawRequest(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { id } = req.params;
       
-      await this.service.delete(id, organizationId);
+      await this.service.delete(id, orgId);
       res.sendApiResponse(ApiResponse.success('Raw request deleted successfully'));
     } catch (error) {
       next(error);
@@ -101,7 +101,7 @@ class RawRequestController {
 
   async searchRawRequests(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { search, page = 1, limit = 10 } = req.query;
 
       if (!search || search.trim().length === 0) {
@@ -110,7 +110,7 @@ class RawRequestController {
 
       const result = await this.service.search(
         search,
-        organizationId,
+        orgId,
         {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -136,10 +136,10 @@ class RawRequestController {
 
   async bulkDelete(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { requestIds } = req.body;
 
-      const result = await this.service.bulkDelete(requestIds, organizationId);
+      const result = await this.service.bulkDelete(requestIds, orgId);
       res.sendApiResponse(
         ApiResponse.success(
           `${result.deletedCount} raw requests deleted successfully`,

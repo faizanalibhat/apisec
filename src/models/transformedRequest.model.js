@@ -7,7 +7,7 @@ const transformedRequestSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  organizationId: {
+  orgId: {
     type: String,
     required: true,
     index: true

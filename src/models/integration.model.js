@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const integrationSchema = new mongoose.Schema({
-    organizationId: {
+    orgId: {
         type: String,
         required: [true, 'Organization ID is required'],
         // index: true

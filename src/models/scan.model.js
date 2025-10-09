@@ -39,7 +39,7 @@ const findingSchema = new mongoose.Schema({
 });
 
 const scanSchema = new mongoose.Schema({
-  organizationId: {
+  orgId: {
     type: String,
     required: true,
     index: true

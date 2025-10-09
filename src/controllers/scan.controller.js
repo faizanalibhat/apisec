@@ -17,7 +17,7 @@ class ScanController {
 
   async createScan(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { name, description, ruleIds, requestIds } = req.body;
       
       const scanData = {
@@ -25,7 +25,7 @@ class ScanController {
         description,
         ruleIds,
         requestIds,
-        organizationId
+        orgId 
       };
       
       const scan = await this.scanService.createScan(scanData);
@@ -40,7 +40,7 @@ class ScanController {
 
   async getScans(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { page = 1, limit = 10, status, sortBy = 'createdAt', order = 'desc' } = req.query;
       
       const options = {
@@ -49,7 +49,7 @@ class ScanController {
         status,
         sortBy,
         order,
-        organizationId
+        orgId 
       };
       
       const result = await this.scanService.getScans(options);
@@ -73,10 +73,10 @@ class ScanController {
 
   async getScan(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { id } = req.params;
       
-      const scan = await this.scanService.getScan(id, organizationId);
+      const scan = await this.scanService.getScan(id, orgId);
       
       res.sendApiResponse(
         ApiResponse.success('Scan retrieved successfully', scan)
@@ -88,7 +88,7 @@ class ScanController {
 
   async getScanFindings(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { id } = req.params;
       const { page = 1, limit = 20, severity } = req.query;
       
@@ -98,7 +98,7 @@ class ScanController {
         severity
       };
       
-      const findings = await this.scanService.getScanFindings(id, organizationId, options);
+      const findings = await this.scanService.getScanFindings(id, orgId, options);
       
       res.sendApiResponse(
         ApiResponse.paginated(
@@ -119,7 +119,7 @@ class ScanController {
 
   async searchScans(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { search, page = 1, limit = 10 } = req.query;
       
       if (!search) {
@@ -130,7 +130,7 @@ class ScanController {
         search,
         page: parseInt(page),
         limit: parseInt(limit),
-        organizationId
+        orgId 
       };
       
       const result = await this.scanService.searchScans(options);
@@ -154,10 +154,10 @@ class ScanController {
 
   async deleteScan(req, res, next) {
     try {
-      const { organizationId } = req;
+      const { orgId } = req.authenticatedService;
       const { id } = req.params;
       
-      await this.scanService.deleteScan(id, organizationId);
+      await this.scanService.deleteScan(id, orgId);
       
       res.sendApiResponse(
         ApiResponse.success('Scan deleted successfully')
