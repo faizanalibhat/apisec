@@ -1,10 +1,9 @@
 import mongoose from 'mongoose';
 
 const ruleSchema = new mongoose.Schema({
-    organizationId: {
+    orgId: {
         type: String,
         required: true,
-        index: true
     },
 
     rule_name: {

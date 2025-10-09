@@ -19,12 +19,12 @@ class RuleController {
 
     async createRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const raw_yaml = req.body;
 
             const json_parsed = yaml.load(raw_yaml);
 
-            const ruleData = { ...json_parsed, organizationId, raw_yaml: raw_yaml };
+            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml };
 
             // parse yaml & store both json & yaml
 
@@ -40,11 +40,11 @@ class RuleController {
 
     async getRules(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { page = 1, limit = 20, isActive } = req.query;
 
             const result = await this.ruleService.getRules({
-                organizationId,
+                orgId,
                 page: parseInt(page),
                 limit: parseInt(limit),
                 isActive
@@ -64,10 +64,10 @@ class RuleController {
 
     async getRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { ruleId } = req.params;
 
-            const rule = await this.ruleService.getRule(ruleId, organizationId);
+            const rule = await this.ruleService.getRule(ruleId, orgId);
 
             res.sendApiResponse(
                 ApiResponse.success('Rule fetched successfully', rule)
@@ -79,11 +79,11 @@ class RuleController {
 
     async updateRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { ruleId } = req.params;
             const updateData = req.body;
 
-            const rule = await this.ruleService.updateRule(ruleId, updateData, organizationId);
+            const rule = await this.ruleService.updateRule(ruleId, updateData, orgId);
 
             res.sendApiResponse(
                 ApiResponse.updated('Rule updated successfully', rule)
@@ -95,10 +95,10 @@ class RuleController {
 
     async deleteRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { ruleId } = req.params;
 
-            const deletedRule = await this.ruleService.deleteRule(ruleId, organizationId);
+            const deletedRule = await this.ruleService.deleteRule(ruleId, orgId);
 
             res.sendApiResponse(
                 ApiResponse.deleted('Rule deleted successfully')
@@ -110,7 +110,7 @@ class RuleController {
 
     async searchRules(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req.authenticatedService;
             const { search, page = 1, limit = 20 } = req.query;
 
             if (!search) {
@@ -118,7 +118,7 @@ class RuleController {
             }
 
             const result = await this.ruleService.searchRules({
-                organizationId,
+                orgId,
                 searchQuery: search,
                 page: parseInt(page),
                 limit: parseInt(limit)

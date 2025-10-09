@@ -11,17 +11,19 @@ import scanRoutes from "./scan.routes.js";
 import vulnerabilityRoutes from './vulnerability.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 
+import { authenticateService } from '../middleware/auth.js';
+
 
 // Health check endpoint
 router.get('/health', healthCheck);
 
 // API Routes - Use Kebab-case for route names
-router.use('/rule', ruleRoutes);
-router.use('/integration', integrationRoutes);
-router.use('/raw-request', rawRequestRoutes);
-router.use('/scan', scanRoutes);
-router.use('/vulnerability', vulnerabilityRoutes);
-router.use('/dashboard', dashboardRoutes);
+router.use('/rule', authenticateService(), ruleRoutes);
+router.use('/integration', authenticateService(), integrationRoutes);
+router.use('/raw-request', authenticateService(), rawRequestRoutes);
+router.use('/scan', authenticateService(), scanRoutes);
+router.use('/vulnerability', authenticateService(), vulnerabilityRoutes);
+router.use('/dashboard', authenticateService(), dashboardRoutes);
 
 
 // 404 handler - catches all unmatched routes
