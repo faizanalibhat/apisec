@@ -7,7 +7,7 @@ RUN npm install pm2 -g
 WORKDIR /app
 
 # Copy ecosystem file first (explicit)
-COPY ecosystem.config.js .
+COPY ecosystem.config.mjs .
 
 # Copy package files
 COPY package*.json ./
