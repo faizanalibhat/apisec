@@ -7,7 +7,7 @@ RUN npm install pm2 -g
 WORKDIR /app
 
 # Copy ecosystem file first (explicit)
-COPY ecosystem.config.mjs .
+COPY ecosystem.config.cjs .
 
 # Copy package files
 COPY package*.json ./
@@ -22,4 +22,4 @@ COPY . .
 RUN mkdir -p keys
 
 # Start command
-CMD ["pm2-runtime", "ecosystem.config.mjs"]
+CMD ["pm2-runtime", "ecosystem.config.cjs"]
