@@ -1,4 +1,4 @@
-module.exports = {
+export {
     apps: [{
         name: "apisec",
         script: "src/app.js",
