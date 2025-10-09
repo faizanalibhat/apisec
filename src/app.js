@@ -29,7 +29,7 @@ app.use(express.text({ type: ['application/x-yaml', 'text/yaml'] }))
 // API Response middleware
 app.use(apiResponseMiddleware);
 
-app.use('/api/v1', apiV1Routes);
+app.use('/apisec/api/v1', apiV1Routes);
 
 
 scanWorker();
