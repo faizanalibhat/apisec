@@ -67,7 +67,7 @@ const scanSchema = new mongoose.Schema({
   },
   requestIds: {
     type: [mongoose.Schema.Types.ObjectId],
-    ref: 'RawRequest'
+    ref: 'RawRequest',
     default: [] 
   },
   // Statistics
