@@ -43,7 +43,7 @@ class RawRequestService {
                 {
                     $addFields: {
                         totalVulns: {
-                            $ifNull: [{ $arrayElemAt: ["$vulnStats.count", 0] }, 0]
+                            $ifNull: [{ $arrayElemAt: ["$vulnStats", 0] }, 0]
                         }
                     }
                 },
