@@ -30,7 +30,7 @@ class ApiResponse {
         }
 
         // Add timestamp
-        // response.timestamp = new Date().toISOString();
+        response.timestamp = new Date().toISOString();
 
         return response;
     }
