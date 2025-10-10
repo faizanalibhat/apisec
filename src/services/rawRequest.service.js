@@ -75,11 +75,11 @@ class RawRequestService {
         }
     }
 
-    async findOne(id, organizationId) {
+    async findOne(id, orgId) {
         try {
             const rawRequest = await RawRequest.findOne({
                 _id: id,
-                organizationId,
+                orgId,
             })
                 .populate('integrationId', 'name')
                 .lean();
@@ -94,10 +94,10 @@ class RawRequestService {
         }
     }
 
-    async update(id, updateData, organizationId) {
+    async update(id, updateData, orgId) {
         try {
             // Remove fields that shouldn't be updated
-            const { _id, organizationId: _, integrationId, createdAt, updatedAt, ...validUpdateData } = updateData;
+            const { _id, orgId: _, integrationId, createdAt, updatedAt, ...validUpdateData } = updateData;
 
             // Regenerate rawHttp if request details changed
             if (validUpdateData.method || validUpdateData.url || validUpdateData.headers || validUpdateData.body) {
@@ -108,7 +108,7 @@ class RawRequestService {
             }
 
             const rawRequest = await RawRequest.findOneAndUpdate(
-                { _id: id, organizationId },
+                { _id: id, orgId },
                 validUpdateData,
                 { new: true, runValidators: true }
             )
@@ -125,11 +125,11 @@ class RawRequestService {
         }
     }
 
-    async delete(id, organizationId) {
+    async delete(id, orgId) {
         try {
             const result = await RawRequest.findOneAndDelete({
                 _id: id,
-                organizationId,
+                orgId,
             });
 
             if (!result) {
@@ -142,7 +142,7 @@ class RawRequestService {
         }
     }
 
-    async bulkDelete(requestIds, organizationId) {
+    async bulkDelete(requestIds, orgId) {
         try {
             if (!Array.isArray(requestIds) || requestIds.length === 0) {
                 throw ApiError.badRequest('Request IDs must be a non-empty array');
@@ -150,7 +150,7 @@ class RawRequestService {
 
             const result = await RawRequest.deleteMany({
                 _id: { $in: requestIds },
-                organizationId,
+                orgId,
             });
 
             return {
@@ -162,11 +162,11 @@ class RawRequestService {
         }
     }
 
-    async deleteByIntegrationId(integrationId, organizationId) {
+    async deleteByIntegrationId(integrationId, orgId) {
         try {
             const result = await RawRequest.deleteMany({
                 integrationId,
-                organizationId,
+                orgId,
             });
 
             return result.deletedCount;

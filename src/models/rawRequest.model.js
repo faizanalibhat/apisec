@@ -82,8 +82,8 @@ const rawRequestSchema = new mongoose.Schema(
 
 // Indexes for search functionality
 rawRequestSchema.index({ name: 'text', url: 'text', description: 'text' });
-rawRequestSchema.index({ method: 1, organizationId: 1 });
-rawRequestSchema.index({ collectionName: 1, organizationId: 1 });
+rawRequestSchema.index({ method: 1, orgId: 1 });
+rawRequestSchema.index({ collectionName: 1, orgId: 1 });
 
 // Mark as edited when updating
 rawRequestSchema.pre('findOneAndUpdate', function () {

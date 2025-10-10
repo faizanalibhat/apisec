@@ -132,7 +132,7 @@ const ruleSchema = new mongoose.Schema({
 });
 
 // Indexes
-ruleSchema.index({ organizationId: 1, ruleName: 1 }, { unique: true });
+ruleSchema.index({ orgId: 1, ruleName: 1 }, { unique: true });
 ruleSchema.index({ 'report.title': 'text', ruleName: 'text' });
 // ruleSchema.index({ tags: 1 });
 

@@ -138,7 +138,7 @@ export const validateUpdateRawRequest = [
     .withMessage('Description must not exceed 1000 characters'),
 
   // Prevent updating certain fields
-  body(['_id', 'organizationId', 'integrationId', 'createdAt', 'updatedAt'])
+  body(['_id', 'orgId', 'integrationId', 'createdAt', 'updatedAt'])
     .not()
     .exists()
     .withMessage('This field cannot be updated'),

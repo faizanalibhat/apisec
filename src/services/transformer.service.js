@@ -85,7 +85,7 @@ export class TransformerService {
     async createTransformedRequest(scanId, request, rule) {
         return await TransformedRequest.create({
             scanId,
-            organizationId: request.organizationId,
+            orgId: request.orgId,
             originalRequestId: request._id,
             ruleId: rule._id,
             original: {

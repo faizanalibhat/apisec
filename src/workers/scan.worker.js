@@ -7,7 +7,7 @@ import { EngineService } from "../services/engine/engine.service.js";
 import Vulnerability from "../models/vulnerability.model.js";
 
 async function transformationHandler(payload, msg, channel) {
-    const { _id, requestIds, ruleIds, organizationId } = payload;
+    const { _id, requestIds, ruleIds, orgId } = payload;
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -37,7 +37,7 @@ async function transformationHandler(payload, msg, channel) {
                         insertOne: { 
                             document: { 
                                 scanId: _id, 
-                                organizationId,
+                                orgId,
                                 requestId: request._id, 
                                 ruleId: rule._id, 
                                 ...t 
@@ -82,7 +82,7 @@ async function transformationHandler(payload, msg, channel) {
 }
 
 async function runScan(payload, msg, channel) {
-    const { _id, organizationId } = payload;
+    const { _id, orgId } = payload;
     try {
         console.log("[+] SCAN EXECUTION TRIGGERED : ", _id);
 
@@ -127,7 +127,7 @@ async function runScan(payload, msg, channel) {
                 if (matchResult.matched) {
                     // Create vulnerability data
                     const vulnerabilityData = {
-                        organizationId,
+                        orgId,
                         scanId: _id,
                         ruleId: rule._id,
                         requestId: originalRequest._id,

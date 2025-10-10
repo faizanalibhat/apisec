@@ -76,7 +76,7 @@ class IntegrationHelper {
     /**
      * Check if an API key already exists for the organization
      */
-    static async checkDuplicateApiKey(Integration, apiKey, organizationId, excludeId = null) {
+    static async checkDuplicateApiKey(Integration, apiKey, orgId, excludeId = null) {
         // This would require decrypting all API keys to check, which is expensive
         // For MVP, we'll skip this check and rely on unique integration names
         // In production, consider storing a hashed version of API keys for comparison

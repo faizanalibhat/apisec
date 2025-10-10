@@ -28,7 +28,7 @@ class DashboardService {
         return now;
     }
 
-    async getDashboardStats(organizationId, period) {
+    async getDashboardStats(orgId, period) {
         try {
             const startDate = this.getPeriodStartDate(period);
 
@@ -44,15 +44,15 @@ class DashboardService {
                 vulnByCWE,
                 vulnByStatus
             ] = await Promise.all([
-                this.getTotalRequests(organizationId),
-                this.getTotalVulnerabilities(organizationId),
-                this.getTotalRules(organizationId),
-                this.getTotalScans(organizationId),
-                this.getVulnerabilityTimeline(organizationId, startDate),
-                this.getTopVulnerabilities(organizationId),
-                this.getVulnerabilitiesBySeverity(organizationId),
-                this.getVulnerabilitiesByCWE(organizationId),
-                this.getVulnerabilitiesByStatus(organizationId)
+                this.getTotalRequests(orgId),
+                this.getTotalVulnerabilities(orgId),
+                this.getTotalRules(orgId),
+                this.getTotalScans(orgId),
+                this.getVulnerabilityTimeline(orgId, startDate),
+                this.getTopVulnerabilities(orgId),
+                this.getVulnerabilitiesBySeverity(orgId),
+                this.getVulnerabilitiesByCWE(orgId),
+                this.getVulnerabilitiesByStatus(orgId)
             ]);
 
             return {
@@ -71,27 +71,27 @@ class DashboardService {
         }
     }
 
-    async getTotalRequests(organizationId) {
-        return await RawRequest.countDocuments({ organizationId });
+    async getTotalRequests(orgId) {
+        return await RawRequest.countDocuments({ orgId });
     }
 
-    async getTotalVulnerabilities(organizationId) {
-        return await Vulnerability.countDocuments({ organizationId });
+    async getTotalVulnerabilities(orgId) {
+        return await Vulnerability.countDocuments({ orgId });
     }
 
-    async getTotalRules(organizationId) {
-        return await Rule.countDocuments({ organizationId, isActive: true });
+    async getTotalRules(orgId) {
+        return await Rule.countDocuments({ orgId, isActive: true });
     }
 
-    async getTotalScans(organizationId) {
-        return await Scan.countDocuments({ organizationId });
+    async getTotalScans(orgId) {
+        return await Scan.countDocuments({ orgId });
     }
 
-    async getVulnerabilityTimeline(organizationId, startDate) {
+    async getVulnerabilityTimeline(orgId, startDate) {
         const timeline = await Vulnerability.aggregate([
             {
                 $match: {
-                    organizationId,
+                    orgId,
                     createdAt: { $gte: startDate }
                 }
             },
@@ -141,9 +141,9 @@ class DashboardService {
         return result;
     }
 
-    async getTopVulnerabilities(organizationId) {
+    async getTopVulnerabilities(orgId) {
         const topVulns = await Vulnerability.find({
-            organizationId,
+            orgId,
             status: 'active'
         })
         .sort({ severity: 1, createdAt: -1 }) // Sort by severity (critical first) then by date
@@ -162,9 +162,9 @@ class DashboardService {
         });
     }
 
-    async getVulnerabilitiesBySeverity(organizationId) {
+    async getVulnerabilitiesBySeverity(orgId) {
         const severityAgg = await Vulnerability.aggregate([
-            { $match: { organizationId } },
+            { $match: { orgId } },
             {
                 $group: {
                     _id: '$severity',
@@ -191,11 +191,11 @@ class DashboardService {
         return severityMap;
     }
 
-    async getVulnerabilitiesByCWE(organizationId) {
+    async getVulnerabilitiesByCWE(orgId) {
         const cweAgg = await Vulnerability.aggregate([
             {
                 $match: {
-                    organizationId,
+                    orgId,
                     cwe: { $exists: true, $ne: null, $ne: '' }
                 }
             },
@@ -222,9 +222,9 @@ class DashboardService {
         return cweMap;
     }
 
-    async getVulnerabilitiesByStatus(organizationId) {
+    async getVulnerabilitiesByStatus(orgId) {
         const statusAgg = await Vulnerability.aggregate([
-            { $match: { organizationId } },
+            { $match: { orgId } },
             {
                 $group: {
                     _id: '$status',

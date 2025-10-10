@@ -12,7 +12,7 @@ class DashboardController {
 
     async getDashboardStats(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { period = '7d' } = req.query;
 
             // Validate period format
@@ -22,7 +22,7 @@ class DashboardController {
             }
 
             const dashboardData = await this.dashboardService.getDashboardStats(
-                organizationId,
+                orgId,
                 period
             );
 

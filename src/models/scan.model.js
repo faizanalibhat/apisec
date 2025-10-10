@@ -109,9 +109,9 @@ const scanSchema = new mongoose.Schema({
 
 // Indexes for search and performance
 scanSchema.index({ name: 'text', description: 'text' });
-scanSchema.index({ organizationId: 1, status: 1, createdAt: -1 });
-scanSchema.index({ organizationId: 1, 'vulnerabilitySummary.critical': -1 });
-scanSchema.index({ organizationId: 1, 'vulnerabilitySummary.high': -1 });
+scanSchema.index({ orgId: 1, status: 1, createdAt: -1 });
+scanSchema.index({ orgId: 1, 'vulnerabilitySummary.critical': -1 });
+scanSchema.index({ orgId: 1, 'vulnerabilitySummary.high': -1 });
 
 // Virtual for execution status
 scanSchema.virtual('isActive').get(function() {

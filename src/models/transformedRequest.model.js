@@ -127,7 +127,7 @@ const transformedRequestSchema = new mongoose.Schema({
 transformedRequestSchema.index({ scanId: 1, state: 1 });
 transformedRequestSchema.index({ scanId: 1, 'execution.status': 1 });
 transformedRequestSchema.index({ scanId: 1, vulnerabilityDetected: 1 });
-transformedRequestSchema.index({ organizationId: 1, createdAt: -1 });
+transformedRequestSchema.index({ orgId: 1, createdAt: -1 });
 transformedRequestSchema.index({ ruleId: 1, requestId: 1 });
 
 // Compound index for scan processing

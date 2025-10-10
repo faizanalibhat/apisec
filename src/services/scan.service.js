@@ -13,12 +13,12 @@ export class ScanService {
 
     async createScan(scanData) {
         try {
-            const { name, description, ruleIds, requestIds, organizationId } = scanData;
+            const { name, description, ruleIds, requestIds, orgId } = scanData;
 
             // Validate rules exist
             // const rules = await Rule.find({
             //     _id: { $in: ruleIds },
-            //     organizationId
+            //     orgId
             // }).lean();
 
             // if (rules.length !== ruleIds.length) {
@@ -30,7 +30,7 @@ export class ScanService {
             // if (requestIds && requestIds.length > 0) {
             //     requests = await RawRequest.find({
             //         _id: { $in: requestIds },
-            //         organizationId
+            //         orgId
             //     }).lean();
 
             //     if (requests.length !== requestIds.length) {
@@ -38,7 +38,7 @@ export class ScanService {
             //     }
             // } else {
             //     // Get all requests for the organization
-            //     requests = await RawRequest.find({ organizationId }).lean();
+            //     requests = await RawRequest.find({ orgId }).lean();
 
             //     if (requests.length === 0) {
             //         throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
@@ -49,7 +49,7 @@ export class ScanService {
             const scan = await Scan.create({
                 name,
                 description,
-                organizationId,
+                orgId,
                 // ruleIds: rules.map(r => r._id),
                 // requestIds: requests.map(r => r._id),
                 status: 'pending',
@@ -119,9 +119,9 @@ export class ScanService {
 
     async getScans(options) {
         try {
-            const { page, limit, status, sortBy, order, organizationId } = options;
+            const { page, limit, status, sortBy, order, orgId } = options;
 
-            const query = { organizationId };
+            const query = { orgId };
             if (status) {
                 query.status = status;
             }
@@ -152,11 +152,11 @@ export class ScanService {
         }
     }
 
-    async getScan(scanId, organizationId) {
+    async getScan(scanId, orgId) {
         try {
             const scan = await Scan.findOne({
                 _id: scanId,
-                organizationId
+                orgId
             })
                 .populate('ruleIds', 'ruleName description')
                 .populate('requestIds', 'name method url')
@@ -172,13 +172,13 @@ export class ScanService {
         }
     }
 
-    async getScanFindings(scanId, organizationId, options) {
+    async getScanFindings(scanId, orgId, options) {
         try {
             const { page, limit, severity } = options;
 
             const scan = await Scan.findOne({
                 _id: scanId,
-                organizationId
+                orgId
             }).select('findings');
 
             if (!scan) {
@@ -212,10 +212,10 @@ export class ScanService {
 
     async searchScans(options) {
         try {
-            const { search, page, limit, organizationId } = options;
+            const { search, page, limit, orgId } = options;
 
             const query = {
-                organizationId,
+                orgId,
                 $text: { $search: search }
             };
 
@@ -242,11 +242,11 @@ export class ScanService {
         }
     }
 
-    async deleteScan(scanId, organizationId) {
+    async deleteScan(scanId, orgId) {
         try {
             const scan = await Scan.findOne({
                 _id: scanId,
-                organizationId
+                orgId
             });
 
             if (!scan) {

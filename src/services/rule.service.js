@@ -6,7 +6,7 @@ class RuleService {
         try {
             // Check if rule with same name exists for organization
             const existingRule = await Rule.findOne({
-                organizationId: ruleData.organizationId,
+                orgId: ruleData.orgId,
                 ruleName: ruleData.ruleName
             });
 
@@ -23,9 +23,9 @@ class RuleService {
         }
     }
 
-    async getRules({ organizationId, page, limit, isActive }) {
+    async getRules({ orgId, page, limit, isActive }) {
         try {
-            const query = { organizationId };
+            const query = { orgId };
 
             // Filter by active status if provided
             if (isActive !== undefined) {
@@ -59,11 +59,11 @@ class RuleService {
         }
     }
 
-    async getRule(ruleId, organizationId) {
+    async getRule(ruleId, orgId) {
         try {
             const rule = await Rule.findOne({
                 _id: ruleId,
-                organizationId
+                orgId
             }).lean();
 
             if (!rule) {
@@ -76,12 +76,12 @@ class RuleService {
         }
     }
 
-    async updateRule(ruleId, updateData, organizationId) {
+    async updateRule(ruleId, updateData, orgId) {
         try {
             // If changing rule name, check for duplicates
             if (updateData.ruleName) {
                 const existingRule = await Rule.findOne({
-                    organizationId,
+                    orgId,
                     ruleName: updateData.ruleName,
                     _id: { $ne: ruleId }
                 });
@@ -91,11 +91,11 @@ class RuleService {
                 }
             }
 
-            // Don't allow organizationId to be updated
-            delete updateData.organizationId;
+            // Don't allow orgId to be updated
+            delete updateData.orgId;
 
             const rule = await Rule.findOneAndUpdate(
-                { _id: ruleId, organizationId },
+                { _id: ruleId, orgId },
                 updateData,
                 { new: true, runValidators: true }
             );
@@ -110,11 +110,11 @@ class RuleService {
         }
     }
 
-    async deleteRule(ruleId, organizationId) {
+    async deleteRule(ruleId, orgId) {
         try {
             const rule = await Rule.findOneAndDelete({
                 _id: ruleId,
-                organizationId
+                orgId
             });
 
             if (!rule) {
@@ -127,13 +127,13 @@ class RuleService {
         }
     }
 
-    async searchRules({ organizationId, searchQuery, page, limit }) {
+    async searchRules({ orgId, searchQuery, page, limit }) {
         try {
             const skip = (page - 1) * limit;
 
             // Text search on indexed fields
             const query = {
-                organizationId,
+                orgId,
                 $text: { $search: searchQuery }
             };
 

@@ -192,7 +192,7 @@ async searchByName() { }
 
 ### Variable Names: camelCase
 ```javascript
-const organizationId = req.organizationId;
+const orgId = req.orgId;
 const searchQuery = req.query.q;
 const pageNumber = parseInt(page);
 ```

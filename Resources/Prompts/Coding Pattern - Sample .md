@@ -20,9 +20,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.text({ type: ['application/x-yaml', 'text/yaml'] }));
 app.use(apiResponseMiddleware);
 
-// Add organizationId to all requests
+// Add orgId to all requests
 app.use((req, res, next) => {
-    req.organizationId = process.env.ORGANIZATION_ID || 'default-org-id';
+    req.orgId = process.env.ORGANIZATION_ID || 'default-org-id';
     next();
 });
 
@@ -102,7 +102,7 @@ class RuleController {
 
     async searchRules(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { q, page = 1, limit = 20 } = req.query;
 
             if (!q) {
@@ -110,7 +110,7 @@ class RuleController {
             }
 
             const result = await this.ruleService.searchRules({
-                organizationId,
+                orgId,
                 query: q,
                 page: parseInt(page),
                 limit: parseInt(limit)
@@ -130,12 +130,12 @@ class RuleController {
 
     async createRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const data = req.body;
             
             const rule = await this.ruleService.createRule({
                 ...data,
-                organizationId
+                orgId
             });
 
             res.sendApiResponse(
@@ -148,11 +148,11 @@ class RuleController {
 
     async getRules(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { page = 1, limit = 20 } = req.query;
 
             const result = await this.ruleService.getRules({
-                organizationId,
+                orgId,
                 page: parseInt(page),
                 limit: parseInt(limit)
             });
@@ -171,10 +171,10 @@ class RuleController {
 
     async getRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { id } = req.params;
 
-            const rule = await this.ruleService.getRule(id, organizationId);
+            const rule = await this.ruleService.getRule(id, orgId);
 
             res.sendApiResponse(
                 ApiResponse.success('Rule fetched successfully', rule)
@@ -186,14 +186,14 @@ class RuleController {
 
     async updateRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { id } = req.params;
             const updateData = req.body;
 
             const rule = await this.ruleService.updateRule(
                 id, 
                 updateData, 
-                organizationId
+                orgId
             );
 
             res.sendApiResponse(
@@ -206,10 +206,10 @@ class RuleController {
 
     async deleteRule(req, res, next) {
         try {
-            const { organizationId } = req;
+            const { orgId } = req;
             const { id } = req.params;
 
-            await this.ruleService.deleteRule(id, organizationId);
+            await this.ruleService.deleteRule(id, orgId);
 
             res.sendApiResponse(
                 ApiResponse.deleted('Rule deleted successfully')
@@ -248,20 +248,20 @@ class RuleService {
         }
     }
 
-    async searchRules({ organizationId, query, page, limit }) {
+    async searchRules({ orgId, query, page, limit }) {
         try {
             const skip = (page - 1) * limit;
             
             const [rules, total] = await Promise.all([
                 Rule.find({
-                    organizationId,
+                    orgId,
                     $text: { $search: query }
                 })
                 .skip(skip)
                 .limit(limit)
                 .lean(),
                 Rule.countDocuments({
-                    organizationId,
+                    orgId,
                     $text: { $search: query }
                 })
             ]);
@@ -275,17 +275,17 @@ class RuleService {
         }
     }
 
-    async getRules({ organizationId, page, limit }) {
+    async getRules({ orgId, page, limit }) {
         try {
             const skip = (page - 1) * limit;
             
             const [rules, total] = await Promise.all([
-                Rule.find({ organizationId })
+                Rule.find({ orgId })
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
                     .lean(),
-                Rule.countDocuments({ organizationId })
+                Rule.countDocuments({ orgId })
             ]);
 
             return {
@@ -297,9 +297,9 @@ class RuleService {
         }
     }
 
-    async getRule(id, organizationId) {
+    async getRule(id, orgId) {
         try {
-            const rule = await Rule.findOne({ _id: id, organizationId }).lean();
+            const rule = await Rule.findOne({ _id: id, orgId }).lean();
             
             if (!rule) {
                 throw ApiError.notFound('Rule not found');
@@ -311,10 +311,10 @@ class RuleService {
         }
     }
 
-    async updateRule(id, updateData, organizationId) {
+    async updateRule(id, updateData, orgId) {
         try {
             const rule = await Rule.findOneAndUpdate(
-                { _id: id, organizationId },
+                { _id: id, orgId },
                 updateData,
                 { new: true, runValidators: true }
             );
@@ -329,11 +329,11 @@ class RuleService {
         }
     }
 
-    async deleteRule(id, organizationId) {
+    async deleteRule(id, orgId) {
         try {
             const rule = await Rule.findOneAndDelete({
                 _id: id,
-                organizationId
+                orgId
             });
 
             if (!rule) {

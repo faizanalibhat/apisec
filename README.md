@@ -56,7 +56,7 @@ src/
 3. **Asynchronous Processing**: RabbitMQ for scan execution
 4. **Global Error Handling**: Centralized error transformation
 5. **Standardized Responses**: ApiResponse class for consistency
-6. **Organization Isolation**: req.organizationId (temporary, will use JWT later)
+6. **Organization Isolation**: req.orgId (temporary, will use JWT later)
 
 ## Data Flow Architecture
 
