@@ -43,6 +43,38 @@ class RawRequestService {
         }
     }
 
+    async searchWithFilters(searchQuery, additionalFilters, pagination) {
+        try {
+            const { page, limit } = pagination;
+            const skip = (page - 1) * limit;
+
+            const searchConditions = {
+                ...additionalFilters, // Combine search with other filters
+                $text: { $search: searchQuery },
+            };
+
+            const [data, totalItems] = await Promise.all([
+                RawRequest.find(searchConditions)
+                    .populate('integrationId', 'name')
+                    .sort({ score: { $meta: 'textScore' } }) // Sort by relevance for search
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                RawRequest.countDocuments(searchConditions),
+            ]);
+
+            return {
+                data,
+                currentPage: page,
+                totalPages: Math.ceil(totalItems / limit),
+                totalItems,
+                itemsPerPage: limit,
+            };
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     async findOne(id, organizationId) {
         try {
             const rawRequest = await RawRequest.findOne({
@@ -105,38 +137,6 @@ class RawRequestService {
             }
 
             return result;
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async search(searchQuery, organizationId, pagination) {
-        try {
-            const { page, limit } = pagination;
-            const skip = (page - 1) * limit;
-
-            const searchConditions = {
-                organizationId,
-                $text: { $search: searchQuery },
-            };
-
-            const [data, totalItems] = await Promise.all([
-                RawRequest.find(searchConditions)
-                    .populate('integrationId', 'name')
-                    .sort({ score: { $meta: 'textScore' } })
-                    .skip(skip)
-                    .limit(limit)
-                    .lean(),
-                RawRequest.countDocuments(searchConditions),
-            ]);
-
-            return {
-                data,
-                currentPage: page,
-                totalPages: Math.ceil(totalItems / limit),
-                totalItems,
-                itemsPerPage: limit,
-            };
         } catch (error) {
             this.handleError(error);
         }

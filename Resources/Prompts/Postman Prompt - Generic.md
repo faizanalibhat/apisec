@@ -3,7 +3,7 @@ Please create a Postman collection JSON with the following specifications:
 **Collection Structure:**
 - Main collection name: "Fruits"
 - No scripts or variables at the collection level
-- Contains a folder named "Resource Routes"
+- Contains a folder named {CurrentResource} Routes
 
 **Rules Vulnerability Folder Requirements:**
 - Include a folder-level script that:

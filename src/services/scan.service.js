@@ -54,9 +54,9 @@ export class ScanService {
                 // requestIds: requests.map(r => r._id),
                 status: 'pending',
                 stats: {
-                    totalRequests: requests.length,
-                    totalRules: rules.length,
-                    totalTransformedRequests: requests.length * rules.length
+                    // totalRequests: requests.length,
+                    // totalRules: rules.length,
+                    // totalTransformedRequests: requests.length * rules.length
                 }
             });
 
