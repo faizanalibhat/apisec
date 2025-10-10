@@ -147,7 +147,7 @@ class DashboardService {
             status: 'active'
         })
         .sort({ severity: 1, createdAt: -1 }) // Sort by severity (critical first) then by date
-        .limit(10)
+        .limit(5)
         .populate('ruleId', 'ruleName category')
         .populate('requestId', 'name url method collectionName')
         .lean();
