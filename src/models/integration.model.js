@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const integrationSchema = new mongoose.Schema({
     orgId: {
         type: String,
-        required: [true, 'Organization ID is required'],
+        required: [true, 'orgId is required'],
         // index: true
     },
     environmentId: { type: mongoose.Types.ObjectId, required: false },
