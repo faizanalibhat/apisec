@@ -1,10 +1,10 @@
 class ApiResponse {
-    constructor({ status, message, data, meta, errors }, statusCode = 200) {
-        this.body = this.formatResponseBody({ status, message, data, meta, errors }, statusCode);
+    constructor({ status, message, data, meta, errors, filters }, statusCode = 200) {
+        this.body = this.formatResponseBody({ status, message, data, meta, errors, filters }, statusCode);
         this.statusCode = statusCode;
     }
 
-    formatResponseBody({ status, message, data, meta, errors }, statusCode) {
+    formatResponseBody({ status, message, data, meta, filters, errors }, statusCode) {
         const response = {
             status: status || (statusCode < 400 ? 'success' : 'error'),
             message
@@ -25,8 +25,12 @@ class ApiResponse {
             response.meta = meta;
         }
 
+        if (filters) {
+            response.filters = filters;
+        }
+
         // Add timestamp
-        response.timestamp = new Date().toISOString();
+        // response.timestamp = new Date().toISOString();
 
         return response;
     }
