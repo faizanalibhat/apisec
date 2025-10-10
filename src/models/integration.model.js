@@ -62,9 +62,6 @@ const integrationSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Compound index for unique integration per organization
-integrationSchema.index({ organizationId: 1, name: 1 }, { unique: true });
-
 // Create text index for searching
 integrationSchema.index({ name: 'text', description: 'text' });
 
