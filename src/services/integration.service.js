@@ -14,7 +14,7 @@ class IntegrationService {
 
     async createIntegration(data) {
         try {
-            const { apiKey, name, description, workspaceIds, organizationId, environment } = data;
+            const { apiKey, name, description, workspaceIds, orgId, environment } = data;
 
             // Encrypt API key before storing
             const encryptedApiKey = await encryptApiKey(apiKey);
@@ -30,7 +30,7 @@ class IntegrationService {
 
             // Create integration
             const integration = await Integration.create({
-                organizationId,
+                orgId,
                 environmentId: env._id,
                 name,
                 description,
@@ -55,18 +55,18 @@ class IntegrationService {
         }
     }
 
-    async getIntegrations(organizationId, page, limit) {
+    async getIntegrations(orgId, page, limit) {
         try {
             const skip = (page - 1) * limit;
 
             const [integrations, totalItems] = await Promise.all([
-                Integration.find({ organizationId })
+                Integration.find({ orgId })
                     .select('-apiKey')
                     .skip(skip)
                     .limit(limit)
                     .sort({ createdAt: -1 })
                     .lean(),
-                Integration.countDocuments({ organizationId })
+                Integration.countDocuments({ orgId })
             ]);
 
             const totalPages = Math.ceil(totalItems / limit);
@@ -83,11 +83,11 @@ class IntegrationService {
         }
     }
 
-    async getIntegration(id, organizationId) {
+    async getIntegration(id, orgId) {
         try {
             const integration = await Integration.findOne({ 
                 _id: id, 
-                organizationId 
+                orgId 
             }).select('-apiKey').lean();
 
             if (!integration) {
@@ -100,12 +100,12 @@ class IntegrationService {
         }
     }
 
-    async updateIntegration(id, organizationId, updateData) {
+    async updateIntegration(id, orgId, updateData) {
         try {
             const { name, description } = updateData;
 
             const integration = await Integration.findOneAndUpdate(
-                { _id: id, organizationId },
+                { _id: id, orgId },
                 { 
                     $set: {
                         ...(name && { name }),
@@ -125,11 +125,11 @@ class IntegrationService {
         }
     }
 
-    async deleteIntegration(id, organizationId) {
+    async deleteIntegration(id, orgId) {
         try {
             const integration = await Integration.findOne({ 
                 _id: id, 
-                organizationId 
+                orgId 
             });
 
             if (!integration) {
@@ -139,7 +139,7 @@ class IntegrationService {
             // Delete all raw requests associated with this integration
             await RawRequest.deleteMany({ 
                 integrationId: integration._id,
-                organizationId 
+                orgId 
             });
 
             // Delete the integration
@@ -151,11 +151,11 @@ class IntegrationService {
         }
     }
 
-    async refreshIntegration(id, organizationId) {
+    async refreshIntegration(id, orgId) {
         try {
             const integration = await Integration.findOne({ 
                 _id: id, 
-                organizationId 
+                orgId 
             });
 
             if (!integration) {
@@ -168,7 +168,7 @@ class IntegrationService {
             // Delete existing raw requests for this integration
             await RawRequest.deleteMany({ 
                 integrationId: integration._id,
-                organizationId 
+                orgId 
             });
 
             // Sync again
@@ -230,7 +230,7 @@ class IntegrationService {
                     const rawRequests = await this.postmanParser.parseCollection(
                         collectionDetail,
                         {
-                            organizationId: integration.organizationId,
+                            orgId: integration.orgId,
                             integrationId: integration._id,
                             workspaceName: workspace.name,
                             collectionName: collection.name,
