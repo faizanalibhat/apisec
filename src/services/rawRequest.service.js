@@ -25,26 +25,37 @@ class RawRequestService {
                 { $match: filters },
                 {
                     $lookup: {
-                        from: "vulnerabilities",
-                        localField: "_id",
-                        foreignField: "requestId", // fixed: should be a string key, not a variable
-                        pipeline: [
-                            {
-                                $group: {
-                                    _id: "$severity",
-                                    count: { $sum: 1 }
-                                }
-                            }
-                        ],
-                        as: "vulnStats"
+                    from: "vulnerabilities",
+                    localField: "_id",
+                    foreignField: "requestId",
+                    pipeline: [
+                        {
+                        $group: {
+                            _id: "$severity",
+                            count: { $sum: 1 }
+                        }
+                        },
+                        {
+                        $project: {
+                            _id: 0,
+                            k: "$_id",   // key
+                            v: "$count"  // value
+                        }
+                        }
+                    ],
+                    as: "vulnStats"
                     }
                 },
-                // Extract the count (default to 0 if no vulnerabilities found)
                 {
+                    // Convert array of {k,v} into an object like {high: 2, critical: 5, ...}
                     $addFields: {
-                        totalVulns: {
-                            $ifNull: [{ $arrayElemAt: ["$vulnStats", 0] }, 0]
-                        }
+                    vulnCounts: {
+                        $cond: [
+                        { $gt: [{ $size: "$vulnStats" }, 0] },
+                        { $arrayToObject: "$vulnStats" },
+                        {}
+                        ]
+                    }
                     }
                 },
                 {
@@ -59,6 +70,7 @@ class RawRequestService {
                 { $skip: skip },
                 { $limit: limit }
             ];
+
 
             const [data, totalItems] = await Promise.all([
                 RawRequest.aggregate(pipeline),
