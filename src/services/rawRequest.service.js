@@ -21,14 +21,48 @@ class RawRequestService {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
 
+            const pipeline = [
+                { $match: filters },
+                {
+                    $lookup: {
+                    from: "vulnerabilities",
+                    localField: "_id",
+                    foreignField: "requestId", // fixed: should be a string key, not a variable
+                    pipeline: [
+                        {
+                        $group: {
+                            _id: null,
+                            count: { $sum: 1 }
+                        }
+                        }
+                    ],
+                    as: "vulnStats"
+                    }
+                },
+                // Extract the count (default to 0 if no vulnerabilities found)
+                {
+                    $addFields: {
+                    totalVulns: {
+                        $ifNull: [{ $arrayElemAt: ["$vulnStats.count", 0] }, 0]
+                    }
+                    }
+                },
+                {
+                    $lookup: {
+                    from: "integrations",
+                    localField: "integrationId",
+                    foreignField: "_id",
+                    as: "integrationId"
+                    }
+                },
+                { $sort: sortOptions },
+                { $skip: skip },
+                { $limit: limit }
+            ];
+
             const [data, totalItems] = await Promise.all([
-                RawRequest.find(filters)
-                    .populate('integrationId', 'name')
-                    .sort(sortOptions)
-                    .skip(skip)
-                    .limit(limit)
-                    .lean(),
-                RawRequest.countDocuments(filters),
+                RawRequest.aggregate(pipeline),
+                RawRequest.countDocuments(filters)
             ]);
 
             return {
