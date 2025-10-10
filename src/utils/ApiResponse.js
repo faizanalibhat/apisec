@@ -52,7 +52,7 @@ class ApiResponse {
         return new ApiResponse({ status: 'success', message }, 200);
     }
 
-    static paginated(message, data, pagination) {
+    static paginated(message, data, pagination, filters) {
         return new ApiResponse({
             status: 'success',
             message,

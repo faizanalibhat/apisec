@@ -42,7 +42,6 @@ const scanSchema = new mongoose.Schema({
   orgId: {
     type: String,
     required: true,
-    index: true
   },
   name: {
     type: String,

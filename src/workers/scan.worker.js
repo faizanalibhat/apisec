@@ -154,7 +154,7 @@ async function runScan(payload, msg, channel) {
                             folderName: originalRequest.folderName
                         },
                         ruleDetails: {
-                            name: rule.ruleName,
+                            name: rule.rule_name,
                             category: rule.category
                         },
                         
@@ -175,7 +175,7 @@ async function runScan(payload, msg, channel) {
                                 size: response.size || 0,
                                 responseTime: response.time || 0
                             },
-                            matchedCriteria: matchResult.matchedCriteria
+                            // matchedCriteria: matchResult.matchedCriteria
                         }
                     };
 
@@ -184,7 +184,7 @@ async function runScan(payload, msg, channel) {
                     // Also prepare finding for scan document
                     scanFindings.push({
                         ruleId: rule._id,
-                        ruleName: rule.ruleName,
+                        ruleName: rule.rule_name,
                         requestId: originalRequest._id,
                         requestName: originalRequest.name,
                         requestUrl: originalRequest.url,
@@ -270,7 +270,7 @@ async function runScan(payload, msg, channel) {
         // Bulk create vulnerabilities
         if (vulnerabilities.length > 0) {
             try {
-                await Vulnerability.insertMany(vulnerabilities, { ordered: false });
+                await Vulnerability.create(vulnerabilities, { ordered: false, strict: false });
                 console.log(`[+] Created ${vulnerabilities.length} vulnerability records`);
             } catch (vulnError) {
                 console.error("[!] Error creating vulnerabilities:", vulnError);
