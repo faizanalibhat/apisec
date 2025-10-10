@@ -57,6 +57,7 @@ class ApiResponse {
             status: 'success',
             message,
             data,
+            filters,
             meta: { pagination }
         }, 200);
     }
