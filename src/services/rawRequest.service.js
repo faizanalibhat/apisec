@@ -27,24 +27,35 @@ class RawRequestService {
                     $lookup: {
                     from: "vulnerabilities",
                     localField: "_id",
-                    foreignField: "requestId", // fixed: should be a string key, not a variable
+                    foreignField: "requestId",
                     pipeline: [
                         {
                         $group: {
-                            _id: null,
+                            _id: "$severity",
                             count: { $sum: 1 }
+                        }
+                        },
+                        {
+                        $project: {
+                            _id: 0,
+                            k: "$_id",   // key
+                            v: "$count"  // value
                         }
                         }
                     ],
                     as: "vulnStats"
                     }
                 },
-                // Extract the count (default to 0 if no vulnerabilities found)
                 {
+                    // Convert array of {k,v} into an object like {high: 2, critical: 5, ...}
                     $addFields: {
-                    totalVulns: {
-                        $ifNull: [{ $arrayElemAt: ["$vulnStats.count", 0] }, 0]
-                    }
+                        vulnCounts: {
+                            $cond: [
+                            { $gt: [{ $size: "$vulnStats" }, 0] },
+                            { $arrayToObject: "$vulnStats" },
+                            {}
+                            ]
+                        }
                     }
                 },
                 {
@@ -57,8 +68,10 @@ class RawRequestService {
                 },
                 { $sort: sortOptions },
                 { $skip: skip },
-                { $limit: limit }
+                { $limit: limit },
+                { $project: { vulnStats: 0  } }
             ];
+
 
             const [data, totalItems] = await Promise.all([
                 RawRequest.aggregate(pipeline),
