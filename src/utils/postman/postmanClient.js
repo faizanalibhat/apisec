@@ -96,7 +96,11 @@ class PostmanClient {
     // Get specific workspaces by IDs
     async getWorkspacesByIds(apiKey, workspaceIds) {
         const allWorkspaces = await this.getAllWorkspaces(apiKey);
-        return allWorkspaces.filter(ws => workspaceIds.includes(ws.id));
+
+        return allWorkspaces;
+
+        // should support both maybe.
+        // return allWorkspaces.filter(ws => workspaceIds.includes(ws.id));
     }
 
     // Get collections from a specific workspace
