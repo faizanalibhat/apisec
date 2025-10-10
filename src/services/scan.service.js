@@ -28,11 +28,6 @@ export class ScanService {
                 rules = await Rule.find({ orgId }).lean();
             }
 
-            if (rules.length !== ruleIds.length) {
-                throw ApiError.badRequest('One or more invalid rule IDs provided');
-            }
-
-            // Get requests - if requestIds provided, use them; otherwise get all
             let requests;
             if (requestIds && requestIds.length > 0) {
                 requests = await RawRequest.find({
