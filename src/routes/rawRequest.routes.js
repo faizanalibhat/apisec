@@ -9,7 +9,8 @@ router.post('/bulk/delete', validation.validateBulkDelete, rawRequestController.
 
 router
   .post('/', validation.validateCreateRawRequest, rawRequestController.createRawRequest)
-  .get('/', validation.validateGetRawRequests, rawRequestController.getRawRequests)
+  // .get('/', validation.validateGetRawRequests, rawRequestController.getRawRequests)
+  .get('/', rawRequestController.getRawRequests)
   .get('/:id', validation.validateObjectId, rawRequestController.getRawRequest)
   .put('/:id', validation.validateObjectId, validation.validateUpdateRawRequest, rawRequestController.updateRawRequest)
   .delete('/:id', validation.validateObjectId, rawRequestController.deleteRawRequest);
