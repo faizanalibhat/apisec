@@ -49,13 +49,13 @@ class RawRequestService {
                 {
                     // Convert array of {k,v} into an object like {high: 2, critical: 5, ...}
                     $addFields: {
-                    vulnCounts: {
-                        $cond: [
-                        { $gt: [{ $size: "$vulnStats" }, 0] },
-                        { $arrayToObject: "$vulnStats" },
-                        {}
-                        ]
-                    }
+                        vulnCounts: {
+                            $cond: [
+                            { $gt: [{ $size: "$vulnStats" }, 0] },
+                            { $arrayToObject: "$vulnStats" },
+                            {}
+                            ]
+                        }
                     }
                 },
                 {
@@ -68,7 +68,8 @@ class RawRequestService {
                 },
                 { $sort: sortOptions },
                 { $skip: skip },
-                { $limit: limit }
+                { $limit: limit },
+                { $project: { vulnStats: 0  } }
             ];
 
 
