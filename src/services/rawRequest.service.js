@@ -25,26 +25,26 @@ class RawRequestService {
                 { $match: filters },
                 {
                     $lookup: {
-                    from: "vulnerabilities",
-                    localField: "_id",
-                    foreignField: "requestId", // fixed: should be a string key, not a variable
-                    pipeline: [
-                        {
-                        $group: {
-                            _id: null,
-                            count: { $sum: 1 }
-                        }
-                        }
-                    ],
-                    as: "vulnStats"
+                        from: "vulnerabilities",
+                        localField: "_id",
+                        foreignField: "requestId", // fixed: should be a string key, not a variable
+                        pipeline: [
+                            {
+                                $group: {
+                                    _id: "$severity",
+                                    count: { $sum: 1 }
+                                }
+                            }
+                        ],
+                        as: "vulnStats"
                     }
                 },
                 // Extract the count (default to 0 if no vulnerabilities found)
                 {
                     $addFields: {
-                    totalVulns: {
-                        $ifNull: [{ $arrayElemAt: ["$vulnStats.count", 0] }, 0]
-                    }
+                        totalVulns: {
+                            $ifNull: [{ $arrayElemAt: ["$vulnStats.count", 0] }, 0]
+                        }
                     }
                 },
                 {
