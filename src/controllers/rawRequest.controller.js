@@ -42,8 +42,8 @@ class RawRequestController {
       };
 
       const paginationOptions = {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parseInt(page) || 1,
+        limit: parseInt(limit) || 10,
       };
 
       let result;

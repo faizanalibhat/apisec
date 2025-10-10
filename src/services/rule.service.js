@@ -76,28 +76,13 @@ class RuleService {
         }
     }
 
-    async updateRule(ruleId, updateData, orgId) {
+    async updateRule(ruleId, newRule, orgId) {
         try {
-            // If changing rule name, check for duplicates
-            if (updateData.ruleName) {
-                const existingRule = await Rule.findOne({
-                    orgId,
-                    ruleName: updateData.ruleName,
-                    _id: { $ne: ruleId }
-                });
-
-                if (existingRule) {
-                    throw ApiError.conflict('Rule with this name already exists');
-                }
-            }
-
-            // Don't allow orgId to be updated
-            delete updateData.orgId;
 
             const rule = await Rule.findOneAndUpdate(
                 { _id: ruleId, orgId },
-                updateData,
-                { new: true, runValidators: true }
+                newRule,
+                { new: true }
             );
 
             if (!rule) {
