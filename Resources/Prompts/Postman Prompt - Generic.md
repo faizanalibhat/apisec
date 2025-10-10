@@ -5,7 +5,7 @@ Please create a Postman collection JSON with the following specifications:
 - No scripts or variables at the collection level
 - Contains a folder named {CurrentResource} Routes
 
-**Rules Vulnerability Folder Requirements:**
+**Resource Folder Requirements:**
 - Include a folder-level script that:
   - Saves newly created Resource to the environment variables
   - Clears environment variable values by setting them to empty strings (e.g., `pm.environment.set('resourceId', "");`) when a resource is deleted
