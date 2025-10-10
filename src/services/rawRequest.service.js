@@ -16,7 +16,7 @@ class RawRequestService {
         }
     }
 
-    async findAll(filters, pagination) {
+    async findAllWithSort(filters, sortOptions, pagination) {
         try {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
@@ -24,7 +24,7 @@ class RawRequestService {
             const [data, totalItems] = await Promise.all([
                 RawRequest.find(filters)
                     .populate('integrationId', 'name')
-                    .sort({ createdAt: -1 })
+                    .sort(sortOptions)
                     .skip(skip)
                     .limit(limit)
                     .lean(),
@@ -43,20 +43,27 @@ class RawRequestService {
         }
     }
 
-    async searchWithFilters(searchQuery, additionalFilters, pagination) {
+    async searchWithFiltersAndSort(searchQuery, additionalFilters, sortOptions, pagination) {
         try {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
 
             const searchConditions = {
-                ...additionalFilters, // Combine search with other filters
+                ...additionalFilters,
                 $text: { $search: searchQuery },
+            };
+
+            // Build sort with text score for search relevance
+            const searchSort = {
+                score: { $meta: 'textScore' },
+                ...sortOptions
             };
 
             const [data, totalItems] = await Promise.all([
                 RawRequest.find(searchConditions)
                     .populate('integrationId', 'name')
-                    .sort({ score: { $meta: 'textScore' } }) // Sort by relevance for search
+                    // .sort({ score: { $meta: 'textScore' } }) // Sort by relevance for search
+                    .sort(searchSort) // exact search
                     .skip(skip)
                     .limit(limit)
                     .lean(),

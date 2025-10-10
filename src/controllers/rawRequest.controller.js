@@ -31,15 +31,36 @@ class RawRequestController {
   async getRawRequests(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { page = 1, limit = 10, search, method, collectionName, integrationId } = req.query;
+      const { 
+        page = 1, 
+        limit = 10, 
+        search, 
+        sort,
+        method, 
+        workspace,
+        collectionName, 
+        integrationId 
+      } = req.query;
       
-      // Base filters for non-search queries
-      const baseFilters = {
+      // Build filters
+      const filters = {
         orgId,
         ...(method && { method: method.toUpperCase() }),
+        ...(workspace && { workspaceName: workspace }),
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
       };
+
+      // Parse sort parameter
+      let sortOptions = { createdAt: -1 }; // Default sort
+      if (sort) {
+        const [field, order] = sort.split(':');
+        const allowedSortFields = ['createdAt', 'method', 'collectionName'];
+        
+        if (allowedSortFields.includes(field)) {
+          sortOptions = { [field]: order === 'asc' ? 1 : -1 };
+        }
+      }
 
       const paginationOptions = {
         page: parseInt(page) || 1,
@@ -49,11 +70,20 @@ class RawRequestController {
       let result;
       
       if (search && search.trim().length > 0) {
-        // Use search functionality with combined filters
-        result = await this.service.searchWithFilters(search, baseFilters, paginationOptions);
+        // Use search functionality with filters and sorting
+        result = await this.service.searchWithFiltersAndSort(
+          search, 
+          filters, 
+          sortOptions,
+          paginationOptions
+        );
       } else {
-        // Use regular findAll
-        result = await this.service.findAll(baseFilters, paginationOptions);
+        // Use regular findAll with sorting
+        result = await this.service.findAllWithSort(
+          filters, 
+          sortOptions,
+          paginationOptions
+        );
       }
 
       const response = ApiResponse.paginated(

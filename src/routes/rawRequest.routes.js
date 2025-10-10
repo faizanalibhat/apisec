@@ -9,8 +9,8 @@ router.post('/bulk/delete', validation.validateBulkDelete, rawRequestController.
 
 router
   .post('/', validation.validateCreateRawRequest, rawRequestController.createRawRequest)
+  .get('/', validation.validateGetRawRequests, rawRequestController.getRawRequests)
   .get('/:id', validation.validateObjectId, rawRequestController.getRawRequest)
-  .get('/', rawRequestController.getRawRequests) // Now handles both listing and search
   .put('/:id', validation.validateObjectId, validation.validateUpdateRawRequest, rawRequestController.updateRawRequest)
   .delete('/:id', validation.validateObjectId, rawRequestController.deleteRawRequest);
 

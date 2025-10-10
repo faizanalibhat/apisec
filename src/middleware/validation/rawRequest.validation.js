@@ -23,6 +23,71 @@ export const validateObjectId = [
   handleValidationErrors,
 ];
 
+// Validate get raw requests with filters, search, and sort
+export const validateGetRawRequests = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer'),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100'),
+
+  query('search')
+    .optional()
+    .trim()
+    .isLength({ min: 2 })
+    .withMessage('Search query must be at least 2 characters long'),
+
+  query('sort')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      const [field, order] = value.split(':');
+      const allowedFields = ['createdAt', 'method', 'collectionName'];
+      const allowedOrders = ['asc', 'desc'];
+      
+      if (!field || !order) {
+        throw new Error('Sort format must be field:order (e.g., createdAt:desc)');
+      }
+      if (!allowedFields.includes(field)) {
+        throw new Error(`Sort field must be one of: ${allowedFields.join(', ')}`);
+      }
+      if (!allowedOrders.includes(order)) {
+        throw new Error('Sort order must be either asc or desc');
+      }
+      return true;
+    }),
+
+  query('method')
+    .optional()
+    .trim()
+    .toUpperCase()
+    .isIn(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+    .withMessage('Invalid HTTP method'),
+
+  query('workspace')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Workspace cannot be empty'),
+
+  query('collectionName')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Collection name cannot be empty'),
+
+  query('integrationId')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid integration ID format'),
+
+  handleValidationErrors,
+];
+
 // Validate create raw request
 export const validateCreateRawRequest = [
   body('name')
@@ -159,7 +224,7 @@ export const validateBulkDelete = [
   handleValidationErrors,
 ];
 
-// Validate search query
+// Validate search query (DEPRECATED - use validateGetRawRequests instead)
 export const validateSearch = [
   query('search')
     .trim()
