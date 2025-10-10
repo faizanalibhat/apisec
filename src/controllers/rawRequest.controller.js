@@ -12,7 +12,6 @@ class RawRequestController {
     this.getRawRequest = this.getRawRequest.bind(this);
     this.updateRawRequest = this.updateRawRequest.bind(this);
     this.deleteRawRequest = this.deleteRawRequest.bind(this);
-    this.searchRawRequests = this.searchRawRequests.bind(this);
     this.bulkDelete = this.bulkDelete.bind(this);
   }
 
@@ -32,22 +31,33 @@ class RawRequestController {
   async getRawRequests(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { page = 1, limit = 10, method, collectionName, integrationId } = req.query;
+      const { page = 1, limit = 10, search, method, collectionName, integrationId } = req.query;
       
-      const filters = {
+      // Base filters for non-search queries
+      const baseFilters = {
         orgId,
         ...(method && { method: method.toUpperCase() }),
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
       };
 
-      const result = await this.service.findAll(filters, {
+      const paginationOptions = {
         page: parseInt(page),
         limit: parseInt(limit),
-      });
+      };
+
+      let result;
+      
+      if (search && search.trim().length > 0) {
+        // Use search functionality with combined filters
+        result = await this.service.searchWithFilters(search, baseFilters, paginationOptions);
+      } else {
+        // Use regular findAll
+        result = await this.service.findAll(baseFilters, paginationOptions);
+      }
 
       const response = ApiResponse.paginated(
-        'Raw requests retrieved successfully',
+        search ? 'Search results retrieved successfully' : 'Raw requests retrieved successfully',
         result.data,
         {
           currentPage: result.currentPage,
@@ -99,41 +109,6 @@ class RawRequestController {
     }
   }
 
-  async searchRawRequests(req, res, next) {
-    try {
-      const { orgId } = req.authenticatedService;
-      const { search, page = 1, limit = 10 } = req.query;
-
-      if (!search || search.trim().length === 0) {
-        throw ApiError.badRequest('Search query is required');
-      }
-
-      const result = await this.service.search(
-        search,
-        orgId,
-        {
-          page: parseInt(page),
-          limit: parseInt(limit),
-        }
-      );
-
-      const response = ApiResponse.paginated(
-        'Search results retrieved successfully',
-        result.data,
-        {
-          currentPage: result.currentPage,
-          totalPages: result.totalPages,
-          totalItems: result.totalItems,
-          itemsPerPage: result.itemsPerPage,
-        }
-      );
-
-      res.sendApiResponse(response);
-    } catch (error) {
-      next(error);
-    }
-  }
-
   async bulkDelete(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
@@ -160,6 +135,5 @@ export const {
   getRawRequest,
   updateRawRequest,
   deleteRawRequest,
-  searchRawRequests,
   bulkDelete,
 } = controller;
