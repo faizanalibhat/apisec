@@ -60,8 +60,6 @@ export class ScanService {
                 }
             });
 
-
-
             await mqbroker.publish("apisec", "apisec.scan.create", scan);
 
             // Trigger async transformation process
