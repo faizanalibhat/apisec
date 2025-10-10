@@ -59,15 +59,17 @@ const scanSchema = new mongoose.Schema({
     default: 'preparing',
     index: true
   },
-  ruleIds: [{
-    type: mongoose.Schema.Types.ObjectId,
+  ruleIds: {
+    type: [mongoose.Schema.Types.ObjectId],
     ref: 'Rule',
-    required: true
-  }],
-  requestIds: [{
-    type: mongoose.Schema.Types.ObjectId,
+    required: false,
+    default: [] 
+  },
+  requestIds: {
+    type: [mongoose.Schema.Types.ObjectId],
     ref: 'RawRequest'
-  }],
+    default: [] 
+  },
   // Statistics
   stats: {
     totalRequests: { type: Number, default: 0 },
