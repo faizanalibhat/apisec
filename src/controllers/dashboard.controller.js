@@ -12,11 +12,12 @@ class DashboardController {
 
     async getDashboardStats(req, res, next) {
         try {
-            const { orgId } = req;
+            const { orgId } = req.authenticatedService;
             const { period = '7d' } = req.query;
 
             // Validate period format
             const validPeriodPattern = /^\d+[dhm]$/; // e.g., 7d, 30d, 24h, 3m
+
             if (!validPeriodPattern.test(period)) {
                 throw ApiError.badRequest('Invalid period format. Use format like 7d, 30d, 24h, 3m');
             }
