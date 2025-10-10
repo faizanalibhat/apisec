@@ -81,9 +81,14 @@ class RuleController {
         try {
             const { orgId } = req.authenticatedService;
             const { ruleId } = req.params;
-            const updateData = req.body;
 
-            const rule = await this.ruleService.updateRule(ruleId, updateData, orgId);
+            const raw_yaml = req.body;
+
+            const json_parsed = yaml.load(raw_yaml);
+
+            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml };
+
+            const rule = await this.ruleService.updateRule(ruleId, ruleData, orgId);
 
             res.sendApiResponse(
                 ApiResponse.updated('Rule updated successfully', rule)
