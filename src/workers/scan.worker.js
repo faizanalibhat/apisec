@@ -270,7 +270,7 @@ async function runScan(payload, msg, channel) {
         // Bulk create vulnerabilities
         if (vulnerabilities.length > 0) {
             try {
-                await Vulnerability.insertMany(vulnerabilities, { ordered: false });
+                await Vulnerability.create(vulnerabilities, { ordered: false, strict: false });
                 console.log(`[+] Created ${vulnerabilities.length} vulnerability records`);
             } catch (vulnError) {
                 console.error("[!] Error creating vulnerabilities:", vulnError);
