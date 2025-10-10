@@ -5,7 +5,6 @@ const transformedRequestSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Scan',
     required: true,
-    index: true
   },
   orgId: {
     type: String,
