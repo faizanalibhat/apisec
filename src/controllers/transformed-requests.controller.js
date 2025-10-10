@@ -1,4 +1,4 @@
-import TransformedRequest from "../models/transformedRequest.model"
+import TransformedRequest from "../models/transformedRequest.model.js"
 
 
 
