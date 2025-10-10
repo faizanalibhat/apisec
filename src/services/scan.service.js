@@ -16,42 +16,42 @@ export class ScanService {
             const { name, description, ruleIds, requestIds, organizationId } = scanData;
 
             // Validate rules exist
-            const rules = await Rule.find({
-                _id: { $in: ruleIds },
-                organizationId
-            }).lean();
+            // const rules = await Rule.find({
+            //     _id: { $in: ruleIds },
+            //     organizationId
+            // }).lean();
 
-            if (rules.length !== ruleIds.length) {
-                throw ApiError.badRequest('One or more invalid rule IDs provided');
-            }
+            // if (rules.length !== ruleIds.length) {
+            //     throw ApiError.badRequest('One or more invalid rule IDs provided');
+            // }
 
-            // Get requests - if requestIds provided, use them; otherwise get all
-            let requests;
-            if (requestIds && requestIds.length > 0) {
-                requests = await RawRequest.find({
-                    _id: { $in: requestIds },
-                    organizationId
-                }).lean();
+            // // Get requests - if requestIds provided, use them; otherwise get all
+            // let requests;
+            // if (requestIds && requestIds.length > 0) {
+            //     requests = await RawRequest.find({
+            //         _id: { $in: requestIds },
+            //         organizationId
+            //     }).lean();
 
-                if (requests.length !== requestIds.length) {
-                    throw ApiError.badRequest('One or more invalid request IDs provided');
-                }
-            } else {
-                // Get all requests for the organization
-                requests = await RawRequest.find({ organizationId }).lean();
+            //     if (requests.length !== requestIds.length) {
+            //         throw ApiError.badRequest('One or more invalid request IDs provided');
+            //     }
+            // } else {
+            //     // Get all requests for the organization
+            //     requests = await RawRequest.find({ organizationId }).lean();
 
-                if (requests.length === 0) {
-                    throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
-                }
-            }
+            //     if (requests.length === 0) {
+            //         throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
+            //     }
+            // }
 
             // Create scan document
             const scan = await Scan.create({
                 name,
                 description,
                 organizationId,
-                ruleIds: rules.map(r => r._id),
-                requestIds: requests.map(r => r._id),
+                // ruleIds: rules.map(r => r._id),
+                // requestIds: requests.map(r => r._id),
                 status: 'pending',
                 stats: {
                     totalRequests: requests.length,
