@@ -94,7 +94,8 @@ class RawRequestController {
           totalPages: result.totalPages,
           totalItems: result.totalItems,
           itemsPerPage: result.itemsPerPage,
-        }
+        },
+        result.filters
       );
 
       res.sendApiResponse(response);
