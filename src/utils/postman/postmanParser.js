@@ -254,7 +254,7 @@ class PostmanParser {
 
             return {
                 // Required fields with correct names
-                organizationId: context.organizationId,
+                orgId: context.orgId,
                 integrationId: context.integrationId,
                 name: item.name || request.name || 'Unnamed Request',
                 method: (request.method || 'GET').toUpperCase(),
