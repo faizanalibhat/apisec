@@ -154,7 +154,7 @@ async function runScan(payload, msg, channel) {
                             folderName: originalRequest.folderName
                         },
                         ruleDetails: {
-                            name: rule.ruleName,
+                            name: rule.rule_name,
                             category: rule.category
                         },
                         
@@ -184,7 +184,7 @@ async function runScan(payload, msg, channel) {
                     // Also prepare finding for scan document
                     scanFindings.push({
                         ruleId: rule._id,
-                        ruleName: rule.ruleName,
+                        ruleName: rule.rule_name,
                         requestId: originalRequest._id,
                         requestName: originalRequest.name,
                         requestUrl: originalRequest.url,
