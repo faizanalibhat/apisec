@@ -18,7 +18,7 @@ class IntegrationController {
 
     async createIntegration(req, res, next) {
         try {
-            const { orgId } = req;
+            const { orgId } = req.authenticatedService;
             const { apiKey, name, description, workspaceIds, environment } = req.body;
 
             const result = await this.service.createIntegration({
