@@ -175,7 +175,7 @@ async function runScan(payload, msg, channel) {
                                 size: response.size || 0,
                                 responseTime: response.time || 0
                             },
-                            matchedCriteria: matchResult.matchedCriteria
+                            // matchedCriteria: matchResult.matchedCriteria
                         }
                     };
 
