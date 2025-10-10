@@ -1,5 +1,5 @@
 import express from 'express';
-import { TransformedRequestsController } from "../controllers/" 
+import { TransformedRequestsController } from "../controllers/transformed-requests.controller" 
 
 const router = express.Router();
 
