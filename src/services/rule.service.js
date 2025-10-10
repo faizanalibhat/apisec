@@ -5,14 +5,14 @@ class RuleService {
     async createRule(ruleData) {
         try {
             // Check if rule with same name exists for organization
-            const existingRule = await Rule.findOne({
-                orgId: ruleData.orgId,
-                ruleName: ruleData.ruleName
-            });
+            // const existingRule = await Rule.findOne({
+            //     orgId: ruleData.orgId,
+            //     ruleName: ruleData.ruleName
+            // });
 
-            if (existingRule) {
-                throw ApiError.conflict('Rule with this name already exists');
-            }
+            // if (existingRule) {
+            //     throw ApiError.conflict('Rule with this name already exists');
+            // }
 
             const rule = new Rule(ruleData);
             await rule.save();
