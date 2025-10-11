@@ -138,7 +138,7 @@ class PostmanParser {
 
                 return {
                     protocol: urlObj.protocol.replace(':', ''),
-                    host: context?.variables?.base_url,
+                    host: urlObj.host || context?.variables?.base_url,
                     port: urlObj.port,
                     path: urlObj.pathname,
                     query: urlObj.search
@@ -146,7 +146,7 @@ class PostmanParser {
             } catch (e) {
                 return {
                     protocol: 'https',
-                    host: context?.variables?.base_url,
+                    host: urlObj.host || context?.variables?.base_url,
                     path: '/',
                     query: ''
                 };
