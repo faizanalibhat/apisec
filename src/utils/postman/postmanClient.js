@@ -75,6 +75,31 @@ class PostmanClient {
         throw lastError;
     }
 
+    // Get user information
+    async getUserInfo(apiKey) {
+        const config = {
+            ...this.baseConfig,
+            headers: { 'X-Api-Key': apiKey }
+        };
+
+        const response = await this.makeRequest(() =>
+            axios.get(`${POSTMAN_API_BASE}/me`, config)
+        );
+
+        if (!response.data?.user) {
+            throw ApiError.badRequest('Invalid response from Postman API');
+        }
+
+        return {
+            userId: response.data.user.id,
+            teamDomain: response.data.user.teamDomain,
+            username: response.data.user.username,
+            email: response.data.user.email,
+            fullName: response.data.user.fullName,
+            teamName: response.data.user.teamName
+        };
+    }
+
     // Get all workspaces
     async getAllWorkspaces(apiKey) {
         const config = {
@@ -82,7 +107,7 @@ class PostmanClient {
             headers: { 'X-Api-Key': apiKey }
         };
 
-        const response = await this.makeRequest(() => 
+        const response = await this.makeRequest(() =>
             axios.get(`${POSTMAN_API_BASE}/workspaces`, config)
         );
 
@@ -110,7 +135,7 @@ class PostmanClient {
             headers: { 'X-Api-Key': apiKey }
         };
 
-        const response = await this.makeRequest(() => 
+        const response = await this.makeRequest(() =>
             axios.get(`${POSTMAN_API_BASE}/collections?workspace=${workspaceId}`, config)
         );
 
@@ -128,7 +153,7 @@ class PostmanClient {
             headers: { 'X-Api-Key': apiKey }
         };
 
-        const response = await this.makeRequest(() => 
+        const response = await this.makeRequest(() =>
             axios.get(`${POSTMAN_API_BASE}/collections/${collectionId}`, config)
         );
 
@@ -154,7 +179,7 @@ class PostmanClient {
             if (!response.data?.environments) return {};
 
             const envVars = {};
-            
+
             // Fetch each environment's details
             for (const env of response.data.environments) {
                 const envDetail = await this.makeRequest(() =>
@@ -168,7 +193,7 @@ class PostmanClient {
                         }
                     }
                 }
-                
+
                 // Add delay to avoid rate limits
                 await this.sleep(100);
             }

@@ -19,25 +19,31 @@ class IntegrationService {
             // Encrypt API key before storing
             const encryptedApiKey = await encryptApiKey(apiKey);
 
+            // Get user info from Postman
+            const userInfo = await this.postmanClient.getUserInfo(apiKey);
+
             // Get workspace details from Postman
             const workspaces = await this.postmanClient.getWorkspacesByIds(apiKey, workspaceIds);
-            
+
             if (!workspaces || workspaces.length === 0) {
                 throw ApiError.badRequest('No valid workspaces found for the provided IDs');
             }
 
             const env = await Environment.create({ ...environment });
 
-            // Create integration
+            // Create integration with user info
             const integration = await Integration.create({
                 orgId,
                 environmentId: env._id,
                 name,
                 description,
                 apiKey: encryptedApiKey,
+                postmanUserId: userInfo.userId.toString(),
+                postmanTeamDomain: userInfo.teamDomain,
                 workspaces: workspaces.map(ws => ({
                     id: ws.id,
-                    name: ws.name
+                    name: ws.name,
+                    collections: [] // Will be populated during sync
                 }))
             });
 
@@ -46,9 +52,8 @@ class IntegrationService {
 
             // Return integration without sensitive data
             const integrationData = integration.toObject();
-
             delete integrationData.apiKey;
-            
+
             return integrationData;
         } catch (error) {
             this.handleError(error);
@@ -85,9 +90,9 @@ class IntegrationService {
 
     async getIntegration(id, orgId) {
         try {
-            const integration = await Integration.findOne({ 
-                _id: id, 
-                orgId 
+            const integration = await Integration.findOne({
+                _id: id,
+                orgId
             }).select('-apiKey').lean();
 
             if (!integration) {
@@ -106,7 +111,7 @@ class IntegrationService {
 
             const integration = await Integration.findOneAndUpdate(
                 { _id: id, orgId },
-                { 
+                {
                     $set: {
                         ...(name && { name }),
                         ...(description !== undefined && { description })
@@ -127,9 +132,9 @@ class IntegrationService {
 
     async deleteIntegration(id, orgId) {
         try {
-            const integration = await Integration.findOne({ 
-                _id: id, 
-                orgId 
+            const integration = await Integration.findOne({
+                _id: id,
+                orgId
             });
 
             if (!integration) {
@@ -137,9 +142,9 @@ class IntegrationService {
             }
 
             // Delete all raw requests associated with this integration
-            await RawRequest.deleteMany({ 
+            await RawRequest.deleteMany({
                 integrationId: integration._id,
-                orgId 
+                orgId
             });
 
             // Delete the integration
@@ -153,9 +158,9 @@ class IntegrationService {
 
     async refreshIntegration(id, orgId) {
         try {
-            const integration = await Integration.findOne({ 
-                _id: id, 
-                orgId 
+            const integration = await Integration.findOne({
+                _id: id,
+                orgId
             });
 
             if (!integration) {
@@ -166,10 +171,16 @@ class IntegrationService {
             const apiKey = await decryptApiKey(integration.apiKey);
 
             // Delete existing raw requests for this integration
-            await RawRequest.deleteMany({ 
+            await RawRequest.deleteMany({
                 integrationId: integration._id,
-                orgId 
+                orgId
             });
+
+            // Clear existing collections from workspaces
+            integration.workspaces.forEach(workspace => {
+                workspace.collections = [];
+            });
+            await integration.save();
 
             // Sync again
             await this.syncIntegration(integration, apiKey);
@@ -185,7 +196,7 @@ class IntegrationService {
     async getWorkspaces(apiKey) {
         try {
             const workspaces = await this.postmanClient.getAllWorkspaces(apiKey);
-            
+
             if (!workspaces || workspaces.length === 0) {
                 throw ApiError.badRequest('No workspaces found for this API key');
             }
@@ -207,12 +218,15 @@ class IntegrationService {
 
             let totalRequests = 0;
             let totalCollections = 0;
+            const workspaceUpdates = [];
 
             // For each workspace
             for (const workspace of integration.workspaces) {
+                const workspaceCollections = [];
+
                 // Get collections from workspace
                 const collections = await this.postmanClient.getCollectionsFromWorkspace(
-                    apiKey, 
+                    apiKey,
                     workspace.id
                 );
 
@@ -225,6 +239,21 @@ class IntegrationService {
                         apiKey,
                         collection.uid
                     );
+
+                    // Generate Postman URL for this collection
+                    const postmanUrl = integration.generatePostmanUrl(
+                        workspace.name,
+                        workspace.id,
+                        collection.uid
+                    );
+
+                    // Add to workspace collections
+                    workspaceCollections.push({
+                        id: collection.id,
+                        uid: collection.uid,
+                        name: collection.name,
+                        postmanUrl: postmanUrl
+                    });
 
                     // Parse collection into raw requests
                     const rawRequests = await this.postmanParser.parseCollection(
@@ -244,10 +273,21 @@ class IntegrationService {
                         await RawRequest.insertMany(rawRequests);
                         totalRequests += rawRequests.length;
                     }
-
-                    // For now, just count
-                    totalRequests += rawRequests?.length || 0;
                 }
+
+                // Update workspace with collections
+                workspaceUpdates.push({
+                    workspaceId: workspace.id,
+                    collections: workspaceCollections
+                });
+            }
+
+            // Update all workspace collections
+            for (const update of workspaceUpdates) {
+                await integration.updateWorkspaceCollections(
+                    update.workspaceId,
+                    update.collections
+                );
             }
 
             // Update integration metadata

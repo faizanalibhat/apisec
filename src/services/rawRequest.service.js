@@ -1,4 +1,5 @@
 import RawRequest from '../models/rawRequest.model.js';
+import Integration from '../models/integration.model.js';
 import { ApiError } from '../utils/ApiError.js';
 
 class RawRequestService {
@@ -25,25 +26,25 @@ class RawRequestService {
                 { $match: filters },
                 {
                     $lookup: {
-                    from: "vulnerabilities",
-                    localField: "_id",
-                    foreignField: "requestId",
-                    pipeline: [
-                        {
-                        $group: {
-                            _id: "$severity",
-                            count: { $sum: 1 }
-                        }
-                        },
-                        {
-                        $project: {
-                            _id: 0,
-                            k: "$_id",   // key
-                            v: "$count"  // value
-                        }
-                        }
-                    ],
-                    as: "vulnStats"
+                        from: "vulnerabilities",
+                        localField: "_id",
+                        foreignField: "requestId",
+                        pipeline: [
+                            {
+                                $group: {
+                                    _id: "$severity",
+                                    count: { $sum: 1 }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 0,
+                                    k: "$_id",   // key
+                                    v: "$count"  // value
+                                }
+                            }
+                        ],
+                        as: "vulnStats"
                     }
                 },
                 {
@@ -51,27 +52,89 @@ class RawRequestService {
                     $addFields: {
                         vulnCounts: {
                             $cond: [
-                            { $gt: [{ $size: "$vulnStats" }, 0] },
-                            { $arrayToObject: "$vulnStats" },
-                            {}
+                                { $gt: [{ $size: "$vulnStats" }, 0] },
+                                { $arrayToObject: "$vulnStats" },
+                                {}
                             ]
                         }
                     }
                 },
                 {
                     $lookup: {
-                    from: "integrations",
-                    localField: "integrationId",
-                    foreignField: "_id",
-                    as: "integrationId"
+                        from: "integrations",
+                        localField: "integrationId",
+                        foreignField: "_id",
+                        as: "integration"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$integration",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                // Add postman URL field
+                {
+                    $addFields: {
+                        postmanUrl: {
+                            $let: {
+                                vars: {
+                                    collectionData: {
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input: {
+                                                        $reduce: {
+                                                            input: "$integration.workspaces",
+                                                            initialValue: [],
+                                                            in: {
+                                                                $concatArrays: [
+                                                                    "$$value",
+                                                                    {
+                                                                        $map: {
+                                                                            input: "$$this.collections",
+                                                                            as: "collection",
+                                                                            in: {
+                                                                                $mergeObjects: [
+                                                                                    "$$collection",
+                                                                                    {
+                                                                                        workspaceName: "$$this.name",
+                                                                                        workspaceId: "$$this.id"
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    cond: { $eq: ["$$this.name", "$collectionName"] }
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+                                in: "$$collectionData.postmanUrl"
+                            }
+                        }
+                    }
+                },
+                // Clean up integration field to only include necessary data
+                {
+                    $addFields: {
+                        integrationId: {
+                            _id: "$integration._id",
+                            name: "$integration.name"
+                        }
                     }
                 },
                 { $sort: sortOptions },
                 { $skip: skip },
                 { $limit: limit },
-                { $project: { vulnStats: 0  } }
+                { $project: { vulnStats: 0, integration: 0 } }
             ];
-
 
             const [data, totalItems] = await Promise.all([
                 RawRequest.aggregate(pipeline),
@@ -106,16 +169,43 @@ class RawRequestService {
                 ...sortOptions
             };
 
-            const [data, totalItems] = await Promise.all([
+            // First get the raw requests with search
+            const [rawRequests, totalItems] = await Promise.all([
                 RawRequest.find(searchConditions)
-                    .populate('integrationId', 'name')
-                    // .sort({ score: { $meta: 'textScore' } }) // Sort by relevance for search
-                    .sort(searchSort) // exact search
+                    .populate('integrationId', 'name postmanUserId postmanTeamDomain workspaces')
+                    .sort(searchSort)
                     .skip(skip)
                     .limit(limit)
                     .lean(),
                 RawRequest.countDocuments(searchConditions),
             ]);
+
+            // Process each request to add postman URL
+            const data = rawRequests.map(request => {
+                const result = { ...request };
+                
+                if (request.integrationId) {
+                    // Find the matching collection in integration
+                    const integration = request.integrationId;
+                    const collectionData = this.findCollectionInIntegration(
+                        integration,
+                        request.collectionName,
+                        request.workspaceName
+                    );
+                    
+                    if (collectionData) {
+                        result.postmanUrl = collectionData.postmanUrl;
+                    }
+                    
+                    // Clean up integration data
+                    result.integrationId = {
+                        _id: integration._id,
+                        name: integration.name
+                    };
+                }
+                
+                return result;
+            });
 
             return {
                 data,
@@ -135,11 +225,31 @@ class RawRequestService {
                 _id: id,
                 orgId,
             })
-                .populate('integrationId', 'name')
+                .populate('integrationId', 'name postmanUserId postmanTeamDomain workspaces')
                 .lean();
 
             if (!rawRequest) {
                 throw ApiError.notFound('Raw request not found');
+            }
+
+            // Add postman URL if integration exists
+            if (rawRequest.integrationId) {
+                const integration = rawRequest.integrationId;
+                const collectionData = this.findCollectionInIntegration(
+                    integration,
+                    rawRequest.collectionName,
+                    rawRequest.workspaceName
+                );
+                
+                if (collectionData) {
+                    rawRequest.postmanUrl = collectionData.postmanUrl;
+                }
+                
+                // Clean up integration data
+                rawRequest.integrationId = {
+                    _id: integration._id,
+                    name: integration.name
+                };
             }
 
             return rawRequest;
@@ -227,6 +337,25 @@ class RawRequestService {
         } catch (error) {
             this.handleError(error);
         }
+    }
+
+    // Helper method to find collection in integration data
+    findCollectionInIntegration(integration, collectionName, workspaceName) {
+        if (!integration || !integration.workspaces) return null;
+
+        for (const workspace of integration.workspaces) {
+            if (workspace.name === workspaceName) {
+                const collection = workspace.collections.find(c => c.name === collectionName);
+                if (collection) {
+                    return {
+                        collection,
+                        workspace,
+                        postmanUrl: collection.postmanUrl
+                    };
+                }
+            }
+        }
+        return null;
     }
 
     generateRawHttp(requestData) {

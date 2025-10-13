@@ -21,6 +21,14 @@ const integrationSchema = new mongoose.Schema({
         type: String,
         required: [true, 'API key is required']
     },
+    postmanUserId: {
+        type: String,
+        default: null
+    },
+    postmanTeamDomain: {
+        type: String,
+        default: null
+    },
     workspaces: [{
         id: {
             type: String,
@@ -29,7 +37,25 @@ const integrationSchema = new mongoose.Schema({
         name: {
             type: String,
             required: true
-        }
+        },
+        collections: [{
+            id: {
+                type: String,
+                required: true
+            },
+            uid: {
+                type: String,
+                required: true
+            },
+            name: {
+                type: String,
+                required: true
+            },
+            postmanUrl: {
+                type: String,
+                default: null
+            }
+        }]
     }],
     metadata: {
         lastSyncedAt: {
@@ -66,14 +92,14 @@ const integrationSchema = new mongoose.Schema({
 integrationSchema.index({ name: 'text', description: 'text' });
 
 // Virtual for checking if sync is needed (e.g., not synced in last 24 hours)
-integrationSchema.virtual('needsSync').get(function() {
+integrationSchema.virtual('needsSync').get(function () {
     if (!this.metadata.lastSyncedAt) return true;
     const hoursSinceSync = (Date.now() - this.metadata.lastSyncedAt.getTime()) / (1000 * 60 * 60);
     return hoursSinceSync > 24;
 });
 
 // Method to update sync status
-integrationSchema.methods.updateSyncStatus = function(status, error = null) {
+integrationSchema.methods.updateSyncStatus = function (status, error = null) {
     this.metadata.status = status;
     if (status === 'completed') {
         this.metadata.lastSyncedAt = new Date();
@@ -85,10 +111,36 @@ integrationSchema.methods.updateSyncStatus = function(status, error = null) {
 };
 
 // Method to update sync metadata
-integrationSchema.methods.updateSyncMetadata = function(totalRequests, totalCollections) {
+integrationSchema.methods.updateSyncMetadata = function (totalRequests, totalCollections) {
     this.metadata.totalRequests = totalRequests;
     this.metadata.totalCollections = totalCollections;
     return this.save();
+};
+
+// Method to generate Postman URL for a collection
+integrationSchema.methods.generatePostmanUrl = function (workspaceName, workspaceId, collectionUid) {
+    if (!this.postmanTeamDomain || !this.postmanUserId) {
+        return null;
+    }
+
+    return `https://${this.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspaceName)}~${workspaceId}/collection/${this.postmanUserId}-${collectionUid}`;
+};
+
+// Method to find collection by name
+integrationSchema.methods.findCollectionByName = function (collectionName, workspaceName) {
+    for (const workspace of this.workspaces) {
+        if (!workspaceName || workspace.name === workspaceName) {
+            const collection = workspace.collections.find(c => c.name === collectionName);
+            if (collection) {
+                return {
+                    collection,
+                    workspace,
+                    postmanUrl: collection.postmanUrl
+                };
+            }
+        }
+    }
+    return null;
 };
 
 const Integration = mongoose.model('Integration', integrationSchema);
