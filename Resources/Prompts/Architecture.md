@@ -45,7 +45,7 @@ src/
 
 ```
 1. Setup Phase:
-   Postman API Key → Import Workspaces → Select Collections → Store Raw Requests
+   Postman API Key → Fetch User Info → Import Workspaces → Select Collections → Store Raw Requests & Environments
 
 2. Configuration Phase:
    Create Security Rules (transformations + match criteria)
@@ -99,28 +99,36 @@ Scan Creation → RabbitMQ Queue → Worker (Transformation)
 - **Matching**: Status codes, response body, headers, content type, response time
 
 ### 2. Integration Module ✅
-- **Model**: Postman API integrations with encrypted keys
-- **Features**: Multiple integrations per organization, workspace selection
+- **Model**: Postman API integrations with encrypted keys and user metadata
+- **Features**: Multiple integrations per organization, workspace selection, collection mapping
 - **Security**: AES-256-GCM encryption for API keys
-- **Utilities**: Rate-limited Postman client, collection parser
+- **Postman Data**: Stores user ID, team domain, workspace-collection relationships
+- **URL Generation**: Automatic Postman collection URL construction
 
 ### 3. Raw Request Module ✅
 - **Model**: Individual API requests from Postman
 - **Features**: CRUD, bulk operations, edit tracking, search and filters
 - **Data**: Complete request context including collection metadata
+- **Integration**: Links to Postman collections via Integration module
 
-### 4. Scan Module ✅
+### 4. Raw Environment Module ✅
+- **Model**: Postman environment configurations per workspace
+- **Features**: CRUD, workspace filtering, variable management
+- **Data**: Environment variables, workspace association, edit tracking
+- **URL Generation**: Direct links to Postman environments
+
+### 5. Scan Module ✅
 - **Model**: Security scan sessions with findings and statistics
 - **Features**: Asynchronous execution, progress tracking, vulnerability summary
 - **Integration**: RabbitMQ for distributed processing
 
-### 5. Vulnerability Module ✅
+### 6. Vulnerability Module ✅
 - **Model**: Detailed vulnerability records with evidence
 - **Features**: CRUD, status management, notes, false positive marking
 - **Evidence**: Full request/response pairs with transformation details
 - **Export**: JSON and CSV formats
 
-### 6. Transformed Request Module ✅
+### 7. Transformed Request Module ✅
 - **Model**: Requests after rule transformations applied
 - **Purpose**: Intermediate storage during scan execution
 - **Tracking**: Execution state and results
@@ -186,6 +194,18 @@ Scan Creation → RabbitMQ Queue → Worker (Transformation)
 - Security misconfigurations
 - Rate limiting issues
 
+## Postman Integration
+
+### Data Collection
+- **User Information**: Fetched via `/me` endpoint (user ID, team domain)
+- **Workspaces**: Complete workspace metadata and associations
+- **Collections**: Full collection details with Postman URLs
+- **Environments**: Environment variables and configurations per workspace
+
+### URL Generation Pattern
+- **Collections**: `https://{teamDomain}.postman.co/workspace/{workspaceName}~{workspaceId}/collection/{userId}-{collectionUid}`
+- **Environments**: `https://{teamDomain}.postman.co/workspace/{workspaceName}~{workspaceId}/environment/{userId}-{environmentUid}`
+
 ## API Patterns
 
 ### Route Structure
@@ -236,14 +256,17 @@ router.delete('/:id', controller.delete)     // Delete resource
 
 ### Collections
 1. **rules**: Security testing rule definitions
-2. **integrations**: Postman API connections
-3. **rawrequests**: Original API requests
-4. **scans**: Security scan sessions
-5. **transformedrequests**: Modified requests for testing
-6. **vulnerabilities**: Detected security issues
+2. **integrations**: Postman API connections with user metadata
+3. **raw_requests**: Original API requests from Postman
+4. **raw_environments**: Postman environment configurations
+5. **scans**: Security scan sessions
+6. **transformedrequests**: Modified requests for testing
+7. **vulnerabilities**: Detected security issues
 
 ### Relationships
 - Integration → Raw Requests (1:N)
+- Integration → Raw Environments (1:N)
+- Workspace → Raw Environments (1:N)
 - Scan → Transformed Requests (1:N)
 - Scan → Vulnerabilities (1:N)
 - Rule + Request → Transformed Request
@@ -258,6 +281,7 @@ router.delete('/:id', controller.delete)     // Delete resource
 4. Automated regression testing
 5. Integration with CI/CD pipelines
 6. Advanced reporting and analytics
+7. Environment variable substitution in scans
 
 ### Scalability Considerations
 1. Horizontal scaling of workers
