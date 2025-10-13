@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 
 const uri = process.env.APISEC_MONGODB_URL;
-console.log(uri);
 
 // Connect to MongoDB
 const connectDB = async () => {
