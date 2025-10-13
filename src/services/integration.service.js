@@ -284,11 +284,13 @@ class IntegrationService {
 
             // Update all workspace collections
             for (const update of workspaceUpdates) {
-                await integration.updateWorkspaceCollections(
-                    update.workspaceId,
-                    update.collections
-                );
+                const workspaceIndex = integration.workspaces.findIndex(ws => ws.id === update.workspaceId);
+                if (workspaceIndex !== -1) {
+                    integration.workspaces[workspaceIndex].collections = update.collections;
+                }
             }
+            // Save the integration with all updates
+            await integration.save();
 
             // Update integration metadata
             await integration.updateSyncMetadata(totalRequests, totalCollections);
