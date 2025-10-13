@@ -13,7 +13,7 @@ Please create a Postman collection JSON with the following specifications:
 **Endpoint Configuration:**
 - All URLs should use: `{{base_url}}/endpoint-path`. Value of `base_url` is `http://localhost:9040/api/v1`
 - All requests must include the header: `Authorization: Bearer {{access_token}}`
-- Use path variables for dynamic IDs (e.g., `{{base_url}}/item/:itemId}`)
+- Use path variables for dynamic IDs (e.g., `{{base_url}}/items/:itemId}`)
 - Do not hardcode any IDs in the URLs
 
 Please provide the complete Postman collection JSON export that meets these requirements.
