@@ -302,6 +302,8 @@ class IntegrationService {
     }
 
     handleError(error) {
+        console.error('aaaaaaaaaaaaaaError:', error);
+
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(e => e.message);
             throw ApiError.validationError('Validation failed', messages);
