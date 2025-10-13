@@ -69,6 +69,12 @@ const scanSchema = new mongoose.Schema({
     ref: 'RawRequest',
     default: [] 
   },
+  // Environment for variable substitution
+  environmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'RawEnvironment',
+    required: false
+  },
   // Statistics
   stats: {
     totalRequests: { type: Number, default: 0 },

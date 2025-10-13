@@ -1,6 +1,7 @@
 import Scan from '../models/scan.model.js';
 import Rule from '../models/rule.model.js';
 import RawRequest from '../models/rawRequest.model.js';
+import RawEnvironment from '../models/rawEnvironment.model.js';
 import TransformedRequest from '../models/transformedRequest.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import { TransformerService } from './transformer.service.js';
@@ -13,11 +14,23 @@ export class ScanService {
 
     async createScan(scanData) {
         try {
-            const { name, description, ruleIds, requestIds, orgId } = scanData;
+            const { name, description, ruleIds, requestIds, environmentId, orgId } = scanData;
+
+            // Validate environment if provided
+            if (environmentId) {
+                const environment = await RawEnvironment.findOne({
+                    _id: environmentId,
+                    orgId
+                });
+
+                if (!environment) {
+                    throw ApiError.badRequest('Invalid environment ID provided');
+                }
+            }
 
             // Validate rules exist
             let rules;
-            
+
             if (ruleIds && ruleIds?.length) {
                 rules = await Rule.find({
                     _id: { $in: ruleIds },
@@ -54,6 +67,7 @@ export class ScanService {
                 orgId,
                 ruleIds: rules.map(r => r._id),
                 requestIds: requests.map(r => r._id),
+                environmentId,
                 status: 'pending',
                 stats: {
                     totalRequests: requests.length,
@@ -137,6 +151,7 @@ export class ScanService {
 
             const scans = await Scan.find(query)
                 .select('-findings') // Exclude findings for list view
+                .populate('environmentId', 'name')
                 .sort(sort)
                 .skip(skip)
                 .limit(limit)
@@ -162,6 +177,7 @@ export class ScanService {
             })
                 .populate('ruleIds', 'ruleName description')
                 .populate('requestIds', 'name method url')
+                .populate('environmentId', 'name workspaceName')
                 .lean();
 
             if (!scan) {
@@ -227,6 +243,7 @@ export class ScanService {
 
             const scans = await Scan.find(query, { score: { $meta: 'textScore' } })
                 .select('-findings')
+                .populate('environmentId', 'name')
                 .sort({ score: { $meta: 'textScore' } })
                 .skip(skip)
                 .limit(limit)

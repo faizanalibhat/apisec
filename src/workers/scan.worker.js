@@ -2,12 +2,14 @@ import { mqbroker } from "../services/rabbitmq.service.js";
 import Scan from "../models/scan.model.js";
 import Requests from "../models/rawRequest.model.js";
 import Rules from "../models/rule.model.js";
+import RawEnvironment from "../models/rawEnvironment.model.js";
 import TransformedRequest from "../models/transformedRequest.model.js";
 import { EngineService } from "../services/engine/engine.service.js";
 import Vulnerability from "../models/vulnerability.model.js";
+import { substituteVariables } from "../utils/variableSubstitution.js";
 
 async function transformationHandler(payload, msg, channel) {
-    const { _id, requestIds, ruleIds, orgId } = payload;
+    const { _id, requestIds, ruleIds, environmentId, orgId } = payload;
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -22,6 +24,21 @@ async function transformationHandler(payload, msg, channel) {
         const requests = await Requests.find({ _id: { $in: requestIds }}).lean();
         const rules = await Rules.find({ _id: { $in: ruleIds }}).lean();
 
+        // Fetch environment variables if environmentId is provided
+        let environmentVariables = {};
+        if (environmentId) {
+            const environment = await RawEnvironment.findById(environmentId).lean();
+            if (environment) {
+                // Convert environment values to key-value pairs
+                environment.values
+                    .filter(v => v.enabled && v.key)
+                    .forEach(v => {
+                        environmentVariables[v.key] = v.value;
+                    });
+                console.log(`[+] Loaded ${Object.keys(environmentVariables).length} environment variables`);
+            }
+        }
+
         const bulkOps = [];
 
         // Generate transformed requests (cartesian product)
@@ -30,7 +47,14 @@ async function transformationHandler(payload, msg, channel) {
                 // Remove fields
                 const { _id: reqId, __v: _, ...reqObject } = request;
 
-                const transformed = await EngineService.transform({ request: reqObject, rule });
+                // Apply environment variable substitution if environment is provided
+                let processedRequest = reqObject;
+                if (environmentId && Object.keys(environmentVariables).length > 0) {
+                    processedRequest = substituteVariables(reqObject, environmentVariables);
+                }
+
+                // Apply rule transformations
+                const transformed = await EngineService.transform({ request: processedRequest, rule });
 
                 for (let t of transformed) {
                     bulkOps.push({

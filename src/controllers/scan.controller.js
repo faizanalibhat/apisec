@@ -18,13 +18,14 @@ class ScanController {
   async createScan(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { name, description, ruleIds, requestIds } = req.body;
+      const { name, description, ruleIds, requestIds, environmentId } = req.body;
       
       const scanData = {
         name,
         description,
         ruleIds,
         requestIds,
+        environmentId,
         orgId 
       };
       
