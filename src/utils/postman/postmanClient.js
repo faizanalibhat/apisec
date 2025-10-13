@@ -164,7 +164,66 @@ class PostmanClient {
         return response.data.collection;
     }
 
-    // Get environment variables for a workspace
+    // Get all environments (global)
+    async getAllEnvironments(apiKey) {
+        const config = {
+            ...this.baseConfig,
+            headers: { 'X-Api-Key': apiKey }
+        };
+
+        const response = await this.makeRequest(() =>
+            axios.get(`${POSTMAN_API_BASE}/environments`, config)
+        );
+
+        if (!response.data?.environments) {
+            return [];
+        }
+
+        return response.data.environments;
+    }
+
+    // Get environments from a specific workspace
+    async getEnvironmentsFromWorkspace(apiKey, workspaceId) {
+        const config = {
+            ...this.baseConfig,
+            headers: { 'X-Api-Key': apiKey }
+        };
+
+        const response = await this.makeRequest(() =>
+            axios.get(`${POSTMAN_API_BASE}/environments?workspace=${workspaceId}`, config)
+        );
+
+        if (!response.data?.environments) {
+            return [];
+        }
+
+        return response.data.environments;
+    }
+
+    // Get environment details
+    async getEnvironmentDetail(apiKey, environmentUid) {
+        const config = {
+            ...this.baseConfig,
+            headers: { 'X-Api-Key': apiKey }
+        };
+
+        try {
+            const response = await this.makeRequest(() =>
+                axios.get(`${POSTMAN_API_BASE}/environments/${environmentUid}`, config)
+            );
+
+            if (!response.data?.environment) {
+                return null;
+            }
+
+            return response.data.environment;
+        } catch (error) {
+            console.warn(`Error fetching environment ${environmentUid}:`, error.message);
+            return null;
+        }
+    }
+
+    // Get environment variables for a workspace (legacy method - keeping for compatibility)
     async getEnvironmentVariables(apiKey, workspaceId) {
         const config = {
             ...this.baseConfig,
@@ -182,12 +241,10 @@ class PostmanClient {
 
             // Fetch each environment's details
             for (const env of response.data.environments) {
-                const envDetail = await this.makeRequest(() =>
-                    axios.get(`${POSTMAN_API_BASE}/environments/${env.uid}`, config)
-                );
+                const envDetail = await this.getEnvironmentDetail(apiKey, env.uid);
 
-                if (envDetail.data?.environment?.values) {
-                    for (const v of envDetail.data.environment.values) {
+                if (envDetail?.values) {
+                    for (const v of envDetail.values) {
                         if (v.enabled !== false && v.key && v.value) {
                             envVars[v.key] = v.value;
                         }

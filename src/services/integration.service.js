@@ -5,6 +5,7 @@ import { PostmanClient } from '../utils/postman/postmanClient.js';
 import { PostmanParser } from '../utils/postman/postmanParser.js';
 import { Environment } from '../models/environment.model.js';
 import RawRequest from '../models/rawRequest.model.js';
+import RawEnvironment from '../models/rawEnvironment.model.js';
 
 class IntegrationService {
     constructor() {
@@ -147,10 +148,16 @@ class IntegrationService {
                 orgId
             });
 
+            // Delete all raw environments associated with this integration
+            await RawEnvironment.deleteMany({
+                integrationId: integration._id,
+                orgId
+            });
+
             // Delete the integration
             await integration.deleteOne();
 
-            return { message: 'Integration and associated requests deleted successfully' };
+            return { message: 'Integration and associated data deleted successfully' };
         } catch (error) {
             this.handleError(error);
         }
@@ -172,6 +179,12 @@ class IntegrationService {
 
             // Delete existing raw requests for this integration
             await RawRequest.deleteMany({
+                integrationId: integration._id,
+                orgId
+            });
+
+            // Delete existing raw environments for this integration
+            await RawEnvironment.deleteMany({
                 integrationId: integration._id,
                 orgId
             });
@@ -223,12 +236,70 @@ class IntegrationService {
             // For each workspace
             for (const workspace of integration.workspaces) {
                 const workspaceCollections = [];
+                const workspaceEnvironments = [];
 
                 // Get collections from workspace
                 const collections = await this.postmanClient.getCollectionsFromWorkspace(
                     apiKey,
                     workspace.id
                 );
+
+                // Get environments from workspace
+                const environments = await this.postmanClient.getEnvironmentsFromWorkspace(
+                    apiKey,
+                    workspace.id
+                );
+
+                // Process environments
+                for (const env of environments) {
+                    try {
+                        // Get full environment details
+                        const envDetail = await this.postmanClient.getEnvironmentDetail(
+                            apiKey,
+                            env.uid
+                        );
+
+                        if (envDetail) {
+                            // Create raw environment
+                            const rawEnvData = {
+                                orgId: integration.orgId,
+                                integrationId: integration._id,
+                                workspaceId: workspace.id,
+                                workspaceName: workspace.name,
+                                postmanEnvironmentId: envDetail.id,
+                                postmanUid: envDetail.uid,
+                                name: envDetail.name,
+                                owner: envDetail.owner,
+                                values: envDetail.values || [],
+                                isPublic: envDetail.isPublic || false,
+                                postmanCreatedAt: envDetail.createdAt ? new Date(envDetail.createdAt) : null,
+                                postmanUpdatedAt: envDetail.updatedAt ? new Date(envDetail.updatedAt) : null,
+                            };
+
+                            // Generate Postman URL
+                            rawEnvData.postmanUrl = `https://${integration.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspace.name)}~${workspace.id}/environment/${integration.postmanUserId}-${envDetail.uid}`;
+
+                            // Upsert the environment
+                            await RawEnvironment.findOneAndUpdate(
+                                {
+                                    postmanEnvironmentId: envDetail.id,
+                                    orgId: integration.orgId
+                                },
+                                rawEnvData,
+                                { upsert: true, new: true }
+                            );
+
+                            workspaceEnvironments.push({
+                                id: envDetail.id,
+                                uid: envDetail.uid,
+                                name: envDetail.name
+                            });
+                        }
+                    } catch (envError) {
+                        console.error(`Error processing environment ${env.uid}:`, envError.message);
+                        // Continue processing other environments
+                    }
+                }
 
                 totalCollections += collections.length;
 
@@ -304,7 +375,7 @@ class IntegrationService {
     }
 
     handleError(error) {
-        // console.error('Error:', error);
+        console.error('Original error:', error);
 
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(e => e.message);
