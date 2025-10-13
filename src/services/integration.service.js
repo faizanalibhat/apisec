@@ -304,7 +304,7 @@ class IntegrationService {
     }
 
     handleError(error) {
-        console.error('aaaaaaaaaaaaaaError:', error);
+        // console.error('Error:', error);
 
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(e => e.message);
