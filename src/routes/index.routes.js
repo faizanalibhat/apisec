@@ -27,7 +27,7 @@ router.use('/scan', authenticateService(), scanRoutes);
 router.use('/vulnerability', authenticateService(), vulnerabilityRoutes);
 router.use('/dashboard', authenticateService(), dashboardRoutes);
 router.use("/transformed_requests", authenticateService(), transformedRequestsRoutes);
-router.use("/raw_environments", authenticateService(), rawEnvironmentRoutes);
+router.use("/raw-environments", authenticateService(), rawEnvironmentRoutes);
 
 
 // 404 handler - catches all unmatched routes
