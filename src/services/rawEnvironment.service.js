@@ -314,6 +314,127 @@ class RawEnvironmentService {
         }
     }
 
+    // Add environment key values variable
+    async addVariable(id, orgId, variableData) {
+        try {
+            const environment = await RawEnvironment.findOne({
+                _id: id,
+                orgId,
+            });
+
+            if (!environment) {
+                throw ApiError.notFound('Raw environment not found');
+            }
+
+            // Check if variable with same key already exists
+            const existingIndex = environment.values.findIndex(v => v.key === variableData.key);
+            if (existingIndex !== -1) {
+                throw ApiError.conflict(`Variable with key '${variableData.key}' already exists`);
+            }
+
+            // Add new variable
+            environment.values.push({
+                key: variableData.key,
+                value: variableData.value || '',
+                type: variableData.type || 'default',
+                enabled: variableData.enabled !== false
+            });
+
+            // Mark as edited
+            environment.isEdited = true;
+            if (!environment.originalData) {
+                environment.originalData = { values: [...environment.values.slice(0, -1)] };
+            }
+
+            await environment.save();
+
+            // Return the newly added variable
+            return environment.values[environment.values.length - 1];
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+    // Update environment key values variable
+    async updateVariable(id, orgId, key, updateData) {
+        try {
+            const environment = await RawEnvironment.findOne({
+                _id: id,
+                orgId,
+            });
+
+            if (!environment) {
+                throw ApiError.notFound('Raw environment not found');
+            }
+
+            // Find the variable
+            const variableIndex = environment.values.findIndex(v => v.key === key);
+            if (variableIndex === -1) {
+                throw ApiError.notFound(`Variable with key '${key}' not found`);
+            }
+
+            // Store original if not already stored
+            if (!environment.originalData) {
+                environment.originalData = { values: JSON.parse(JSON.stringify(environment.values)) };
+            }
+
+            // Update the variable
+            const variable = environment.values[variableIndex];
+            if (updateData.value !== undefined) variable.value = updateData.value;
+            if (updateData.type !== undefined) variable.type = updateData.type;
+            if (updateData.enabled !== undefined) variable.enabled = updateData.enabled;
+
+            // Mark as edited
+            environment.isEdited = true;
+
+            await environment.save();
+
+            return environment.values[variableIndex];
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+    // Delete environment key values variable
+    async deleteVariable(id, orgId, key) {
+        try {
+            const environment = await RawEnvironment.findOne({
+                _id: id,
+                orgId,
+            });
+
+            if (!environment) {
+                throw ApiError.notFound('Raw environment not found');
+            }
+
+            // Find the variable
+            const variableIndex = environment.values.findIndex(v => v.key === key);
+            if (variableIndex === -1) {
+                throw ApiError.notFound(`Variable with key '${key}' not found`);
+            }
+
+            // Store original if not already stored
+            if (!environment.originalData) {
+                environment.originalData = { values: JSON.parse(JSON.stringify(environment.values)) };
+            }
+
+            // Remove the variable
+            const deletedVariable = environment.values.splice(variableIndex, 1)[0];
+
+            // Mark as edited
+            environment.isEdited = true;
+
+            await environment.save();
+
+            return {
+                deleted: true,
+                variable: deletedVariable
+            };
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     handleError(error) {
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => ({

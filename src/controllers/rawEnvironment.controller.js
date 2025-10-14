@@ -15,6 +15,9 @@ class RawEnvironmentController {
         this.search = this.search.bind(this);
         this.getByWorkspace = this.getByWorkspace.bind(this);
         this.bulkDelete = this.bulkDelete.bind(this);
+        this.addVariable = this.addVariable.bind(this);
+        this.updateVariable = this.updateVariable.bind(this);
+        this.deleteVariable = this.deleteVariable.bind(this);
     }
 
     async create(req, res, next) {
@@ -186,6 +189,60 @@ class RawEnvironmentController {
             next(error);
         }
     }
+
+    async addVariable(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { id } = req.params;
+            const { key, value, type = 'default', enabled = true } = req.body;
+
+            if (!key) {
+                return res.sendApiResponse(ApiResponse.badRequest('Variable key is required'));
+            }
+
+            const result = await this.service.addVariable(id, orgId, {
+                key,
+                value,
+                type,
+                enabled
+            });
+
+            res.sendApiResponse(ApiResponse.success('Variable added successfully', result));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateVariable(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { id, key } = req.params;
+            const { value, type, enabled } = req.body;
+
+            const result = await this.service.updateVariable(id, orgId, key, {
+                ...(value !== undefined && { value }),
+                ...(type !== undefined && { type }),
+                ...(enabled !== undefined && { enabled })
+            });
+
+            res.sendApiResponse(ApiResponse.success('Variable updated successfully', result));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async deleteVariable(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { id, key } = req.params;
+
+            const result = await this.service.deleteVariable(id, orgId, key);
+
+            res.sendApiResponse(ApiResponse.success('Variable deleted successfully', result));
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 const controller = new RawEnvironmentController();
@@ -199,4 +256,7 @@ export const {
     search,
     getByWorkspace,
     bulkDelete,
+    addVariable,
+    updateVariable,
+    deleteVariable,
 } = controller;
