@@ -164,7 +164,6 @@ async function runScan(payload, msg, channel) {
                     return;
                 }
 
-
                 // console.log(`[+] Processing request: ${transformedRequest._id}`);
 
                 // Update state
