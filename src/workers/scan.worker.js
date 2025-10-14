@@ -59,7 +59,7 @@ async function transformationHandler(payload, msg, channel) {
                 }
 
                 // Apply rule transformations
-                const transformed = await EngineService.transform({ request: processedRequest, rule });
+                const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
 
                 for (let t of transformed) {
                     bulkOps.push({
