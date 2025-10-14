@@ -3,7 +3,7 @@ import Scan from '../models/scan.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 
-const ALLOWED_SCAN_STATUSES = ["cancelled", "halt"];
+const ALLOWED_SCAN_STATUSES = ["pause", "resume", "cancelled", "halt"];
 
 class ScanController {
   constructor() {

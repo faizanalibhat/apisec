@@ -17,7 +17,7 @@ router.get('/', scanController.getScans);
 // Get specific scan with findings
 router.get('/:id', scanController.getScan);
 
-router.post("/:id/execution", scanController.updateScanExecutionState)
+router.post("/:id/execution", scanController.updateScanExecution)
 
 // Get detailed findings for a scan
 router.get('/:id/findings', scanController.getScanFindings);
