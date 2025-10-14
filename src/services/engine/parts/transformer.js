@@ -26,6 +26,7 @@ export const transform = ({ request, rule }) => {
   const original = { ...request };
 
   const baseUrl = new URL(original.url);
+  
   // Append params from the request object to the URL's search params
   if (original.params) {
     for (const [key, value] of Object.entries(original.params)) {

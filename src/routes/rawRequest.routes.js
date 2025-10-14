@@ -12,7 +12,8 @@ router
   // .get('/', validation.validateGetRawRequests, rawRequestController.getRawRequests)
   .get('/', rawRequestController.getRawRequests)
   .get('/:id', validation.validateObjectId, rawRequestController.getRawRequest)
-  .put('/:id', validation.validateObjectId, validation.validateUpdateRawRequest, rawRequestController.updateRawRequest)
+  .put('/:id', validation.validateObjectId, rawRequestController.updateRawRequest)
   .delete('/:id', validation.validateObjectId, rawRequestController.deleteRawRequest);
+
 
 export default router;

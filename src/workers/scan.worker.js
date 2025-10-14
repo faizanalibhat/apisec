@@ -67,6 +67,7 @@ async function transformationHandler(payload, msg, channel) {
                 console.log("[+] PROCESSED REQUEST : ", processedRequest);
 
 
+                
                 // Apply rule transformations
                 // const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
 
