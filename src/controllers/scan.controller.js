@@ -155,8 +155,9 @@ class ScanController {
       updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
     }
     else if (status == "resume") {
-
       updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status: 'running' }});
+
+      await mqbroker.publish("apisec", "apisec.scan.run", updated);
     }
 
     return res.json({ message: "Scan execution state updated", data: updated });

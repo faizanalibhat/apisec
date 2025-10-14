@@ -45,7 +45,7 @@ const transformedRequestSchema = new mongoose.Schema({
   // Execution state
   state: {
     type: String,
-    enum: ["pending", "running", "complete", "failed"],
+    enum: ["pending", "running", "complete", "failed", "cancelled", "halted"],
     default: "pending",
     index: true
   },
@@ -62,7 +62,7 @@ const transformedRequestSchema = new mongoose.Schema({
   execution: {
     status: {
       type: String,
-      enum: ['pending', 'success', 'failed', 'error'],
+      enum: ['pending', 'success', 'failed', 'cancelled', "halted"],
       default: 'pending'
     },
     startedAt: Date,

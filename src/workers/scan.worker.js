@@ -120,7 +120,7 @@ async function runScan(payload, msg, channel) {
         });
 
         // Get transformed requests
-        const transformed_requests = await TransformedRequest.find({ scanId: _id }).lean();
+        const transformed_requests = await TransformedRequest.find({ scanId: _id, state: "pending" }).lean();
 
         let processedCount = 0;
         let failedCount = 0;
@@ -130,6 +130,20 @@ async function runScan(payload, msg, channel) {
         // Process each transformed request
         for (let transformedRequest of transformed_requests) {
             try {
+
+                const scan = await Scan.findOne({ _id: _id });
+
+                if (scan.status == "paused") {
+                    channel.ack(msg);
+                    return;
+                }
+                else if (scan.status == "cancelled" || scan.status == "halted") {
+                    await TransformedRequest.updateMany({ scanId: _id, state: "pending" }, { $set: { state: scan.status } });
+                    channel.ack(msg);
+                    return;
+                }
+
+
                 console.log(`[+] Processing request: ${transformedRequest._id}`);
 
                 // Update state
@@ -371,6 +385,15 @@ async function runScan(payload, msg, channel) {
         channel.ack(msg);
     }
 }
+
+
+// this function is what handles scan on individual transformed requests
+async function runAndMatchRequests(payload, msg, channel) {
+    try {}
+    catch(err) {}
+    finally {}
+}
+
 
 export async function scanWorker() {
     await mqbroker.consume("apisec", "apisec.scan.create", transformationHandler, 'scanCreatedEventsQueue');
