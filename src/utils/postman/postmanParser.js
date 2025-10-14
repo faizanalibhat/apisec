@@ -137,8 +137,9 @@ class PostmanParser {
                 const urlObj = new URL(url.includes('://') ? url : `https://${url}`);
 
                 return {
-                    protocol: urlObj.protocol.replace(':', ''),
-                    host: urlObj.host || context?.variables?.base_url,
+                    // protocol: urlObj.protocol.replace(':', ''),
+                    // host: urlObj.host || context?.variables?.base_url,
+                    host: urlObj.host,
                     port: urlObj.port,
                     path: urlObj.pathname,
                     query: urlObj.search
@@ -146,7 +147,7 @@ class PostmanParser {
             } catch (e) {
                 return {
                     protocol: 'https',
-                    host: urlObj.host || context?.variables?.base_url,
+                    host: urlObj.host,
                     path: '/',
                     query: ''
                 };
@@ -317,52 +318,52 @@ class PostmanParser {
             const requests = this.parseItems(collection.item, enrichedContext);
 
             // Resolve variables in all requests
-            const resolvedRequests = requests.map(req => {
-                if (!req) return null;
+            // const resolvedRequests = requests.map(req => {
+            //     if (!req) return null;
 
-                // Resolve variables in URL
-                req.url = this.resolveVariables(req.url, allVariables);
+            //     // Resolve variables in URL
+            //     req.url = this.resolveVariables(req.url, allVariables);
 
-                // Resolve in headers (Map format)
-                if (req.headers) {
-                    const resolvedHeaders = {};
-                    Object.entries(req.headers).forEach(([key, value]) => {
-                        resolvedHeaders[key] = this.resolveVariables(value, allVariables);
-                    });
-                    req.headers = resolvedHeaders;
-                }
+            //     // Resolve in headers (Map format)
+            //     if (req.headers) {
+            //         const resolvedHeaders = {};
+            //         Object.entries(req.headers).forEach(([key, value]) => {
+            //             resolvedHeaders[key] = this.resolveVariables(value, allVariables);
+            //         });
+            //         req.headers = resolvedHeaders;
+            //     }
 
-                // Resolve in params (Map format)
-                if (req.params) {
-                    const resolvedParams = {};
-                    Object.entries(req.params).forEach(([key, value]) => {
-                        resolvedParams[key] = this.resolveVariables(value, allVariables);
-                    });
-                    req.params = resolvedParams;
-                }
+            //     // Resolve in params (Map format)
+            //     if (req.params) {
+            //         const resolvedParams = {};
+            //         Object.entries(req.params).forEach(([key, value]) => {
+            //             resolvedParams[key] = this.resolveVariables(value, allVariables);
+            //         });
+            //         req.params = resolvedParams;
+            //     }
 
-                // Update raw HTTP with resolved values
-                req.rawHttp = this.buildRawRequest(
-                    req.method,
-                    req.url,
-                    Object.entries(req.headers || {}).map(([key, value]) => ({
-                        key,
-                        value,
-                        disabled: false
-                    })),
-                    req.body ? { mode: 'raw', content: req.body } : null,
-                    Object.entries(req.params || {}).map(([key, value]) => ({
-                        key,
-                        value,
-                        disabled: false
-                    }))
-                );
+            //     // Update raw HTTP with resolved values
+            //     req.rawHttp = this.buildRawRequest(
+            //         req.method,
+            //         req.url,
+            //         Object.entries(req.headers || {}).map(([key, value]) => ({
+            //             key,
+            //             value,
+            //             disabled: false
+            //         })),
+            //         req.body ? { mode: 'raw', content: req.body } : null,
+            //         Object.entries(req.params || {}).map(([key, value]) => ({
+            //             key,
+            //             value,
+            //             disabled: false
+            //         }))
+            //     );
 
-                return req;
-            });
+            //     return req;
+            // });
 
             // Filter out any null requests
-            return resolvedRequests.filter(req => req !== null);
+            return requests.filter(req => req !== null);
         } catch (error) {
             console.error('Error parsing collection:', error);
             throw ApiError.internal(`Failed to parse Postman collection: ${error.message}`);
