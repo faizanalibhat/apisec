@@ -64,24 +64,26 @@ async function transformationHandler(payload, msg, channel) {
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
                     processedRequest = substituteVariables(reqObject, environmentVariables);
                 }
+                console.log("[+] PROCESSED REQUEST : ", processedRequest);
+
 
                 // Apply rule transformations
-                const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
+                // const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
 
-                for (let t of transformed) {
-                    bulkOps.push({
-                        insertOne: { 
-                            document: { 
-                                scanId: _id, 
-                                orgId,
-                                requestId: request._id, 
-                                ruleId: rule._id, 
-                                ...t,
-                                rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, t.params)
-                            } 
-                        }
-                    });
-                }
+                // for (let t of transformed) {
+                //     bulkOps.push({
+                //         insertOne: { 
+                //             document: { 
+                //                 scanId: _id, 
+                //                 orgId,
+                //                 requestId: request._id, 
+                //                 ruleId: rule._id, 
+                //                 ...t,
+                //                 rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, t.params)
+                //             } 
+                //         }
+                //     });
+                // }
             }
         }
 
