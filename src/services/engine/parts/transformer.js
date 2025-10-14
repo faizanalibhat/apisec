@@ -98,9 +98,6 @@ export const transform = ({ request, rule }) => {
     params.set(key, value);
   });
 
-
-  console.log("NEW BASE URL ", baseUrl.toString());
-
   // === Finalize Transformed Base Request ===
   const transformedRequest = {
     ...original,
