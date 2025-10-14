@@ -7,6 +7,11 @@ import TransformedRequest from "../models/transformedRequest.model.js";
 import { EngineService } from "../services/engine/engine.service.js";
 import Vulnerability from "../models/vulnerability.model.js";
 import { substituteVariables } from "../utils/variableSubstitution.js";
+import { PostmanParser } from "../utils/postman/postmanParser.js";
+
+
+const parser = new PostmanParser();
+
 
 async function transformationHandler(payload, msg, channel) {
     const { _id, requestIds, ruleIds, environmentId, orgId } = payload;
@@ -71,7 +76,8 @@ async function transformationHandler(payload, msg, channel) {
                                 orgId,
                                 requestId: request._id, 
                                 ruleId: rule._id, 
-                                ...t 
+                                ...t,
+                                rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, t.params)
                             } 
                         }
                     });
