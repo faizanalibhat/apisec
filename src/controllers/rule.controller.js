@@ -24,7 +24,7 @@ class RuleController {
 
             const json_parsed = yaml.load(raw_yaml);
 
-            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml };
+            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml, parsed_yaml: json_parsed };
 
             // parse yaml & store both json & yaml
 
@@ -86,7 +86,7 @@ class RuleController {
 
             const json_parsed = yaml.load(raw_yaml);
 
-            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml };
+            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml, parsed_yaml: json_parsed };
 
             const rule = await this.ruleService.updateRule(ruleId, ruleData, orgId);
 

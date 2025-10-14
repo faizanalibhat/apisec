@@ -26,63 +26,6 @@ const ruleSchema = new mongoose.Schema({
         // Only used when target is 'specific'
     }],
 
-    transform: {
-        headers: {
-            add: {
-                type: Map,
-                of: String
-            },
-            remove: [String]
-        },
-
-        overrideHost: {
-            type: String,
-            trim: true
-        },
-
-        queryParams: {
-            add: {
-                type: Map,
-                of: String
-            },
-            remove: [String]
-        },
-
-        body: {
-            add: {
-                type: Map,
-                of: mongoose.Schema.Types.Mixed
-            },
-            remove: [String]
-        },
-
-        method: {
-            type: String,
-            enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD']
-        }
-    },
-
-    match_on: {
-        status: {
-            type: Number,
-            min: 100,
-            max: 599
-        },
-
-        responseContains: {
-            type: String
-        },
-
-        responseNotContains: {
-            type: String
-        },
-
-        headers: {
-            type: Map,
-            of: String
-        }
-    },
-
     report: {
         title: {
             type: String,
@@ -127,6 +70,7 @@ const ruleSchema = new mongoose.Schema({
     }],
 
     raw_yaml: { type: String, required: true },
+    parsed_yaml: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, {
     timestamps: true
 });
