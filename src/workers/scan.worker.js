@@ -77,7 +77,7 @@ async function transformationHandler(payload, msg, channel) {
                     transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
                 }
                 catch(err) {
-                    console.log(err);
+                    console.log(err.message);
                     continue;
                 }
 
