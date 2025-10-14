@@ -339,11 +339,11 @@ class IntegrationService {
                     //     }
                     // );
 
-                    // // Save raw requests
-                    // if (rawRequests && rawRequests.length > 0) {
-                    //     await RawRequest.insertMany(rawRequests);
-                    //     totalRequests += rawRequests.length;
-                    // }
+                    // Save raw requests
+                    if (rawRequests && rawRequests.length > 0) {
+                        await RawRequest.insertMany(rawRequests);
+                        totalRequests += rawRequests.length;
+                    }
                 }
 
                 // Update workspace with collections
