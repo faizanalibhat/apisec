@@ -24,6 +24,9 @@ async function transformationHandler(payload, msg, channel) {
         const requests = await Requests.find({ _id: { $in: requestIds }}).lean();
         const rules = await Rules.find({ _id: { $in: ruleIds }}).lean();
 
+        console.log("[+] TOTAL REQUSTS : ", requests.length);
+        console.log("[+] TOTAL RULES : ", rules.length);
+
         // Fetch environment variables if environmentId is provided
         let environmentVariables = {};
         if (environmentId) {
