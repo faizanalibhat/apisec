@@ -106,7 +106,7 @@ async function transformationHandler(payload, msg, channel) {
 }
 
 async function runScan(payload, msg, channel) {
-    const { _id, orgId } = payload;
+    const { _id, orgId, name } = payload;
     try {
         console.log("[+] SCAN EXECUTION TRIGGERED : ", _id);
 
@@ -152,6 +152,7 @@ async function runScan(payload, msg, channel) {
                     // Create vulnerability data
                     const vulnerabilityData = {
                         orgId,
+                        scanName: name,
                         scanId: _id,
                         ruleId: rule._id,
                         requestId: originalRequest._id,
