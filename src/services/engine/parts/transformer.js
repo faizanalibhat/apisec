@@ -25,8 +25,13 @@ const headerObjectToArray = (headersObj) => {
 export const transform = ({ request, rule }) => {
   const original = { ...request };
 
-
   const baseUrl = new URL(original.url);
+  // Append params from the request object to the URL's search params
+  if (original.params) {
+    for (const [key, value] of Object.entries(original.params)) {
+      baseUrl.searchParams.set(key, String(value)); // Ensure value is a string
+    }
+  }
 
   // === 1. Handle Header Transformations ===
   // let headers = arrayToHeaderObject(original.headers || []);
@@ -105,6 +110,7 @@ export const transform = ({ request, rule }) => {
     headers: headerObjectToArray(headers),
     url: baseUrl.toString(),
   };
+  delete transformedRequest.params;
 
   // === 7. Repeat request with multiple methods ===
   const methodVariants = rule.transform?.repeat_with_methods || [transformedRequest.method];
