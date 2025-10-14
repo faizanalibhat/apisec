@@ -65,8 +65,6 @@ async function transformationHandler(payload, msg, channel) {
                     processedRequest = substituteVariables(reqObject, environmentVariables);
                 }
                 console.log("[+] PROCESSED REQUEST : ", processedRequest);
-
-
                 
                 // Apply rule transformations
                 // const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
