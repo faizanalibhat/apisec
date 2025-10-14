@@ -15,7 +15,7 @@ const rawRequestSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
     method: {
@@ -26,7 +26,7 @@ const rawRequestSchema = new mongoose.Schema(
     },
     url: {
       type: String,
-      required: true,
+      required: false,
     },
     headers: {
       type: Map,
