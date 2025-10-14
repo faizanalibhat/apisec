@@ -183,7 +183,7 @@ async function runScan(payload, msg, channel) {
                 // Check for matches using detailed matching
                 const matchResult = await EngineService.match({ response, rule });
 
-                // console.log(`[+] Match result:`, matchResult);
+                console.log(`[+] Match result:`, matchResult);
 
                 if (matchResult.matched) {
                     // Create vulnerability data
