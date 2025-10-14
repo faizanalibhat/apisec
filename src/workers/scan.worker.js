@@ -36,10 +36,12 @@ async function transformationHandler(payload, msg, channel) {
             if (environment) {
                 // Convert environment values to key-value pairs
                 environment.values
-                    .filter(v => v.enabled && v.key)
+                    // .filter(v => v.enabled && v.key)
+                    .filter(v => v.key)
                     .forEach(v => {
                         environmentVariables[v.key] = v.value;
                     });
+
                 console.log(`[+] Loaded ${Object.keys(environmentVariables).length} environment variables`);
             }
         }
