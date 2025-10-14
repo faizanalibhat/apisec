@@ -27,6 +27,8 @@ async function transformationHandler(payload, msg, channel) {
         console.log("[+] TOTAL REQUSTS : ", requests.length);
         console.log("[+] TOTAL RULES : ", rules.length);
 
+        console.log("[+] RULE: ", JSON.stringify(rules));
+
         // Fetch environment variables if environmentId is provided
         let environmentVariables = {};
         if (environmentId) {
@@ -57,7 +59,7 @@ async function transformationHandler(payload, msg, channel) {
                 }
 
                 // Apply rule transformations
-                const transformed = await EngineService.transform({ request: processedRequest, rule });
+                const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
 
                 for (let t of transformed) {
                     bulkOps.push({
@@ -144,7 +146,7 @@ async function runScan(payload, msg, channel) {
                 }
 
 
-                console.log(`[+] Processing request: ${transformedRequest._id}`);
+                // console.log(`[+] Processing request: ${transformedRequest._id}`);
 
                 // Update state
                 await TransformedRequest.updateOne(
@@ -163,7 +165,7 @@ async function runScan(payload, msg, channel) {
                 // Check for matches using detailed matching
                 const matchResult = await EngineService.match({ response, rule });
 
-                console.log(`[+] Match result:`, matchResult);
+                // console.log(`[+] Match result:`, matchResult);
 
                 if (matchResult.matched) {
                     // Create vulnerability data

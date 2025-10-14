@@ -71,6 +71,7 @@ export const transform = ({ request, rule }) => {
 
   // === 3. Override Host ===
   if (rule.transform?.override_host) {
+    console.log("[+] OVERRIDEING HOST FROM ", baseUrl.host, " TO ", rule.transform?.override_host);
     baseUrl.host = rule.transform.override_host;
   }
 
