@@ -1,4 +1,5 @@
 import RawRequestService from '../services/rawRequest.service.js';
+import RawRequest from '../models/rawRequest.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -90,7 +91,7 @@ class RawRequestController {
       const supported_filters = {};
 
       supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-      supported_filters.workspace = [];
+      supported_filters.workspace = await RawRequest.distinct("workspaceName", { orgId });
       supported_filters.hasVulns = ['true', 'false', 'critical', 'high', 'medium', 'low'];
 
       const response = ApiResponse.paginated(
