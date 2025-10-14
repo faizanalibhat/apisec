@@ -1,6 +1,7 @@
 import { ScanService } from '../services/scan.service.js';
 import Scan from '../models/scan.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
+import { mqbroker } from '../services/rabbitmq.service.js';
 import { ApiError } from '../utils/ApiError.js';
 
 const ALLOWED_SCAN_STATUSES = ["paused", "resume", "cancelled", "halted"];
