@@ -1,6 +1,9 @@
 import { ScanService } from '../services/scan.service.js';
+import Scan from '../models/scan.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
+
+const ALLOWED_SCAN_STATUSES = ["cancelled", "halt"];
 
 class ScanController {
   constructor() {
@@ -13,6 +16,7 @@ class ScanController {
     this.getScanFindings = this.getScanFindings.bind(this);
     this.searchScans = this.searchScans.bind(this);
     this.deleteScan = this.deleteScan.bind(this);
+    this.updateScanExecution = this.updateScanExecution.bind(this);
   }
 
   async createScan(req, res, next) {
@@ -118,41 +122,6 @@ class ScanController {
     }
   }
 
-  async searchScans(req, res, next) {
-    try {
-      const { orgId } = req.authenticatedService;
-      const { search, page = 1, limit = 10 } = req.query;
-      
-      if (!search) {
-        throw ApiError.badRequest('Search query is required');
-      }
-      
-      const options = {
-        search,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        orgId 
-      };
-      
-      const result = await this.scanService.searchScans(options);
-      
-      res.sendApiResponse(
-        ApiResponse.paginated(
-          'Search results retrieved successfully',
-          result.data,
-          {
-            page: result.page,
-            limit: result.limit,
-            total: result.total,
-            pages: result.pages
-          }
-        )
-      );
-    } catch (error) {
-      next(error);
-    }
-  }
-
   async deleteScan(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
@@ -167,6 +136,19 @@ class ScanController {
       next(error);
     }
   }
+
+  async updateScanExecution(req, res, next) {
+    const { orgId } = req.authenticatedService;
+    const scanId = req.params.id;
+
+    const { status } = req.body;
+
+    if (!ALLOWED_SCAN_STATUSES.includes(status)) return res.status(400).json({ message: "Invalid state provided", allowed: ALLOWED_SCAN_STATUSES });
+
+    const updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
+
+    return res.json({ message: "Scan execution state updated", data: updated });
+  }
 }
 
 const scanController = new ScanController();
@@ -175,7 +157,7 @@ export const {
   createScan,
   getScans,
   getScan,
+  updateScanExecution,
   getScanFindings,
-  searchScans,
   deleteScan
 } = scanController;

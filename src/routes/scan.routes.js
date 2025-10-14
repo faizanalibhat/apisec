@@ -8,9 +8,6 @@ import * as scanController from '../controllers/scan.controller.js';
 
 const router = express.Router();
 
-// Search must come before :id routes
-router.get('/search', scanController.searchScans);
-
 // Create a new scan
 router.post('/', scanController.createScan);
 
@@ -19,6 +16,8 @@ router.get('/', scanController.getScans);
 
 // Get specific scan with findings
 router.get('/:id', scanController.getScan);
+
+router.post("/:id/execution", scanController.updateScanExecutionState)
 
 // Get detailed findings for a scan
 router.get('/:id/findings', scanController.getScanFindings);

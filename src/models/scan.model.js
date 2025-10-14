@@ -54,7 +54,7 @@ const scanSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['preparing', 'pending', 'running', 'completed', 'failed', 'cancelled'],
+    enum: ['preparing', 'pending', 'running', 'completed', 'failed', 'cancelled', 'halted'],
     default: 'preparing',
     index: true
   },
