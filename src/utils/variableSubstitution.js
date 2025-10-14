@@ -11,7 +11,7 @@
 function substituteValue(value, variables) {
     if (typeof value === 'string') {
         // Replace all {{variable}} patterns
-        return value.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
+        return value.replace(/\{\{([\w.-]+)\}\}/g, (match, varName) => {
             // If variable exists, use its value, otherwise keep the placeholder
             return variables.hasOwnProperty(varName) ? variables[varName] : match;
         });
@@ -105,7 +105,7 @@ export function substituteVariables(request, variables) {
  */
 export function extractVariables(request) {
     const variables = new Set();
-    const pattern = /\{\{(\w+)\}\}/g;
+    const pattern = /\{\{([\w.-]+)\}\}/g;
 
     function extract(value) {
         if (typeof value === 'string') {
