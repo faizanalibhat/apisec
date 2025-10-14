@@ -157,12 +157,10 @@ async function runScan(payload, msg, channel) {
                 const scan = await Scan.findOne({ _id: _id });
 
                 if (scan.status == "paused") {
-                    channel.ack(msg);
                     return;
                 }
                 else if (scan.status == "cancelled" || scan.status == "halted") {
                     await TransformedRequest.updateMany({ scanId: _id, state: "pending" }, { $set: { state: scan.status } });
-                    channel.ack(msg);
                     return;
                 }
 
