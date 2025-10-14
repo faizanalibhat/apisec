@@ -161,9 +161,12 @@ async function runScan(payload, msg, channel) {
                         title: rule.report.title || `${rule.report.vulnerabilityType} in ${originalRequest.name}`,
                         type: rule.report.vulnerabilityType,
                         severity: rule.report.severity,
+                        cvssScore: rule.report.cvssScore,
                         description: rule.report.description,
                         impact: rule.report.impact,
-                        remediation: rule.report.remediation,
+                        stepsToReproduce: rule.report.stepsToReproduce,
+                        mitigation: rule.report.mitigation,
+                        tags: rule.report.tags?.split?.(",") || [],
                         
                         // Technical details
                         cwe: rule.report.cwe,
