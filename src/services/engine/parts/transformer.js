@@ -79,6 +79,11 @@ export const transform = ({ request, rule }) => {
     baseUrl.protocol = rule.transform.override_protocol;
   }
 
+
+  if (rule.transform?.override_port) {
+    baseUrl.port = rule.transform.override_port;
+  }
+
   // === 4. Replace specific param value ===
   const params = baseUrl.searchParams;
 
