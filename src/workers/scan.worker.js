@@ -53,6 +53,8 @@ async function transformationHandler(payload, msg, channel) {
 
         const bulkOps = [];
 
+        console.log("[+] ENVIRONMENT VARIABLES: ", environmentVariables);
+
         // Generate transformed requests (cartesian product)
         for (let rule of rules) {
             for (let request of requests) {
@@ -61,28 +63,38 @@ async function transformationHandler(payload, msg, channel) {
 
                 // Apply environment variable substitution if environment is provided
                 let processedRequest = reqObject;
+
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
+
                     processedRequest = substituteVariables(reqObject, environmentVariables);
                 }
-                console.log("[+] PROCESSED REQUEST : ", processedRequest);
+
+                // console.log("[+] PROCESSED REQUEST : ", processedRequest);
                 
                 // Apply rule transformations
-                // const transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
+                let transformed;
+                try {
+                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
+                }
+                catch(err) {
+                    console.log(err);
+                    continue;
+                }
 
-                // for (let t of transformed) {
-                //     bulkOps.push({
-                //         insertOne: { 
-                //             document: { 
-                //                 scanId: _id, 
-                //                 orgId,
-                //                 requestId: request._id, 
-                //                 ruleId: rule._id, 
-                //                 ...t,
-                //                 rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, t.params)
-                //             } 
-                //         }
-                //     });
-                // }
+                for (let t of transformed) {
+                    bulkOps.push({
+                        insertOne: { 
+                            document: { 
+                                scanId: _id, 
+                                orgId,
+                                requestId: request._id, 
+                                ruleId: rule._id, 
+                                ...t,
+                                rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, t.params)
+                            } 
+                        }
+                    });
+                }
             }
         }
 
