@@ -25,8 +25,10 @@ const headerObjectToArray = (headersObj) => {
 export const transform = ({ request, rule }) => {
   const original = { ...request };
 
+  let baseUrl;
 
-  const baseUrl = new URL(original.url);
+  baseUrl = new URL(original.url);
+
 
   // === 1. Handle Header Transformations ===
   // let headers = arrayToHeaderObject(original.headers || []);

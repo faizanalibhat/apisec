@@ -52,7 +52,8 @@ class RawRequestController {
       };
 
       // Parse sort parameter
-      let sortOptions = { createdAt: -1 }; // Default sort
+      let sortOptions = { createdAt: -1 };
+
       if (sort) {
         const [field, order] = sort.split(':');
         const allowedSortFields = ['createdAt', 'method', 'collectionName'];
@@ -85,6 +86,12 @@ class RawRequestController {
           paginationOptions
         );
       }
+
+      const supported_filters = {};
+
+      supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+      supported_filters.workspace = [];
+      supported_filters.hasVulns = ['true', 'false', 'critical', 'high', 'medium', 'low'];
 
       const response = ApiResponse.paginated(
         search ? 'Search results retrieved successfully' : 'Raw requests retrieved successfully',
