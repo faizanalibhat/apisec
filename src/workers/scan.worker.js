@@ -181,7 +181,7 @@ async function runScan(payload, msg, channel) {
                 const response = await EngineService.sendRequest({ request: transformedRequest });
 
                 // Check for matches using detailed matching
-                const matchResult = await EngineService.match({ response, rule });
+                const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
                 console.log(`[+] Match result:`, matchResult);
 
