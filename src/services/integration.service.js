@@ -326,24 +326,24 @@ class IntegrationService {
                         postmanUrl: postmanUrl
                     });
 
-                    // // Parse collection into raw requests
-                    // const rawRequests = await this.postmanParser.parseCollection(
-                    //     collectionDetail,
-                    //     {
-                    //         orgId: integration.orgId,
-                    //         integrationId: integration._id,
-                    //         workspaceName: workspace.name,
-                    //         collectionName: collection.name,
-                    //         collectionId: collection.uid,
-                    //         envs: environment
-                    //     }
-                    // );
+                    // Parse collection into raw requests
+                    const rawRequests = await this.postmanParser.parseCollection(
+                        collectionDetail,
+                        {
+                            orgId: integration.orgId,
+                            integrationId: integration._id,
+                            workspaceName: workspace.name,
+                            collectionName: collection.name,
+                            collectionId: collection.uid,
+                            envs: environment
+                        }
+                    );
 
-                    // // Save raw requests
-                    // if (rawRequests && rawRequests.length > 0) {
-                    //     await RawRequest.insertMany(rawRequests);
-                    //     totalRequests += rawRequests.length;
-                    // }
+                    // Save raw requests
+                    if (rawRequests && rawRequests.length > 0) {
+                        await RawRequest.insertMany(rawRequests);
+                        totalRequests += rawRequests.length;
+                    }
                 }
 
                 // Update workspace with collections
