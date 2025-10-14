@@ -3,7 +3,7 @@ import Scan from '../models/scan.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 
-const ALLOWED_SCAN_STATUSES = ["pause", "resume", "cancelled", "halt"];
+const ALLOWED_SCAN_STATUSES = ["paused", "resume", "cancelled", "halted"];
 
 class ScanController {
   constructor() {
@@ -14,7 +14,6 @@ class ScanController {
     this.getScans = this.getScans.bind(this);
     this.getScan = this.getScan.bind(this);
     this.getScanFindings = this.getScanFindings.bind(this);
-    this.searchScans = this.searchScans.bind(this);
     this.deleteScan = this.deleteScan.bind(this);
     this.updateScanExecution = this.updateScanExecution.bind(this);
   }
@@ -144,6 +143,14 @@ class ScanController {
     const { status } = req.body;
 
     if (!ALLOWED_SCAN_STATUSES.includes(status)) return res.status(400).json({ message: "Invalid state provided", allowed: ALLOWED_SCAN_STATUSES });
+
+
+    // handle different statuses
+    if (status == "cancelled" || status == "halted") {
+
+    }
+
+
 
     const updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
 
