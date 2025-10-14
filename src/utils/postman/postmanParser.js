@@ -22,7 +22,7 @@ class PostmanParser {
     extractHeaders(headers = []) {
         return headers.map(h => ({
             key: h.key || '',
-            value: h.key?.toLowerCase() === 'authorization' ? '{{token}}' : (h.value || ''),
+            value: h.value || '',
             type: h.type || 'text',
             disabled: h.disabled || false
         }));
@@ -208,15 +208,12 @@ class PostmanParser {
             const request = item.request;
             if (!request) return null;
 
-            const urlData = this.parseUrl(request.url, context);
-            if (!urlData) return null;
-
             const headers = this.extractHeaders(request.header);
             const body = this.extractBody(request.body);
             const queryParams = this.extractQueryParams(request.url?.query);
 
             // Build the full URL
-            const fullUrl = `${urlData.protocol}://${urlData.host}${urlData.port ? ':' + urlData.port : ''}${urlData.path}${urlData.query}`;
+            const fullUrl = (request.url && request.url.raw) ? request.url.raw : '';
 
             // Build raw request
             const rawRequest = this.buildRawRequest(
