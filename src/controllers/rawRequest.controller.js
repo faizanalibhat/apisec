@@ -94,19 +94,25 @@ class RawRequestController {
       supported_filters.workspace = await RawRequest.distinct("workspaceName", { orgId });
       supported_filters.hasVulns = ['true', 'false', 'critical', 'high', 'medium', 'low'];
 
-      const response = ApiResponse.paginated(
-        search ? 'Search results retrieved successfully' : 'Raw requests retrieved successfully',
-        result.data,
-        {
+      // const response = ApiResponse.paginated(
+      //   search ? 'Search results retrieved successfully' : 'Raw requests retrieved successfully',
+      //   result.data,
+      //   result.filters
+      // );
+
+      // res.sendApiResponse(response);
+
+      return res.json({ 
+        data: result.data,
+        message: "retrieved successfully",
+        meta: {
           currentPage: result.currentPage,
           totalPages: result.totalPages,
           totalItems: result.totalItems,
           itemsPerPage: result.itemsPerPage,
         },
-        result.filters
-      );
-
-      res.sendApiResponse(response);
+        filters: supported_filters
+      });
     } catch (error) {
       next(error);
     }
