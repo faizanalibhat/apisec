@@ -71,6 +71,7 @@ export const transform = ({ request, rule }) => {
 
   // === 3. Override Host ===
   if (rule.transform?.override_host) {
+    console.log("[+] OVERRIDEING HOST FROM ", baseUrl.host, " TO ", rule.transform?.override_host);
     baseUrl.host = rule.transform.override_host;
   }
 
@@ -96,6 +97,9 @@ export const transform = ({ request, rule }) => {
   Object.entries(rule.transform?.add_query_params || {}).forEach(([key, value]) => {
     params.set(key, value);
   });
+
+
+  console.log("NEW BASE URL ", baseUrl.toString());
 
   // === Finalize Transformed Base Request ===
   const transformedRequest = {
