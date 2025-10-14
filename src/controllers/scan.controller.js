@@ -144,15 +144,20 @@ class ScanController {
 
     if (!ALLOWED_SCAN_STATUSES.includes(status)) return res.status(400).json({ message: "Invalid state provided", allowed: ALLOWED_SCAN_STATUSES });
 
+    let updated;
 
     // handle different statuses
     if (status == "cancelled" || status == "halted") {
-
+      updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
     }
+    else if (status == "paused") {
 
+      updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
+    }
+    else if (status == "resume") {
 
-
-    const updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
+      updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status: 'running' }});
+    }
 
     return res.json({ message: "Scan execution state updated", data: updated });
   }
