@@ -333,11 +333,17 @@ class IntegrationService {
                     });
 
                     collectionsToCreate.push({
-                        orgId: integration.orgId,
-                        name: collection.name,
-                        collectionUid: collection.uid,
-                        postmanUrl: postmanUrl,
-                        workspaceId: workspace.id
+                        filter: { orgId: integration.orgId, collectionUid: collection.uid },
+                        update: {
+                            $setOnInsert: {
+                                orgId: integration.orgId,
+                                name: collection.name,
+                                collectionUid: collection.uid,
+                                postmanUrl: postmanUrl,
+                                workspaceId: workspace.id
+                            }
+                        },
+                        upsert: true
                     });
 
                     // Parse collection into raw requests
@@ -384,7 +390,7 @@ class IntegrationService {
             await integration.save();
 
             // save all the collections as well.
-            await PostmanCollections.insertMany(collectionsToCreate);
+            await PostmanCollections.bulkWrite(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
             integration.metadata.status = 'failed';
