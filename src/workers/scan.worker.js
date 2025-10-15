@@ -393,8 +393,9 @@ async function runAndMatchRequests(payload, msg, channel) {
 // sync requests from integration.
 async function syncIntegration(payload, msg, channel) {
     const { integration, apiKey, environment } = payload; 
+    console.log("[+] SYNCING INTEGRATION : ", integration);
+
     try {
-        console.log("[+] SYNCING INTEGRATION : ", integration);
         await integrationService.syncIntegration(integration, apiKey, environment);
     }
     catch(err) {
