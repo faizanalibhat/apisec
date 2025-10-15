@@ -234,7 +234,8 @@ class IntegrationService {
     async syncIntegration(integration, apiKey, environment = {}) {
         try {
             // Update status to syncing
-            await integration.updateSyncStatus('syncing');
+            await Integration.updateOne({ _id: integration._id }, { $set: { status: 'syncing' } });
+            // await integration.updateSyncStatus('syncing');
 
             let totalRequests = 0;
             let totalCollections = 0;
@@ -390,14 +391,14 @@ class IntegrationService {
 
             integration.metadata.status = 'completed';
 
-            await Integration.updateOne({ _id: id }, { $set: integration } );
+            await Integration.updateOne({ _id: integration._id }, { $set: integration } );
 
             // save all the collections as well.
             await PostmanCollections.bulkWrite(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
             integration.metadata.status = 'failed';
-            await Integration.updateOne({ _id: id }, { $set: integration } );
+            await Integration.updateOne({ _id: integration._id }, { $set: integration } );
             throw error;
         }
     }

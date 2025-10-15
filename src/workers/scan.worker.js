@@ -426,7 +426,7 @@ async function syncIntegration(payload, msg, channel) {
         await integrationService.syncIntegration(integration, apiKey, environment);
     }
     catch(err) {
-        console.log(err.message);
+        console.log(err);
     }
     finally {
         channel.ack(msg);
