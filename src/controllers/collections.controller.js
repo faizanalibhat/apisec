@@ -12,11 +12,10 @@ export class CollectionsController {
 
         const skip = ((page - 1) * limit)
 
-        const filters = {
-            $and: [],
-        };
+        const filters = {};
 
         if (search) {
+            filters.$and = [];
             filters.$and.push({
                 $or: [
                     { name: { $regex: search, $options: 'i' } }
