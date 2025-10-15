@@ -337,17 +337,19 @@ class IntegrationService {
                     });
 
                     collectionsToCreate.push({
-                        filter: { orgId: integration.orgId, collectionUid: collection.uid },
-                        update: {
-                            $setOnInsert: {
-                                orgId: integration.orgId,
-                                name: collection.name,
-                                collectionUid: collection.uid,
-                                postmanUrl: postmanUrl,
-                                workspaceId: workspace.id
-                            }
-                        },
-                        upsert: true
+                        updateOne: {
+                            filter: { orgId: integration.orgId, collectionUid: collection.uid },
+                            update: {
+                                $setOnInsert: {
+                                    orgId: integration.orgId,
+                                    name: collection.name,
+                                    collectionUid: collection.uid,
+                                    postmanUrl: postmanUrl,
+                                    workspaceId: workspace.id
+                                }
+                            },
+                            upsert: true
+                        }
                     });
 
                     // Parse collection into raw requests
