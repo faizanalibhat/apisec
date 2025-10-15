@@ -9,6 +9,7 @@ import Vulnerability from "../models/vulnerability.model.js";
 import { substituteVariables } from "../utils/variableSubstitution.js";
 import { PostmanParser } from "../utils/postman/postmanParser.js";
 import { IntegrationService } from "../services/integration.service.js";
+import "../db/mongoose.js";
 
 
 const parser = new PostmanParser();
