@@ -50,12 +50,12 @@ class IntegrationService {
                 }))
             });
 
-            // Return integration without sensitive data
-            const integrationData = integration.toObject();
-
             // Start the sync process
             // await this.syncIntegration(integration, apiKey, environment);
-            await mqbroker.publish("apisec", "apisec.integration.sync", { integration: integrationData, apiKey, environment });
+            await mqbroker.publish("apisec", "apisec.integration.sync", { integration, apiKey, environment });
+
+            // Return integration without sensitive data
+            const integrationData = integration.toObject();
 
             delete integrationData.apiKey;
 
