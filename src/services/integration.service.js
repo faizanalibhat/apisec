@@ -240,12 +240,12 @@ class IntegrationService {
             let totalRequests = 0;
             let totalCollections = 0;
             const workspaceUpdates = [];
+            // used to store collections objects that will be put in mongodb
+            const collectionsToCreate = [];
 
             // For each workspace
             for (const workspace of integration.workspaces) {
                 const workspaceCollections = [];
-                // used to store collections objects that will be put in mongodb
-                const collectionsToCreate = [];
                 const workspaceEnvironments = [];
 
                 // Get collections from workspace
