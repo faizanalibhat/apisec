@@ -255,18 +255,18 @@ async function runAndMatchRequests(payload, msg, channel) {
                 
                 // Basic info from rule report
                 title: rule.report.title || `${rule.report.vulnerabilityType} in ${originalRequest.name}`,
-                type: rule.report.vulnerabilityType,
-                severity: rule.report.severity,
-                cvssScore: rule.report.cvssScore,
-                description: rule.report.description,
-                impact: rule.report.impact,
-                stepsToReproduce: rule.report.stepsToReproduce,
-                mitigation: rule.report.mitigation,
-                tags: rule.report.tags?.split?.(",") || [],
+                type: rule.parsed_yaml.report.vulnerabilityType,
+                severity: rule.parsed_yaml.report.severity,
+                cvssScore: rule.parsed_yaml.report.cvssScore,
+                description: rule.parsed_yaml.report.description,
+                impact: rule.parsed_yaml.report.impact,
+                stepsToReproduce: rule.parsed_yaml.report.stepsToReproduce,
+                mitigation: rule.parsed_yaml.report.mitigation,
+                tags: rule.parsed_yaml.report.tags?.split?.(",") || [],
                 
                 // Technical details
-                cwe: rule.report.cwe,
-                owasp: rule.report.owasp,
+                cwe: rule.parsed_yaml.report.cwe,
+                owasp: rule.parsed_yaml.report.owasp,
                 
                 // Request/Rule context
                 requestDetails: {
