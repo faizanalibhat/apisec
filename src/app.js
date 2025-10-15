@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import morgan from "morgan";
 import env from './env.js';
 import apiV1Routes from './routes/index.routes.js';
 import { apiResponseMiddleware } from './middleware/apiResponse.middleware.js';
@@ -15,6 +16,8 @@ const port = env.APISEC_PORT || 80;
 
 // Security middleware
 app.use(helmet());
+
+app.use(morgan('tiny'));
 
 // CORS configuration
 app.use(cors());
