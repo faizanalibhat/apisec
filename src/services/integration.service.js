@@ -200,7 +200,9 @@ class IntegrationService {
             await integration.save();
 
             // Sync again
-            await this.syncIntegration(integration, apiKey);
+            // await this.syncIntegration(integration, apiKey);
+            // await this.syncIntegration(integration, apiKey, environment);
+            await mqbroker.publish("apisec", "apisec.integration.sync", { integration, apiKey, environment });
 
             // Return updated integration without sensitive data
             const updatedIntegration = await Integration.findById(id).select('-apiKey').lean();
