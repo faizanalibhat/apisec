@@ -90,7 +90,7 @@ async function transformationHandler(payload, msg, channel) {
                                 requestId: request._id, 
                                 ruleId: rule._id, 
                                 ...t,
-                                rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, t.params)
+                                rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, [])
                             } 
                         }
                     });
