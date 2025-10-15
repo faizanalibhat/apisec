@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import env from './env.js';
 import apiV1Routes from './routes/index.routes.js';
 import { apiResponseMiddleware } from './middleware/apiResponse.middleware.js';
-import { scanWorker } from './workers/scan.worker.js';
+import './crons/scan-progress.cron.js';
 
 // Database connection
 import './db/mongoose.js';
@@ -30,9 +30,6 @@ app.use(express.text({ type: ['application/x-yaml', 'text/yaml'] }))
 app.use(apiResponseMiddleware);
 
 app.use('/apisec/api/v1', apiV1Routes);
-
-
-scanWorker();
 
 // Start server
 app.listen(port, () => {

@@ -150,224 +150,19 @@ async function runScan(payload, msg, channel) {
         // Get transformed requests
         const transformed_requests = await TransformedRequest.find({ scanId: _id, state: "pending" }).lean();
 
-        let processedCount = 0;
-        let failedCount = 0;
-        const vulnerabilities = [];
-        const scanFindings = [];
-
         // Process each transformed request
         for (let transformedRequest of transformed_requests) {
-            try {
-
-                const scan = await Scan.findOne({ _id: _id });
-
-                if (scan.status == "paused") {
-                    return;
-                }
-                else if (scan.status == "cancelled" || scan.status == "halted") {
-                    await TransformedRequest.updateMany({ scanId: _id, state: "pending" }, { $set: { state: scan.status } });
-                    return;
-                }
-
-                // console.log(`[+] Processing request: ${transformedRequest._id}`);
-
-                // Update state
-                await TransformedRequest.updateOne(
-                    { _id: transformedRequest._id }, 
-                    { $set: { state: "running" } }
-                );
-
-                // Get the associated rule for matching
-                const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
-                const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
-
-                // Send the request
-                console.log(`[+] Sending request to: ${transformedRequest.url}`);
-                const response = await EngineService.sendRequest({ request: transformedRequest });
-
-                // Check for matches using detailed matching
-                const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
-
-                console.log(`[+] Match result:`, matchResult);
-
-                if (matchResult.matched) {
-                    // Create vulnerability data
-                    const vulnerabilityData = {
-                        orgId,
-                        scanName: name,
-                        scanId: _id,
-                        ruleId: rule._id,
-                        requestId: originalRequest._id,
-                        transformedRequestId: transformedRequest._id,
-                        
-                        // Basic info from rule report
-                        title: rule.report.title || `${rule.report.vulnerabilityType} in ${originalRequest.name}`,
-                        type: rule.report.vulnerabilityType,
-                        severity: rule.report.severity,
-                        cvssScore: rule.report.cvssScore,
-                        description: rule.report.description,
-                        impact: rule.report.impact,
-                        stepsToReproduce: rule.report.stepsToReproduce,
-                        mitigation: rule.report.mitigation,
-                        tags: rule.report.tags?.split?.(",") || [],
-                        
-                        // Technical details
-                        cwe: rule.report.cwe,
-                        owasp: rule.report.owasp,
-                        
-                        // Request/Rule context
-                        requestDetails: {
-                            name: originalRequest.name,
-                            method: originalRequest.method,
-                            url: originalRequest.url,
-                            collectionName: originalRequest.collectionName,
-                            folderName: originalRequest.folderName
-                        },
-                        ruleDetails: {
-                            name: rule.rule_name,
-                            category: rule.category
-                        },
-                        
-                        // Evidence
-                        evidence: {
-                            request: {
-                                method: transformedRequest.method,
-                                url: transformedRequest.url,
-                                headers: transformedRequest.headers,
-                                body: transformedRequest.body,
-                                transformations: transformedRequest.appliedTransformations || []
-                            },
-                            response: {
-                                status: response.status,
-                                statusText: response.statusText || '',
-                                headers: response.headers || {},
-                                body: response.body,
-                                size: response.size || 0,
-                                responseTime: response.time || 0
-                            },
-                            // matchedCriteria: matchResult.matchedCriteria
-                        }
-                    };
-
-                    vulnerabilities.push(vulnerabilityData);
-
-                    // Also prepare finding for scan document
-                    scanFindings.push({
-                        ruleId: rule._id,
-                        ruleName: rule.rule_name,
-                        requestId: originalRequest._id,
-                        requestName: originalRequest.name,
-                        requestUrl: originalRequest.url,
-                        method: originalRequest.method,
-                        vulnerability: {
-                            type: rule.report.vulnerabilityType,
-                            severity: rule.report.severity,
-                            description: rule.report.description,
-                            evidence: {
-                                request: vulnerabilityData.evidence.request,
-                                response: vulnerabilityData.evidence.response,
-                                matchedCriteria: matchResult.matchedCriteria.description
-                            }
-                        },
-                        detectedAt: new Date()
-                    });
-
-                    // Send report if configured
-                    if (rule.report.sendReport) {
-                        try {
-                            await EngineService.sendReport({ 
-                                report: {
-                                    ...rule.report,
-                                    scanId: _id,
-                                    detectedAt: new Date(),
-                                    evidence: vulnerabilityData.evidence
-                                }
-                            });
-                        } catch (reportError) {
-                            console.error("[!] Failed to send report:", reportError);
-                        }
-                    }
-                }
-
-                // Update transformed request state
-                await TransformedRequest.updateOne(
-                    { _id: transformedRequest._id }, 
-                    { 
-                        $set: { 
-                            state: "complete",
-                            executionResult: {
-                                matched: matchResult.matched,
-                                executedAt: new Date(),
-                                responseStatus: response.status,
-                                responseTime: response.time
-                            }
-                        } 
-                    }
-                );
-
-                processedCount++;
-
-            } catch (requestError) {
-                console.error(`[!] Error processing request ${transformedRequest._id}:`, requestError);
-                
-                await TransformedRequest.updateOne(
-                    { _id: transformedRequest._id }, 
-                    { 
-                        $set: { 
-                            state: "failed",
-                            error: {
-                                message: requestError.message,
-                                occurredAt: new Date()
-                            }
-                        } 
-                    }
-                );
-                
-                failedCount++;
-            }
-
+            await mqbroker.publish("apisec", "apisec.scan.execute.single", { scan: payload, request: transformedRequest })
             // Update scan progress periodically
-            if (processedCount % 10 === 0) {
-                await Scan.updateOne({ _id: _id }, {
-                    $set: {
-                        'stats.processedRequests': processedCount,
-                        'stats.failedRequests': failedCount
-                    }
-                });
-            }
+            // if (processedCount % 10 === 0) {
+            //     await Scan.updateOne({ _id: _id }, {
+            //         $set: {
+            //             'stats.processedRequests': processedCount,
+            //             'stats.failedRequests': failedCount
+            //         }
+            //     });
+            // }
         }
-
-        // Bulk create vulnerabilities
-        if (vulnerabilities.length > 0) {
-            try {
-                await Vulnerability.create(vulnerabilities, { ordered: false, strict: false });
-                console.log(`[+] Created ${vulnerabilities.length} vulnerability records`);
-            } catch (vulnError) {
-                console.error("[!] Error creating vulnerabilities:", vulnError);
-                // Continue even if some vulnerabilities fail to save
-            }
-        }
-
-        // Calculate vulnerability summary
-        const vulnerabilitySummary = vulnerabilities.reduce((summary, vuln) => {
-            summary[vuln.severity] = (summary[vuln.severity] || 0) + 1;
-            return summary;
-        }, { critical: 0, high: 0, medium: 0, low: 0 });
-
-        // Final scan update
-        await Scan.updateOne({ _id: _id }, {
-            $set: {
-                status: "completed",
-                completedAt: new Date(),
-                'stats.processedRequests': processedCount,
-                'stats.failedRequests': failedCount,
-                'stats.vulnerabilitiesFound': vulnerabilities.length,
-                vulnerabilitySummary,
-                findings: scanFindings
-            }
-        });
-
-        console.log(`[+] Scan ${_id} completed. Processed: ${processedCount}, Failed: ${failedCount}, Vulnerabilities: ${vulnerabilities.length}`);
 
     } catch(err) {
         console.error("[!] ERROR WHILE RUNNING SCAN:", err);
@@ -399,13 +194,13 @@ async function runScan(payload, msg, channel) {
     }
     finally {
         // Calculate and update execution time
-        const scan = await Scan.findById(_id);
-        if (scan && scan.startedAt) {
-            const executionTime = new Date() - scan.startedAt;
-            await Scan.updateOne({ _id: _id }, {
-                $set: { executionTime }
-            });
-        }
+        // const scan = await Scan.findById(_id);
+        // if (scan && scan.startedAt) {
+        //     const executionTime = new Date() - scan.startedAt;
+        //     await Scan.updateOne({ _id: _id }, {
+        //         $set: { executionTime }
+        //     });
+        // }
         
         channel.ack(msg);
     }
@@ -414,9 +209,184 @@ async function runScan(payload, msg, channel) {
 
 // this function is what handles scan on individual transformed requests
 async function runAndMatchRequests(payload, msg, channel) {
-    try {}
-    catch(err) {}
-    finally {}
+    const { scan: scanObj, request } = payload;
+
+    const { _id, orgId } = scanObj;
+    const transformedRequest = request;
+
+    try {
+
+        const scan = await Scan.findOne({ _id: _id });
+
+        if (["paused", "halted", "cancelled"].includes(scan.status)) {
+            return;
+        }
+
+        // Update state
+        await TransformedRequest.updateOne(
+            { _id: transformedRequest._id }, 
+            { $set: { state: "running" } }
+        );
+
+        // Get the associated rule for matching
+        const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
+        const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
+
+        // Send the request
+        console.log(`[+] Sending request to: ${transformedRequest.url}`);
+        const response = await EngineService.sendRequest({ request: transformedRequest });
+
+        // Check for matches using detailed matching
+        const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
+
+        console.log(`[+] Match result:`, matchResult);
+
+        if (matchResult.matched) {
+            // Create vulnerability data
+            const vulnerabilityData = {
+                orgId,
+                scanName: name,
+                scanId: _id,
+                ruleId: rule._id,
+                requestId: originalRequest._id,
+                transformedRequestId: transformedRequest._id,
+                
+                // Basic info from rule report
+                title: rule.report.title || `${rule.report.vulnerabilityType} in ${originalRequest.name}`,
+                type: rule.report.vulnerabilityType,
+                severity: rule.report.severity,
+                cvssScore: rule.report.cvssScore,
+                description: rule.report.description,
+                impact: rule.report.impact,
+                stepsToReproduce: rule.report.stepsToReproduce,
+                mitigation: rule.report.mitigation,
+                tags: rule.report.tags?.split?.(",") || [],
+                
+                // Technical details
+                cwe: rule.report.cwe,
+                owasp: rule.report.owasp,
+                
+                // Request/Rule context
+                requestDetails: {
+                    name: originalRequest.name,
+                    method: originalRequest.method,
+                    url: originalRequest.url,
+                    collectionName: originalRequest.collectionName,
+                    folderName: originalRequest.folderName
+                },
+                ruleDetails: {
+                    name: rule.rule_name,
+                    category: rule.category
+                },
+                
+                // Evidence
+                evidence: {
+                    request: {
+                        method: transformedRequest.method,
+                        url: transformedRequest.url,
+                        headers: transformedRequest.headers,
+                        body: transformedRequest.body,
+                        transformations: transformedRequest.appliedTransformations || []
+                    },
+                    response: {
+                        status: response.status,
+                        statusText: response.statusText || '',
+                        headers: response.headers || {},
+                        body: response.body,
+                        size: response.size || 0,
+                        responseTime: response.time || 0
+                    },
+                    // matchedCriteria: matchResult.matchedCriteria
+                }
+            };
+
+            try {
+                await Vulnerability.create([vulnerabilityData], { strict: false });
+                console.log(`[+] Created vulnerability record - ${vulnerabilityData.title}`);
+            } catch (vulnError) {
+                console.error("[!] Error creating vulnerabilities:", vulnError);
+            }
+
+            // Also prepare finding for scan document
+            // scanFindings.push({
+            //     ruleId: rule._id,
+            //     ruleName: rule.rule_name,
+            //     requestId: originalRequest._id,
+            //     requestName: originalRequest.name,
+            //     requestUrl: originalRequest.url,
+            //     method: originalRequest.method,
+            //     vulnerability: {
+            //         type: rule.report.vulnerabilityType,
+            //         severity: rule.report.severity,
+            //         description: rule.report.description,
+            //         evidence: {
+            //             request: vulnerabilityData.evidence.request,
+            //             response: vulnerabilityData.evidence.response,
+            //             matchedCriteria: matchResult.matchedCriteria.description
+            //         }
+            //     },
+            //     detectedAt: new Date()
+            // });
+
+            // Send report if configured
+            // if (rule.report.sendReport) {
+            //     try {
+            //         await EngineService.sendReport({ 
+            //             report: {
+            //                 ...rule.report,
+            //                 scanId: _id,
+            //                 detectedAt: new Date(),
+            //                 evidence: vulnerabilityData.evidence
+            //             }
+            //         });
+            //     } catch (reportError) {
+            //         console.error("[!] Failed to send report:", reportError);
+            //     }
+            // }
+
+            await Scan.updateOne({ _id: _id }, {
+                $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
+            });
+        }
+
+
+        // Update transformed request state
+        await TransformedRequest.updateOne(
+            { _id: transformedRequest._id }, 
+            { 
+                $set: { 
+                    state: "complete",
+                    executionResult: {
+                        matched: matchResult.matched,
+                        executedAt: new Date(),
+                        responseStatus: response.status,
+                        responseTime: response.time
+                    }
+                } 
+            }
+        );
+
+    } catch (requestError) {
+        console.error(`[!] Error processing request ${transformedRequest._id}:`, requestError);
+        
+        await TransformedRequest.updateOne(
+            { _id: transformedRequest._id }, 
+            { 
+                $set: { 
+                    state: "failed",
+                    error: {
+                        message: requestError.message,
+                        occurredAt: new Date()
+                    }
+                } 
+            }
+        );
+        
+        failedCount++;
+    }
+    finally {
+        channel.ack(msg);
+    }
 }
 
 
@@ -438,5 +408,10 @@ async function syncIntegration(payload, msg, channel) {
 export async function scanWorker() {
     await mqbroker.consume("apisec", "apisec.scan.create", transformationHandler, 'scanCreatedEventsQueue');
     await mqbroker.consume("apisec", "apisec.scan.run", runScan, 'scanRunEventsQueue');
+
+    // depending on no of events in the queue, scale up or down
+    await mqbroker.consume("apisec", "apisec.scan.execute.single", runAndMatchRequests, 'transformedRequestEventQueue');
+
+
     await mqbroker.consume("apisec", "apisec.integration.sync", syncIntegration, 'SyncIntegrationEventsQueue');
 }
