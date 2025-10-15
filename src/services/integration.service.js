@@ -197,6 +197,7 @@ class IntegrationService {
             integration.workspaces.forEach(workspace => {
                 workspace.collections = [];
             });
+
             await integration.save();
 
             // Sync again
@@ -320,7 +321,7 @@ class IntegrationService {
                     );
 
                     // Generate Postman URL for this collection
-                    const postmanUrl = integration.generatePostmanUrl(
+                    const postmanUrl = this.generatePostmanUrl(
                         workspace.name,
                         workspace.id,
                         collection.uid
@@ -389,14 +390,14 @@ class IntegrationService {
 
             integration.metadata.status = 'completed';
 
-            await integration.save();
+            await Integration.updateOne({ _id: id }, { $set: integration } );
 
             // save all the collections as well.
             await PostmanCollections.bulkWrite(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
             integration.metadata.status = 'failed';
-            await integration.save();
+            await Integration.updateOne({ _id: id }, { $set: integration } );
             throw error;
         }
     }
@@ -437,6 +438,14 @@ class IntegrationService {
 
         throw ApiError.internal('An error occurred while processing the integration');
     }
+
+    generatePostmanUrl(integration, workspaceName, workspaceId, collectionUid) {
+        if (!integration.postmanTeamDomain || !integration.postmanUserId) {
+            return null;
+        }
+
+        return `https://${integration.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspaceName)}~${workspaceId}/collection/${this.postmanUserId}-${collectionUid}`;
+};
 }
 
 export { IntegrationService };
