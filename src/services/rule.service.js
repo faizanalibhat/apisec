@@ -23,9 +23,9 @@ class RuleService {
         }
     }
 
-    async getRules({ orgId, page, limit, isActive }) {
+    async getRules({ orgId, filters, page, limit, isActive }) {
         try {
-            const query = { orgId };
+            const query = { orgId, ...filters };
 
             // Filter by active status if provided
             if (isActive !== undefined) {
