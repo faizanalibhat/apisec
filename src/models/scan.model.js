@@ -70,8 +70,8 @@ const scanSchema = new mongoose.Schema({
     default: [] 
   },
   collectionIds: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'collections',
+    type: [String],
+    // ref: 'collections',
     default: [] 
   },
   // Environment for variable substitution
