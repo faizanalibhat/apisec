@@ -211,7 +211,7 @@ async function runScan(payload, msg, channel) {
 async function runAndMatchRequests(payload, msg, channel) {
     const { scan: scanObj, request } = payload;
 
-    const { _id, orgId } = scanObj;
+    const { _id, orgId, name } = scanObj;
     const transformedRequest = request;
 
     console.log("[+] RUNNING SCAN ON THE REQUEST ", request.url);
