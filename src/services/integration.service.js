@@ -374,18 +374,21 @@ class IntegrationService {
                     integration.workspaces[workspaceIndex].collections = update.collections;
                 }
             }
-            // Save the integration with all updates
-            await integration.save();
 
-            // Update integration metadata
-            await integration.updateSyncMetadata(totalRequests, totalCollections);
-            await integration.updateSyncStatus('completed');
+            // Save the integration with all updates
+            integration.metadata.totalRequests = totalRequests;
+            integration.metadata.totalCollections = totalCollections;
+
+            integration.metadata.status = 'completed';
+
+            await integration.save();
 
             // save all the collections as well.
             await PostmanCollections.insertMany(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
-            await integration.updateSyncStatus('failed', error.message);
+            integration.metadata.status = 'failed';
+            await integration.save();
             throw error;
         }
     }
