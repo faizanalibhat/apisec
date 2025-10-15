@@ -10,7 +10,7 @@ cron.schedule("*/1 * * * *", async () => {
   try {
     // Step 1: Get all scanIds that still have pending transformed requests
     const scansWithPending = await TransformedRequest.distinct("scanId", {
-      status: "pending",
+      state: "pending",
     });
 
     // Step 2: Update all scans that are *not* in that list and are not already complete

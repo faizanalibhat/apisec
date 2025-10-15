@@ -54,7 +54,7 @@ export class ScanService {
             }
 
             // Get all requests for the organization
-            requests = await RawRequest.find({ orgId }).lean();
+            requests = await RawRequest.find(filter).lean();
 
             if (requests.length === 0) {
                 throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
