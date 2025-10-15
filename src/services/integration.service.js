@@ -336,7 +336,7 @@ class IntegrationService {
                         postmanUrl: postmanUrl
                     });
 
-                    collectionsToCreate.push({
+                    PostmanCollections.bulkWrite([{
                         updateOne: {
                             filter: { orgId: integration.orgId, collectionUid: collection.uid },
                             update: {
@@ -350,7 +350,7 @@ class IntegrationService {
                             },
                             upsert: true
                         }
-                    });
+                    }]);
 
                     // Parse collection into raw requests
                     const rawRequests = await this.postmanParser.parseCollection(
@@ -397,7 +397,7 @@ class IntegrationService {
             await Integration.updateOne({ _id: integration._id }, { $set: integration } );
 
             // save all the collections as well.
-            await PostmanCollections.bulkWrite(collectionsToCreate);
+            // await PostmanCollections.bulkWrite(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
             integration.metadata.status = 'failed';
