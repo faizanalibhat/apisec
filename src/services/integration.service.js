@@ -6,6 +6,7 @@ import { PostmanParser } from '../utils/postman/postmanParser.js';
 import { Environment } from '../models/environment.model.js';
 import RawRequest from '../models/rawRequest.model.js';
 import RawEnvironment from '../models/rawEnvironment.model.js';
+import { mqbroker } from './rabbitmq.service.js';
 
 class IntegrationService {
     constructor() {
@@ -48,11 +49,13 @@ class IntegrationService {
                 }))
             });
 
-            // Start the sync process
-            await this.syncIntegration(integration, apiKey, environment);
-
             // Return integration without sensitive data
             const integrationData = integration.toObject();
+
+            // Start the sync process
+            // await this.syncIntegration(integration, apiKey, environment);
+            await mqbroker.publish("apisec", "apisec.integration.sync", { integration: integrationData, apiKey, environment });
+
             delete integrationData.apiKey;
 
             return integrationData;

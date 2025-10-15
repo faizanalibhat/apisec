@@ -8,9 +8,11 @@ import { EngineService } from "../services/engine/engine.service.js";
 import Vulnerability from "../models/vulnerability.model.js";
 import { substituteVariables } from "../utils/variableSubstitution.js";
 import { PostmanParser } from "../utils/postman/postmanParser.js";
+import { IntegrationService } from "../services/integration.service.js";
 
 
 const parser = new PostmanParser();
+const integrationService = new IntegrationService();
 
 
 async function transformationHandler(payload, msg, channel) {
@@ -130,6 +132,7 @@ async function transformationHandler(payload, msg, channel) {
         channel.ack(msg);
     }
 }
+
 
 async function runScan(payload, msg, channel) {
     const { _id, orgId, name } = payload;
@@ -407,6 +410,7 @@ async function runScan(payload, msg, channel) {
 }
 
 
+
 // this function is what handles scan on individual transformed requests
 async function runAndMatchRequests(payload, msg, channel) {
     try {}
@@ -415,7 +419,23 @@ async function runAndMatchRequests(payload, msg, channel) {
 }
 
 
+// sync requests from integration.
+async function syncIntegration(payload, msg, channel) {
+    const { integration, apiKey, environment } = payload; 
+    try {
+        await integrationService.syncIntegration(integration, apiKey, environment);
+    }
+    catch(err) {
+        console.log(err.message);
+    }
+    finally {
+        channel.ack(msg);
+    }
+}
+
+
 export async function scanWorker() {
     await mqbroker.consume("apisec", "apisec.scan.create", transformationHandler, 'scanCreatedEventsQueue');
     await mqbroker.consume("apisec", "apisec.scan.run", runScan, 'scanRunEventsQueue');
+    await mqbroker.consume("apisec", "apisec.integration.sync", syncIntegration, 'SyncIntegrationEventsQueue');
 }
