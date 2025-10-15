@@ -21,5 +21,8 @@ COPY . .
 # Create a directory for keys
 RUN mkdir -p keys
 
+RUN chmod +x /app/launch.sh
+
+CMD ["/app/launch.sh"]
 # Start command
-CMD ["pm2-runtime", "ecosystem.config.cjs"]
+# CMD ["pm2-runtime", "ecosystem.config.cjs"]

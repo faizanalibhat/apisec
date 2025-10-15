@@ -1,7 +1,7 @@
 module.exports = {
     apps: [{
-        name: "apisec",
-        script: "src/app.js",
+        name: "scan-worker",
+        script: "src/workers/scan.worker.js",
         instances: 1,
         exec_mode: "cluster",
         autorestart: true,
