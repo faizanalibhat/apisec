@@ -14,7 +14,6 @@ export class CollectionsController {
 
         const filters = {
             $and: [],
-            $or: []
         };
 
         if (search) {
