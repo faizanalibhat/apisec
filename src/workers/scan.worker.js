@@ -406,6 +406,9 @@ async function syncIntegration(payload, msg, channel) {
 
 
 export async function scanWorker() {
+
+    console.log('[+] SCAN WORKER IS UP...')
+
     await mqbroker.consume("apisec", "apisec.scan.create", transformationHandler, 'scanCreatedEventsQueue');
     await mqbroker.consume("apisec", "apisec.scan.run", runScan, 'scanRunEventsQueue');
 
