@@ -136,6 +136,7 @@ async function transformationHandler(payload, msg, channel) {
 
 async function runScan(payload, msg, channel) {
     const { _id, orgId, name } = payload;
+    
     try {
         console.log("[+] SCAN EXECUTION TRIGGERED : ", _id);
 
@@ -408,7 +409,6 @@ async function runScan(payload, msg, channel) {
         channel.ack(msg);
     }
 }
-
 
 
 // this function is what handles scan on individual transformed requests
