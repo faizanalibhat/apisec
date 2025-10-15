@@ -361,6 +361,7 @@ class IntegrationService {
                             workspaceName: workspace.name,
                             collectionName: collection.name,
                             collectionId: collection.uid,
+                            workspaceId: workspace.id,
                             envs: environment
                         }
                     );

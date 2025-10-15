@@ -13,6 +13,8 @@ const rawRequestSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    workspaceId: { type: String },
+    collectionUid: { type: String },
     name: {
       type: String,
       required: false,

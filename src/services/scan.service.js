@@ -42,22 +42,22 @@ export class ScanService {
             }
 
             let requests;
+
+            const filter = { orgId };
+
             if (requestIds && requestIds.length > 0) {
-                requests = await RawRequest.find({
-                    _id: { $in: requestIds },
-                    orgId
-                }).lean();
+                filter._id = { $in: requestIds };
+            }
 
-                if (requests.length !== requestIds.length) {
-                    throw ApiError.badRequest('One or more invalid request IDs provided');
-                }
-            } else {
-                // Get all requests for the organization
-                requests = await RawRequest.find({ orgId }).lean();
+            if (collectionIds && collectionIds.length > 0) {
+                filter.collectionUid = { $in: collectionIds };
+            }
 
-                if (requests.length === 0) {
-                    throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
-                }
+            // Get all requests for the organization
+            requests = await RawRequest.find({ orgId }).lean();
+
+            if (requests.length === 0) {
+                throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
             }
 
             // Create scan document
