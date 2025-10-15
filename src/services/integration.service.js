@@ -7,6 +7,7 @@ import { Environment } from '../models/environment.model.js';
 import RawRequest from '../models/rawRequest.model.js';
 import RawEnvironment from '../models/rawEnvironment.model.js';
 import { mqbroker } from './rabbitmq.service.js';
+import { PostmanCollections } from '../models/postman-collections.model.js';
 
 class IntegrationService {
     constructor() {
@@ -239,6 +240,8 @@ class IntegrationService {
             // For each workspace
             for (const workspace of integration.workspaces) {
                 const workspaceCollections = [];
+                // used to store collections objects that will be put in mongodb
+                const collectionsToCreate = [];
                 const workspaceEnvironments = [];
 
                 // Get collections from workspace
@@ -329,6 +332,14 @@ class IntegrationService {
                         postmanUrl: postmanUrl
                     });
 
+                    collectionsToCreate.push({
+                        orgId: integration.orgId,
+                        name: collection.name,
+                        collectionUid: collection.uid,
+                        postmanUrl: postmanUrl,
+                        workspaceId: workspace.id
+                    });
+
                     // Parse collection into raw requests
                     const rawRequests = await this.postmanParser.parseCollection(
                         collectionDetail,
@@ -370,6 +381,8 @@ class IntegrationService {
             await integration.updateSyncMetadata(totalRequests, totalCollections);
             await integration.updateSyncStatus('completed');
 
+            // save all the collections as well.
+            await PostmanCollections.insertMany(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
             await integration.updateSyncStatus('failed', error.message);

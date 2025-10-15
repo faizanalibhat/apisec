@@ -12,6 +12,7 @@ import vulnerabilityRoutes from './vulnerability.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import transformedRequestsRoutes from "./transformed_request.routes.js";
 import rawEnvironmentRoutes from "./rawEnvironment.routes.js";
+import collectionsRoutes from "./collections.routes.js";
 
 import { authenticateService } from '../middleware/auth.js';
 
@@ -28,6 +29,7 @@ router.use('/vulnerability', authenticateService(), vulnerabilityRoutes);
 router.use('/dashboard', authenticateService(), dashboardRoutes);
 router.use("/transformed_requests", authenticateService(), transformedRequestsRoutes);
 router.use("/raw-environments", authenticateService(), rawEnvironmentRoutes);
+router.use("/collections", authenticateService(), collectionsRoutes);
 
 
 // 404 handler - catches all unmatched routes
