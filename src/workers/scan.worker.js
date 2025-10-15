@@ -214,6 +214,8 @@ async function runAndMatchRequests(payload, msg, channel) {
     const { _id, orgId } = scanObj;
     const transformedRequest = request;
 
+    console.log("[+] RUNNING SCAN ON THE REQUEST ", request.url);
+
     try {
 
         const scan = await Scan.findOne({ _id: _id });
