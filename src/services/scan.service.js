@@ -14,7 +14,7 @@ export class ScanService {
 
     async createScan(scanData) {
         try {
-            const { name, description, ruleIds, requestIds, environmentId, orgId } = scanData;
+            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId } = scanData;
 
             // Validate environment if provided
             if (environmentId) {
@@ -67,6 +67,7 @@ export class ScanService {
                 orgId,
                 ruleIds: rules.map(r => r._id),
                 requestIds: requests.map(r => r._id),
+                collectionIds,
                 environmentId,
                 status: 'pending',
                 stats: {
@@ -149,13 +150,62 @@ export class ScanService {
             const pages = Math.ceil(total / limit);
             const skip = (page - 1) * limit;
 
-            const scans = await Scan.find(query)
-                .select('-findings') // Exclude findings for list view
-                .populate('environmentId', 'name')
-                .sort(sort)
-                .skip(skip)
-                .limit(limit)
-                .lean();
+            const scans = await Scan.aggregate([
+                // 1. Match query filters
+                { $match: query },
+
+                // 2. Lookup environment name
+                {
+                    $lookup: {
+                    from: "environments",
+                    localField: "environmentId",
+                    foreignField: "_id",
+                    as: "environment"
+                    }
+                },
+                { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
+
+                // 3. Lookup transformed requests for each scan
+                {
+                    $lookup: {
+                    from: "transformedrequests", // MongoDB collection name (usually lowercase plural)
+                    localField: "_id",
+                    foreignField: "scanId",
+                    as: "transformedRequests"
+                    }
+                },
+
+                // 4. Compute counts
+                {
+                    $addFields: {
+                    completedRequests: {
+                        $size: {
+                        $filter: {
+                            input: "$transformedRequests",
+                            as: "req",
+                            cond: { $eq: ["$$req.status", "complete"] }
+                        }
+                        }
+                    },
+                    totalRequests: { $size: "$transformedRequests" },
+                    environmentId: "$environment._id",
+                    environmentName: "$environment.name"
+                    }
+                },
+
+                // 5. Optionally remove the full transformedRequests array to avoid large payloads
+                {
+                    $project: {
+                        transformedRequests: 0,
+                        findings: 0 // same as your `.select('-findings')`
+                    }
+                },
+
+                // 6. Sort, skip, limit
+                { $sort: sort },
+                { $skip: skip },
+                { $limit: limit }
+            ]);
 
             return {
                 data: scans,
