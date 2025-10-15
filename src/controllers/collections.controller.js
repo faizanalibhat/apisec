@@ -25,10 +25,52 @@ export class CollectionsController {
             });
         }
 
-        const collections = await PostmanCollections.find({ orgId, ...filters })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
+        const pipeline = [
+            // 1️⃣ Filter by orgId and any other filters
+            { 
+                $match: { orgId, ...filters } 
+            },
+
+            // 2️⃣ Lookup to count related requests
+            {
+                $lookup: {
+                    from: "rawrequests",
+                    localField: "collectionUid",
+                    foreignField: "collectionUid",
+                    as: "requests"
+                }
+            },
+
+            // 3️⃣ Add totalRequests count
+            {
+                $addFields: {
+                    totalRequests: { $size: "$requests" }
+                }
+            },
+
+            // 4️⃣ Remove the full "requests" array (optional for performance)
+            {
+                $project: {
+                    requests: 0
+                }
+            },
+
+            // 5️⃣ Sort by creation time
+            {
+                $sort: { createdAt: -1 }
+            },
+
+            // 6️⃣ Pagination: skip + limit
+            {
+                $skip: skip
+            },
+            {
+                $limit: limit
+            }
+        ];
+
+
+        const collections = await PostmanCollections.aggregate(pipeline);
 
         const total = await PostmanCollections.countDocuments({ orgId });
 
