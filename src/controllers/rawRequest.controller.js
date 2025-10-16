@@ -40,6 +40,7 @@ class RawRequestController {
         method,
         workspace,
         collectionName,
+        projectId,
         integrationId,
         hasVulns
       } = req.query;
@@ -52,6 +53,7 @@ class RawRequestController {
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
         ...(hasVulns && { hasVulns }),
+        ...(projectId && { projectIds: projectId })
       };
 
       // Parse sort parameter

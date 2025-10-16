@@ -14,7 +14,7 @@ export class ScanService {
 
     async createScan(scanData) {
         try {
-            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId } = scanData;
+            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds } = scanData;
 
             // Validate environment if provided
             if (environmentId) {
@@ -51,6 +51,10 @@ export class ScanService {
 
             if (collectionIds && collectionIds.length > 0) {
                 filter.collectionUid = { $in: collectionIds };
+            }
+
+            if (projectIds && projectIds.length > 0) {
+                filter.projectIds = { $in: projectIds };
             }
 
             // Get all requests for the organization

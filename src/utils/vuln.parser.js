@@ -7,14 +7,14 @@ export function vulnParser(vuln){
         description: vuln.description,
         stepsToReproduce: vuln.stepsToReproduce || 'No steps provided',
         impact: vuln.impact || 'No impact provided',
-        cvssScore: vuln?.cvssScore,
+        cvssScore: vuln?.cvssScore || '0',
         cvssString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N',
         state: "In Review",
-        affectedAssets: {
-            value: vuln?.requestId?.url,
+        affectedAssets: [{
+            value: vuln?.transformedRequestId?.url,
             type: "api",
-            vulnerableLocation: vuln?.requestId?.url
-        },
+            vulnerableLocation: vuln?.transformedRequestId?.url
+        }],
         reportOrigin: "apisec-import",
         references: [],
         vulnerableComponent: {
@@ -25,6 +25,7 @@ export function vulnParser(vuln){
         solution: vuln?.remediation,
         cwe: vuln.cwe,
         universalVulnId: vuln?.universalVulnId,
-        _raw: vuln
+        _raw: vuln,
+        asset: vuln.transformedRequestId
     };
 }
