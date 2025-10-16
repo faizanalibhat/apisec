@@ -85,6 +85,8 @@ export const validateGetRawRequests = [
     .isMongoId()
     .withMessage('Invalid integration ID format'),
 
+  query('hasVulns').optional().isIn(['true', 'false', 'critical', 'high', 'medium', 'low']).withMessage('Invalid vulnerability filter'),
+
   handleValidationErrors,
 ];
 
