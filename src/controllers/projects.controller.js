@@ -94,6 +94,25 @@ export class ProjectController {
         return res.json(updated);
     }
 
+
+    static deleteCollection = async (req, res, next) => {
+
+        const { orgId } = req.authenticatedService;
+        const { projectId } = req.params;
+
+        const updated = await Projects.findOneAndDelete({ orgId, _id: projectId });
+
+        const collectionUids = updated.collectionUids;
+
+        // add the id to collections & raw requests
+        await PostmanCollections.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: created._id } });
+
+        // add the id to collections & raw requests
+        await RawRequest.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: created._id } });
+
+        return res.json(updated);
+    }
+
     static addCollaborator = async (req, res, next) => {}
 
     static removeCollaborator = async (req, res, next) => {}
