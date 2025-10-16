@@ -10,11 +10,11 @@ export function vulnParser(vuln){
         cvssScore: vuln?.cvssScore,
         cvssString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N',
         state: "In Review",
-        affectedAssets: {
-            value: vuln?.requestId?.url,
+        affectedAssets: [{
+            value: vuln?.transformedRequestId?.url,
             type: "api",
-            vulnerableLocation: vuln?.requestId?.url
-        },
+            vulnerableLocation: vuln?.transformedRequestId?.url
+        }],
         reportOrigin: "apisec-import",
         references: [],
         vulnerableComponent: {
@@ -25,6 +25,7 @@ export function vulnParser(vuln){
         solution: vuln?.remediation,
         cwe: vuln.cwe,
         universalVulnId: vuln?.universalVulnId,
-        _raw: vuln
+        _raw: vuln,
+        asset: vuln.transformedRequestId
     };
 }
