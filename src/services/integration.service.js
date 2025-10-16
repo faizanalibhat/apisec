@@ -6,6 +6,8 @@ import { PostmanParser } from '../utils/postman/postmanParser.js';
 import { Environment } from '../models/environment.model.js';
 import RawRequest from '../models/rawRequest.model.js';
 import RawEnvironment from '../models/rawEnvironment.model.js';
+import { mqbroker } from './rabbitmq.service.js';
+import { PostmanCollections } from '../models/postman-collections.model.js';
 
 class IntegrationService {
     constructor() {
@@ -49,10 +51,12 @@ class IntegrationService {
             });
 
             // Start the sync process
-            await this.syncIntegration(integration, apiKey, environment);
+            // await this.syncIntegration(integration, apiKey, environment);
+            await mqbroker.publish("apisec", "apisec.integration.sync", { integration, apiKey, environment });
 
             // Return integration without sensitive data
             const integrationData = integration.toObject();
+
             delete integrationData.apiKey;
 
             return integrationData;
@@ -193,10 +197,13 @@ class IntegrationService {
             integration.workspaces.forEach(workspace => {
                 workspace.collections = [];
             });
+
             await integration.save();
 
             // Sync again
-            await this.syncIntegration(integration, apiKey);
+            // await this.syncIntegration(integration, apiKey);
+            // await this.syncIntegration(integration, apiKey, environment);
+            await mqbroker.publish("apisec", "apisec.integration.sync", { integration, apiKey, environment: {} });
 
             // Return updated integration without sensitive data
             const updatedIntegration = await Integration.findById(id).select('-apiKey').lean();
@@ -227,11 +234,14 @@ class IntegrationService {
     async syncIntegration(integration, apiKey, environment = {}) {
         try {
             // Update status to syncing
-            await integration.updateSyncStatus('syncing');
+            await Integration.updateOne({ _id: integration._id }, { $set: { status: 'syncing' } });
+            // await integration.updateSyncStatus('syncing');
 
             let totalRequests = 0;
             let totalCollections = 0;
             const workspaceUpdates = [];
+            // used to store collections objects that will be put in mongodb
+            const collectionsToCreate = [];
 
             // For each workspace
             for (const workspace of integration.workspaces) {
@@ -312,7 +322,7 @@ class IntegrationService {
                     );
 
                     // Generate Postman URL for this collection
-                    const postmanUrl = integration.generatePostmanUrl(
+                    const postmanUrl = this.generatePostmanUrl(
                         workspace.name,
                         workspace.id,
                         collection.uid
@@ -326,6 +336,22 @@ class IntegrationService {
                         postmanUrl: postmanUrl
                     });
 
+                    PostmanCollections.bulkWrite([{
+                        updateOne: {
+                            filter: { orgId: integration.orgId, collectionUid: collection.uid },
+                            update: {
+                                $setOnInsert: {
+                                    orgId: integration.orgId,
+                                    name: collection.name,
+                                    collectionUid: collection.uid,
+                                    postmanUrl: postmanUrl,
+                                    workspaceId: workspace.id
+                                }
+                            },
+                            upsert: true
+                        }
+                    }]);
+
                     // Parse collection into raw requests
                     const rawRequests = await this.postmanParser.parseCollection(
                         collectionDetail,
@@ -335,6 +361,7 @@ class IntegrationService {
                             workspaceName: workspace.name,
                             collectionName: collection.name,
                             collectionId: collection.uid,
+                            workspaceId: workspace.id,
                             envs: environment
                         }
                     );
@@ -360,16 +387,21 @@ class IntegrationService {
                     integration.workspaces[workspaceIndex].collections = update.collections;
                 }
             }
+
             // Save the integration with all updates
-            await integration.save();
+            integration.metadata.totalRequests = totalRequests;
+            integration.metadata.totalCollections = totalCollections;
 
-            // Update integration metadata
-            await integration.updateSyncMetadata(totalRequests, totalCollections);
-            await integration.updateSyncStatus('completed');
+            integration.metadata.status = 'completed';
 
+            await Integration.updateOne({ _id: integration._id }, { $set: integration } );
+
+            // save all the collections as well.
+            // await PostmanCollections.bulkWrite(collectionsToCreate);
         } catch (error) {
             // Update integration with error status
-            await integration.updateSyncStatus('failed', error.message);
+            integration.metadata.status = 'failed';
+            await Integration.updateOne({ _id: integration._id }, { $set: integration } );
             throw error;
         }
     }
@@ -410,6 +442,14 @@ class IntegrationService {
 
         throw ApiError.internal('An error occurred while processing the integration');
     }
+
+    generatePostmanUrl(integration, workspaceName, workspaceId, collectionUid) {
+        if (!integration.postmanTeamDomain || !integration.postmanUserId) {
+            return null;
+        }
+
+        return `https://${integration.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspaceName)}~${workspaceId}/collection/${this.postmanUserId}-${collectionUid}`;
+};
 }
 
 export { IntegrationService };

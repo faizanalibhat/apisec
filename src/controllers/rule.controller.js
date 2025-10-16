@@ -41,10 +41,23 @@ class RuleController {
     async getRules(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
-            const { page = 1, limit = 20, isActive } = req.query;
+            const { page = 1, limit = 20, isActive, search } = req.query;
+
+            const filters = {};
+            filters.$and = [];
+
+            if (search) {
+                filters.$and.push({
+                    $or: [
+                        { rule_name: { $regex: search, $options: 'i' } }
+                    ]
+                })
+            }
+
 
             const result = await this.ruleService.getRules({
                 orgId,
+                filters,
                 page: parseInt(page),
                 limit: parseInt(limit),
                 isActive
