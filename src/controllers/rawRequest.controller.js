@@ -6,7 +6,7 @@ import { ApiError } from '../utils/ApiError.js';
 class RawRequestController {
   constructor() {
     this.service = new RawRequestService();
-    
+
     // Bind all methods
     this.createRawRequest = this.createRawRequest.bind(this);
     this.getRawRequests = this.getRawRequests.bind(this);
@@ -32,17 +32,18 @@ class RawRequestController {
   async getRawRequests(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { 
-        page = 1, 
-        limit = 10, 
-        search, 
+      const {
+        page = 1,
+        limit = 10,
+        search,
         sort,
-        method, 
+        method,
         workspace,
-        collectionName, 
-        integrationId 
+        collectionName,
+        integrationId,
+        hasVulns
       } = req.query;
-      
+
       // Build filters
       const filters = {
         orgId,
@@ -50,6 +51,7 @@ class RawRequestController {
         ...(workspace && { workspaceName: workspace }),
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
+        ...(hasVulns && { hasVulns }),
       };
 
       // Parse sort parameter
@@ -58,7 +60,7 @@ class RawRequestController {
       if (sort) {
         const [field, order] = sort.split(':');
         const allowedSortFields = ['createdAt', 'method', 'collectionName'];
-        
+
         if (allowedSortFields.includes(field)) {
           sortOptions = { [field]: order === 'asc' ? 1 : -1 };
         }
@@ -70,19 +72,19 @@ class RawRequestController {
       };
 
       let result;
-      
+
       if (search && search.trim().length > 0) {
         // Use search functionality with filters and sorting
         result = await this.service.searchWithFiltersAndSort(
-          search, 
-          filters, 
+          search,
+          filters,
           sortOptions,
           paginationOptions
         );
       } else {
         // Use regular findAll with sorting
         result = await this.service.findAllWithSort(
-          filters, 
+          filters,
           sortOptions,
           paginationOptions
         );
@@ -102,7 +104,7 @@ class RawRequestController {
 
       // res.sendApiResponse(response);
 
-      return res.json({ 
+      return res.json({
         data: result.data,
         message: "retrieved successfully",
         meta: {
@@ -122,7 +124,7 @@ class RawRequestController {
     try {
       const { orgId } = req.authenticatedService;
       const { id } = req.params;
-      
+
       const result = await this.service.findOne(id, orgId);
       res.sendApiResponse(ApiResponse.success('Raw request retrieved successfully', result));
     } catch (error) {
@@ -134,7 +136,7 @@ class RawRequestController {
     try {
       const { orgId } = req.authenticatedService;
       const { id } = req.params;
-      
+
       const result = await this.service.update(id, req.body, orgId);
       res.sendApiResponse(ApiResponse.success('Raw request updated successfully', result));
     } catch (error) {
@@ -146,7 +148,7 @@ class RawRequestController {
     try {
       const { orgId } = req.authenticatedService;
       const { id } = req.params;
-      
+
       await this.service.delete(id, orgId);
       res.sendApiResponse(ApiResponse.success('Raw request deleted successfully'));
     } catch (error) {

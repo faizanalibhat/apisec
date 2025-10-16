@@ -22,8 +22,11 @@ class RawRequestService {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
 
+            // Extract hasVulns filter
+            const { hasVulns, ...mongoFilters } = filters;
+
             const pipeline = [
-                { $match: filters },
+                { $match: mongoFilters },
                 {
                     $lookup: {
                         from: "vulnerabilities",
@@ -56,9 +59,32 @@ class RawRequestService {
                                 { $arrayToObject: "$vulnStats" },
                                 {}
                             ]
-                        }
+                        },
+                        hasVulnerabilities: { $gt: [{ $size: "$vulnStats" }, 0] }
                     }
                 },
+            ];
+
+            // Add vulnerability filtering
+            if (hasVulns) {
+                if (hasVulns === 'true') {
+                    // Has any vulnerabilities
+                    pipeline.push({ $match: { hasVulnerabilities: true } });
+                } else if (hasVulns === 'false') {
+                    // Has no vulnerabilities
+                    pipeline.push({ $match: { hasVulnerabilities: false } });
+                } else if (['critical', 'high', 'medium', 'low'].includes(hasVulns)) {
+                    // Has specific severity
+                    pipeline.push({
+                        $match: {
+                            [`vulnCounts.${hasVulns}`]: { $gt: 0 }
+                        }
+                    });
+                }
+            }
+
+            // Continue with the rest of the pipeline
+            pipeline.push(
                 {
                     $lookup: {
                         from: "integrations",
@@ -131,18 +157,205 @@ class RawRequestService {
                     }
                 },
                 { $sort: sortOptions },
-                { $skip: skip },
-                { $limit: limit },
-                { $project: { vulnStats: 0, integration: 0 } }
-            ];
+                // Facet for pagination - split into data and totalCount
+                {
+                    $facet: {
+                        data: [
+                            { $skip: skip },
+                            { $limit: limit },
+                            { $project: { vulnStats: 0, integration: 0, hasVulnerabilities: 0 } }
+                        ],
+                        totalCount: [
+                            { $count: "total" }
+                        ]
+                    }
+                }
+            );
 
-            const [data, totalItems] = await Promise.all([
-                RawRequest.aggregate(pipeline),
-                RawRequest.countDocuments(filters)
-            ]);
+            const result = await RawRequest.aggregate(pipeline);
+            const totalItems = result[0].totalCount[0]?.total || 0;
 
             return {
-                data,
+                data: result[0].data,
+                currentPage: page,
+                totalPages: Math.ceil(totalItems / limit),
+                totalItems,
+                itemsPerPage: limit,
+            };
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+    async searchWithFiltersAndSort(searchQuery, additionalFilters, sortOptions, pagination) {
+        try {
+            const { page, limit } = pagination;
+            const skip = (page - 1) * limit;
+
+            // Extract hasVulns filter
+            const { hasVulns, ...mongoFilters } = additionalFilters;
+
+            // For search, we need to use aggregation pipeline instead of find()
+            const pipeline = [
+                {
+                    $match: {
+                        ...mongoFilters,
+                        $text: { $search: searchQuery }
+                    }
+                },
+                {
+                    $addFields: {
+                        score: { $meta: 'textScore' }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "vulnerabilities",
+                        localField: "_id",
+                        foreignField: "requestId",
+                        pipeline: [
+                            {
+                                $group: {
+                                    _id: "$severity",
+                                    count: { $sum: 1 }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 0,
+                                    k: "$_id",
+                                    v: "$count"
+                                }
+                            }
+                        ],
+                        as: "vulnStats"
+                    }
+                },
+                {
+                    $addFields: {
+                        vulnCounts: {
+                            $cond: [
+                                { $gt: [{ $size: "$vulnStats" }, 0] },
+                                { $arrayToObject: "$vulnStats" },
+                                {}
+                            ]
+                        },
+                        hasVulnerabilities: { $gt: [{ $size: "$vulnStats" }, 0] }
+                    }
+                }
+            ];
+
+            // Add vulnerability filtering
+            if (hasVulns) {
+                if (hasVulns === 'true') {
+                    pipeline.push({ $match: { hasVulnerabilities: true } });
+                } else if (hasVulns === 'false') {
+                    pipeline.push({ $match: { hasVulnerabilities: false } });
+                } else if (['critical', 'high', 'medium', 'low'].includes(hasVulns)) {
+                    pipeline.push({
+                        $match: {
+                            [`vulnCounts.${hasVulns}`]: { $gt: 0 }
+                        }
+                    });
+                }
+            }
+
+            // Add integration lookup and postman URL
+            pipeline.push(
+                {
+                    $lookup: {
+                        from: "integrations",
+                        localField: "integrationId",
+                        foreignField: "_id",
+                        as: "integration"
+                    }
+                },
+                {
+                    $unwind: {
+                        path: "$integration",
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                {
+                    $addFields: {
+                        postmanUrl: {
+                            $let: {
+                                vars: {
+                                    collectionData: {
+                                        $arrayElemAt: [
+                                            {
+                                                $filter: {
+                                                    input: {
+                                                        $reduce: {
+                                                            input: "$integration.workspaces",
+                                                            initialValue: [],
+                                                            in: {
+                                                                $concatArrays: [
+                                                                    "$$value",
+                                                                    {
+                                                                        $map: {
+                                                                            input: "$$this.collections",
+                                                                            as: "collection",
+                                                                            in: {
+                                                                                $mergeObjects: [
+                                                                                    "$$collection",
+                                                                                    {
+                                                                                        workspaceName: "$$this.name",
+                                                                                        workspaceId: "$$this.id"
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    cond: { $eq: ["$$this.name", "$collectionName"] }
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+                                in: "$$collectionData.postmanUrl"
+                            }
+                        }
+                    }
+                },
+                {
+                    $addFields: {
+                        integrationId: {
+                            _id: "$integration._id",
+                            name: "$integration.name"
+                        }
+                    }
+                },
+                {
+                    $sort: {
+                        score: -1,  // Sort by text score first
+                        ...sortOptions
+                    }
+                },
+                {
+                    $facet: {
+                        data: [
+                            { $skip: skip },
+                            { $limit: limit },
+                            { $project: { vulnStats: 0, integration: 0, hasVulnerabilities: 0, score: 0 } }
+                        ],
+                        totalCount: [
+                            { $count: "total" }
+                        ]
+                    }
+                }
+            );
+
+            const result = await RawRequest.aggregate(pipeline);
+            const totalItems = result[0].totalCount[0]?.total || 0;
+
+            return {
+                data: result[0].data,
                 currentPage: page,
                 totalPages: Math.ceil(totalItems / limit),
                 totalItems,
@@ -183,7 +396,7 @@ class RawRequestService {
             // Process each request to add postman URL
             const data = rawRequests.map(request => {
                 const result = { ...request };
-                
+
                 if (request.integrationId) {
                     // Find the matching collection in integration
                     const integration = request.integrationId;
@@ -192,18 +405,18 @@ class RawRequestService {
                         request.collectionName,
                         request.workspaceName
                     );
-                    
+
                     if (collectionData) {
                         result.postmanUrl = collectionData.postmanUrl;
                     }
-                    
+
                     // Clean up integration data
                     result.integrationId = {
                         _id: integration._id,
                         name: integration.name
                     };
                 }
-                
+
                 return result;
             });
 
@@ -240,11 +453,11 @@ class RawRequestService {
                     rawRequest.collectionName,
                     rawRequest.workspaceName
                 );
-                
+
                 if (collectionData) {
                     rawRequest.postmanUrl = collectionData.postmanUrl;
                 }
-                
+
                 // Clean up integration data
                 rawRequest.integrationId = {
                     _id: integration._id,
