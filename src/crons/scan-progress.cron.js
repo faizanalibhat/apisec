@@ -17,9 +17,9 @@ cron.schedule("*/1 * * * *", async () => {
     const result = await Scan.updateMany(
       {
         _id: { $nin: scansWithPending },
-        status: { $ne: "complete" },
+        status: { $ne: "completed" },
       },
-      { $set: { status: "complete", completedAt: new Date() } }
+      { $set: { status: "completed", completedAt: new Date() } }
     );
 
     console.log(
