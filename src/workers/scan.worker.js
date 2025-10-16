@@ -450,6 +450,43 @@ async function runAndMatchRequests(payload, msg, channel) {
                 console.error("[!] Error creating vulnerabilities:", vulnError);
             }
 
+            // Also prepare finding for scan document
+            // scanFindings.push({
+            //     ruleId: rule._id,
+            //     ruleName: rule.rule_name,
+            //     requestId: originalRequest._id,
+            //     requestName: originalRequest.name,
+            //     requestUrl: originalRequest.url,
+            //     method: originalRequest.method,
+            //     vulnerability: {
+            //         type: rule.report.vulnerabilityType,
+            //         severity: rule.report.severity,
+            //         description: rule.report.description,
+            //         evidence: {
+            //             request: vulnerabilityData.evidence.request,
+            //             response: vulnerabilityData.evidence.response,
+            //             matchedCriteria: matchResult.matchedCriteria.description
+            //         }
+            //     },
+            //     detectedAt: new Date()
+            // });
+
+            // Send report if configured
+            // if (rule.report.sendReport) {
+            //     try {
+            //         await EngineService.sendReport({ 
+            //             report: {
+            //                 ...rule.report,
+            //                 scanId: _id,
+            //                 detectedAt: new Date(),
+            //                 evidence: vulnerabilityData.evidence
+            //             }
+            //         });
+            //     } catch (reportError) {
+            //         console.error("[!] Failed to send report:", reportError);
+            //     }
+            // }
+
             await Scan.updateOne({ _id: _id }, {
                 $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
             });
