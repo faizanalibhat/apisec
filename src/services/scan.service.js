@@ -77,6 +77,45 @@ export class ScanService {
                 }
             });
 
+            // Send Scan Start notification
+            try {
+                const scanStartNotification = {
+                    store: true,
+                    orgId: orgId,
+                    channels: ["email"],
+                    notification: {
+                        title: "Scan Started",
+                        description: `Scan "${scan.name}" has been initiated with ${requests.length} requests and ${rules.length} rules.`,
+                        resourceUrl: `/scans/${scan._id}`,
+                        origin: "aim",
+                        resourceMeta: {
+                            product: "aim",
+                            action: "scan_start",
+                            resource: "scan"
+                        }
+                    },
+                    context: {
+                        name: scanData.userName || "User",
+                        title: "Scan Started",
+                        description: `Your API security scan "${scan.name}" has been successfully created and is being prepared for execution. The scan will test ${requests.length} API requests against ${rules.length} security rules.`,
+                        status: "success",
+                        timestamp: Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
+                        action_text: "View Scan",
+                        action_url: `https://suite.snapsec.co/scans/${scan._id}`,
+                        base_url: "https://suite.snapsec.co",
+                        subject: "API Security Scan Started - Snapsec"
+                    },
+                    orgCoverage: { roles: ["Member"] },
+                    authContext: scanData.authContext || 'system'
+                };
+
+                await mqbroker.publish("notification", "notification", scanStartNotification);
+            } catch (notificationError) {
+                console.error('Failed to send scan start notification:', notificationError);
+                // Don't throw - continue with scan creation
+            }
+
+            // Publish scan to queue
             await mqbroker.publish("apisec", "apisec.scan.create", scan);
 
             // Trigger async transformation process
@@ -92,6 +131,44 @@ export class ScanService {
             //     }
             //   }).exec();
             // });
+
+            // Send to VM notification
+            try {
+                const sendToVMNotification = {
+                    store: true,
+                    orgId: orgId,
+                    channels: ["email"],
+                    notification: {
+                        title: "Scan Queued for Processing",
+                        description: `Scan "${scan.name}" has been queued for security testing.`,
+                        resourceUrl: `/scans/${scan._id}`,
+                        origin: "aim",
+                        resourceMeta: {
+                            product: "aim",
+                            action: "scan_queued",
+                            resource: "scan"
+                        }
+                    },
+                    context: {
+                        name: scanData.userName || "User",
+                        title: "Scan Queued for Processing",
+                        description: `Your scan "${scan.name}" has been successfully queued and will begin processing shortly. You will receive another notification when the scan completes.`,
+                        status: "success",
+                        timestamp: Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
+                        action_text: "Monitor Progress",
+                        action_url: `https://suite.snapsec.co/scans/${scan._id}`,
+                        base_url: "https://suite.snapsec.co",
+                        subject: "Scan Processing Started - Snapsec"
+                    },
+                    orgCoverage: { roles: ["Member"] },
+                    authContext: scanData.authContext || 'system'
+                };
+
+                await mqbroker.publish("notification", "notification", sendToVMNotification);
+            } catch (notificationError) {
+                console.error('Failed to send VM queue notification:', notificationError);
+                // Don't throw - continue with scan creation
+            }
 
             return scan;
         } catch (error) {
@@ -157,10 +234,10 @@ export class ScanService {
                 // 2. Lookup environment name
                 {
                     $lookup: {
-                    from: "environments",
-                    localField: "environmentId",
-                    foreignField: "_id",
-                    as: "environment"
+                        from: "environments",
+                        localField: "environmentId",
+                        foreignField: "_id",
+                        as: "environment"
                     }
                 },
                 { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
@@ -168,28 +245,28 @@ export class ScanService {
                 // 3. Lookup transformed requests for each scan
                 {
                     $lookup: {
-                    from: "transformedrequests", // MongoDB collection name (usually lowercase plural)
-                    localField: "_id",
-                    foreignField: "scanId",
-                    as: "transformedRequests"
+                        from: "transformedrequests", // MongoDB collection name (usually lowercase plural)
+                        localField: "_id",
+                        foreignField: "scanId",
+                        as: "transformedRequests"
                     }
                 },
 
                 // 4. Compute counts
                 {
                     $addFields: {
-                    completedRequests: {
-                        $size: {
-                        $filter: {
-                            input: "$transformedRequests",
-                            as: "req",
-                            cond: { $eq: ["$$req.state", "complete"] }
-                        }
-                        }
-                    },
-                    totalRequests: { $size: "$transformedRequests" },
-                    environmentId: "$environment._id",
-                    environmentName: "$environment.name"
+                        completedRequests: {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "complete"] }
+                                }
+                            }
+                        },
+                        totalRequests: { $size: "$transformedRequests" },
+                        environmentId: "$environment._id",
+                        environmentName: "$environment.name"
                     }
                 },
 
