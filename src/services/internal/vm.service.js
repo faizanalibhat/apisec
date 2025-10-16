@@ -17,7 +17,7 @@ export class VmAPI {
 
             console.log("[+] RESPONSE: ", response?.data);
 
-            if (response != 200) {
+            if (response?.status != 200) {
                 return { status: "failed", message: "Failed to import exposures to vm" };
             }
 
