@@ -15,8 +15,9 @@ export class VmAPI {
         try {
             const response = await vmApi.post(`/import/vulns/${assessmentId}`, { vulns: vulns }, { validateStatus: () => true });
 
+            console.log("[+] RESPONSE: ", response?.data);
+
             if (response != 200) {
-                console.log(response?.data);
                 return { status: "failed", message: "Failed to import exposures to vm" };
             }
 
