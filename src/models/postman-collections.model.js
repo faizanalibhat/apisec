@@ -11,6 +11,8 @@ const schema = new Schema({
     postmanUrl: { type: String },
     requestIds: { type: [Schema.Types.ObjectId], ref: 'RawRequest', default: [] },
 
+    projectIds: { type: [Schema.Types.ObjectId], ref: "projects",  default: [] }
+
 }, { timestamps: true, strict: false });
 
 

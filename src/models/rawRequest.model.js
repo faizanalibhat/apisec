@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 const rawRequestSchema = new mongoose.Schema(
   {
@@ -15,6 +15,7 @@ const rawRequestSchema = new mongoose.Schema(
     },
     workspaceId: { type: String },
     collectionUid: { type: String },
+    projectIds: { type: [mongoose.Schema.Types.ObjectId], default: [] },
     name: {
       type: String,
       required: false,
