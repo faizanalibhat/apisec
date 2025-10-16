@@ -48,13 +48,13 @@ src/
    Postman API Key → Fetch User Info → Import Workspaces → Select Collections → Store Raw Requests & Environments
 
 2. Configuration Phase:
-   Create Security Rules (transformations + match criteria)
+   Create Security Rules (transformations + match criteria + report templates)
 
 3. Execution Phase:
-   Create Scan → Queue to RabbitMQ → Transform Requests → Execute → Match Responses
+   Create Scan → Queue to RabbitMQ → Generate Transformed Requests → Save to DB → Workers Execute → Match Responses → Create Vulnerabilities
 
 4. Analysis Phase:
-   Generate Vulnerabilities → Update Scan Results → Create Reports
+   Generate Vulnerability Reports → Update Scan Results → Export Results
 ```
 
 ## Key Architectural Decisions
@@ -65,6 +65,48 @@ src/
 4. **Global Error Handling**: Centralized error transformation
 5. **Standardized Responses**: ApiResponse class for consistency
 6. **Organization Isolation**: req.orgId (temporary, will use JWT later)
+
+## Rule System Architecture
+
+### Triple Purpose of Rules
+
+Rules in APISEC serve three critical functions:
+
+1. **Transform**: Define how to modify requests for security testing
+   - Headers manipulation (add, remove, modify)
+   - Cookie operations
+   - URL parameter modifications
+   - Host override
+   - Method changes
+   - Request body modifications
+
+2. **Match**: Specify criteria to identify vulnerabilities
+   - HTTP status codes
+   - Response body content (string matching, regex)
+   - Header presence and values
+   - Content-Type validation
+   - Response size constraints
+   - Response time thresholds
+
+3. **Report**: Template for vulnerability documentation
+   - Title and description
+   - Severity level (critical, high, medium, low)
+   - CVSS score
+   - CWE ID
+   - OWASP category
+   - Remediation guidance
+
+### Rule Processing Flow
+
+```
+Raw Request + Rule → Transformer → Transformed Request (saved to DB)
+                                           ↓
+                                    Worker Execution
+                                           ↓
+                            Response + Rule.match → Matcher
+                                           ↓
+                                 If matched: Rule.report → Vulnerability
+```
 
 ## Data Flow Architecture
 
@@ -77,26 +119,30 @@ Client Response ← Middleware ← Controller ← Service Response
 
 ### Asynchronous Flow (Scan Processing)
 ```
-Scan Creation → RabbitMQ Queue → Worker (Transformation)
-                                    ↓
-                              Transform Requests
-                                    ↓
-                              Queue Next Stage
-                                    ↓
-                              Worker (Execution)
-                                    ↓
-                              Execute & Match
-                                    ↓
-                              Create Vulnerabilities
+Scan Creation → RabbitMQ Queue → Transformation Worker
+                                        ↓
+                              Generate Transformed Requests
+                                        ↓
+                                 Save to Database
+                                        ↓
+                              Queue Execution Tasks
+                                        ↓
+                               Execution Worker
+                                        ↓
+                         Execute Requests + Match Responses
+                                        ↓
+                           Create Vulnerabilities
+                                        ↓
+                            Update Scan Stats
 ```
 
 ## Completed Modules
 
 ### 1. Rules Module ✅
-- **Model**: Security test rules with transformations and match criteria
+- **Model**: Security test rules with transformations, match criteria, and report templates
 - **Features**: CRUD operations, text search, YAML-based rule definitions
-- **Transformations**: Headers, cookies, parameters, host override, method changes
-- **Matching**: Status codes, response body, headers, content type, response time
+- **Structure**: Transform section, match section, report section
+- **Purpose**: Define how to test, what to look for, and how to report findings
 
 ### 2. Integration Module ✅
 - **Model**: Postman API integrations with encrypted keys and user metadata
@@ -121,41 +167,35 @@ Scan Creation → RabbitMQ Queue → Worker (Transformation)
 - **Model**: Security scan sessions with findings and statistics
 - **Features**: Asynchronous execution, progress tracking, vulnerability summary
 - **Integration**: RabbitMQ for distributed processing
+- **Statistics**: Track total requests, rules, transformations, vulnerabilities by severity
 
 ### 6. Vulnerability Module ✅
 - **Model**: Detailed vulnerability records with evidence
 - **Features**: CRUD, status management, notes, false positive marking
 - **Evidence**: Full request/response pairs with transformation details
+- **Report Data**: Inherits title, severity, CVSS from rule's report section
 - **Export**: JSON and CSV formats
 
 ### 7. Transformed Request Module ✅
 - **Model**: Requests after rule transformations applied
-- **Purpose**: Intermediate storage during scan execution
-- **Tracking**: Execution state and results
+- **Purpose**: Persistent storage of transformed requests before execution
+- **Tracking**: Execution state, applied transformations, match results
+- **Lifecycle**: Created → Queued → Executed → Matched/Not Matched
 
 ## Engine Architecture
 
 ### Components
-1. **Transformer**: Applies rule transformations to requests
+1. **Transformer**: Applies rule transformations to create transformed requests
 2. **Sender**: Executes HTTP requests with timeout handling
-3. **Matcher**: Analyzes responses against rule criteria
-4. **Engine Service**: Orchestrates the transformation-execution-matching flow
+3. **Matcher**: Analyzes responses against rule match criteria
+4. **Engine Service**: Orchestrates the complete testing flow
 
-### Transformation Capabilities
-- Header manipulation (add, remove, modify)
-- Cookie operations
-- URL parameter modifications
-- Host override
-- Method changes
-- Request body modifications
-
-### Matching Criteria
-- HTTP status codes
-- Response body content (string matching, regex)
-- Header presence and values
-- Content-Type validation
-- Response size constraints
-- Response time thresholds
+### Processing Pipeline
+1. Raw Request + Rule → Transformer → Transformed Request (saved)
+2. Worker picks up transformed request + rule
+3. Sender executes the transformed request
+4. Matcher evaluates response using rule.match criteria
+5. If matched, creates vulnerability using rule.report template
 
 ## Worker Architecture
 
@@ -169,14 +209,15 @@ Scan Creation → RabbitMQ Queue → Worker (Transformation)
 1. **Transformation Worker**:
    - Receives scan creation events
    - Generates all request × rule combinations
-   - Creates transformed request documents
-   - Publishes to execution queue
+   - Creates and saves transformed request documents
+   - Publishes execution tasks to queue
 
 2. **Execution Worker**:
-   - Receives scan execution events
-   - Executes transformed requests
-   - Matches responses against rules
-   - Creates vulnerability records
+   - Receives transformed request ID and rule ID
+   - Loads transformed request and rule from database
+   - Executes requests using Sender
+   - Matches responses using rule.match criteria
+   - Creates vulnerabilities using rule.report template
    - Updates scan statistics
 
 ## Security Features
@@ -255,12 +296,12 @@ router.delete('/:id', controller.delete)     // Delete resource
 ## Database Schema Overview
 
 ### Collections
-1. **rules**: Security testing rule definitions
+1. **rules**: Security testing rule definitions with transform, match, and report sections
 2. **integrations**: Postman API connections with user metadata
 3. **raw_requests**: Original API requests from Postman
 4. **raw_environments**: Postman environment configurations
 5. **scans**: Security scan sessions
-6. **transformedrequests**: Modified requests for testing
+6. **transformedrequests**: Modified requests for testing (persistent storage)
 7. **vulnerabilities**: Detected security issues
 
 ### Relationships
@@ -270,7 +311,8 @@ router.delete('/:id', controller.delete)     // Delete resource
 - Scan → Transformed Requests (1:N)
 - Scan → Vulnerabilities (1:N)
 - Rule + Request → Transformed Request
-- Transformed Request → Vulnerability (1:1)
+- Transformed Request → Vulnerability (0:1)
+- Rule → Vulnerability (for report template)
 
 ## Future Enhancements
 
@@ -307,5 +349,42 @@ router.delete('/:id', controller.delete)     // Delete resource
 4. Validation middleware for request validation
 5. Search routes must precede parameterized routes
 6. Pagination on all list endpoints
+
+### Controller Pattern
+```javascript
+class ResourceController {
+  constructor() {
+    // Bind all methods
+    this.getAll = this.getAll.bind(this);
+    this.get = this.get.bind(this);
+    this.create = this.create.bind(this);
+    this.update = this.update.bind(this);
+    this.delete = this.delete.bind(this);
+  }
+}
+```
+
+### Service Pattern
+```javascript
+class ResourceService {
+  async create(data) {
+    // Business logic
+    // Database operations
+    // Return result
+  }
+}
+```
+
+### Error Handling Pattern
+- Use ApiError class for all errors
+- Include proper HTTP status codes
+- Provide meaningful error messages
+- Log errors appropriately
+
+### Validation Middleware
+- Use validation middleware for all input
+- Validate request body, params, and query
+- Return standardized validation errors
+- Sanitize inputs to prevent injection attacks
 
 Please acknowledge that you understand these requirements and wait for my specific request before providing any code.
