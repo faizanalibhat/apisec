@@ -21,16 +21,16 @@ async function transformationHandler(payload, msg, channel) {
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
-        await Scan.updateOne({ _id: _id }, { 
-            $set: { 
+        await Scan.updateOne({ _id: _id }, {
+            $set: {
                 status: "pending",
                 startedAt: new Date()
             }
         });
 
         // Fetch all requests and rules
-        const requests = await Requests.find({ _id: { $in: requestIds }}).lean();
-        const rules = await Rules.find({ _id: { $in: ruleIds }}).lean();
+        const requests = await Requests.find({ _id: { $in: requestIds } }).lean();
+        const rules = await Rules.find({ _id: { $in: ruleIds } }).lean();
 
         console.log("[+] TOTAL REQUSTS : ", requests.length);
         console.log("[+] TOTAL RULES : ", rules.length);
@@ -73,28 +73,28 @@ async function transformationHandler(payload, msg, channel) {
                 }
 
                 // console.log("[+] PROCESSED REQUEST : ", processedRequest);
-                
+
                 // Apply rule transformations
                 let transformed;
                 try {
                     transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
                 }
-                catch(err) {
+                catch (err) {
                     console.log(err.message);
                     continue;
                 }
 
                 for (let t of transformed) {
                     bulkOps.push({
-                        insertOne: { 
-                            document: { 
-                                scanId: _id, 
+                        insertOne: {
+                            document: {
+                                scanId: _id,
                                 orgId,
-                                requestId: request._id, 
-                                ruleId: rule._id, 
+                                requestId: request._id,
+                                ruleId: rule._id,
                                 ...t,
                                 // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, [])
-                            } 
+                            }
                         }
                     });
                 }
@@ -107,8 +107,8 @@ async function transformationHandler(payload, msg, channel) {
         }
 
         // Update scan stats
-        await Scan.updateOne({ _id: _id }, { 
-            $set: { 
+        await Scan.updateOne({ _id: _id }, {
+            $set: {
                 'stats.totalTransformedRequests': bulkOps.length
             }
         });
@@ -116,10 +116,10 @@ async function transformationHandler(payload, msg, channel) {
         // Publish to run queue
         await mqbroker.publish("apisec", "apisec.scan.run", payload);
     }
-    catch(err) {
+    catch (err) {
         console.log("[+] ERROR WHILE TRANSFORMING : ", err);
-        await Scan.updateOne({ _id: _id }, { 
-            $set: { 
+        await Scan.updateOne({ _id: _id }, {
+            $set: {
                 status: "failed",
                 error: {
                     message: err.message,
@@ -137,12 +137,12 @@ async function transformationHandler(payload, msg, channel) {
 
 async function runScan(payload, msg, channel) {
     const { _id, orgId, name } = payload;
-    
+
     try {
         console.log("[+] SCAN EXECUTION TRIGGERED : ", _id);
 
-        await Scan.updateOne({ _id: _id }, { 
-            $set: { 
+        await Scan.updateOne({ _id: _id }, {
+            $set: {
                 status: "running"
             }
         });
@@ -150,45 +150,162 @@ async function runScan(payload, msg, channel) {
         // Get transformed requests
         const transformed_requests = await TransformedRequest.find({ scanId: _id, state: "pending" }).lean();
 
+        // Store total count for tracking completion
+        const totalTransformedRequests = transformed_requests.length;
+
         // Process each transformed request
         for (let transformedRequest of transformed_requests) {
             await mqbroker.publish("apisec", "apisec.scan.execute.single", { scan: payload, request: transformedRequest })
-            // Update scan progress periodically
-            // if (processedCount % 10 === 0) {
-            //     await Scan.updateOne({ _id: _id }, {
-            //         $set: {
-            //             'stats.processedRequests': processedCount,
-            //             'stats.failedRequests': failedCount
-            //         }
-            //     });
-            // }
         }
 
-    } catch(err) {
+        // Check for scan completion periodically
+        const checkInterval = setInterval(async () => {
+            const completedCount = await TransformedRequest.countDocuments({
+                scanId: _id,
+                state: "complete"
+            });
+
+            const failedCount = await TransformedRequest.countDocuments({
+                scanId: _id,
+                state: "failed"
+            });
+
+            const processedCount = completedCount + failedCount;
+
+            // Check if all requests are processed
+            if (processedCount >= totalTransformedRequests) {
+                clearInterval(checkInterval);
+
+                // Update scan as completed
+                const scan = await Scan.findByIdAndUpdate(_id, {
+                    $set: {
+                        status: "completed",
+                        completedAt: new Date(),
+                        'stats.processedRequests': processedCount,
+                        'stats.failedRequests': failedCount
+                    }
+                }, { new: true });
+
+                // Calculate execution time
+                const executionTime = scan.completedAt - scan.startedAt;
+                const executionMinutes = Math.round(executionTime / 60000);
+
+                // Send Scan Finish notification
+                try {
+                    const scanFinishNotification = {
+                        store: true,
+                        orgId: orgId,
+                        channels: ["email"],
+                        notification: {
+                            title: "Scan Completed",
+                            description: `Scan "${scan.name}" has completed with ${scan.stats.vulnerabilitiesFound || 0} vulnerabilities found.`,
+                            resourceUrl: `/scans/${scan._id}`,
+                            origin: "aim",
+                            resourceMeta: {
+                                product: "aim",
+                                action: "scan_finish",
+                                resource: "scan"
+                            }
+                        },
+                        context: {
+                            name: "User",
+                            title: "API Security Scan Completed",
+                            description: `Your API security scan "${scan.name}" has completed successfully. 
+                            
+Summary:
+• Total Requests Tested: ${scan.stats.totalRequests}
+• Security Rules Applied: ${scan.stats.totalRules}
+• Vulnerabilities Found: ${scan.stats.vulnerabilitiesFound || 0}
+• Critical: ${scan.vulnerabilitySummary?.critical || 0}
+• High: ${scan.vulnerabilitySummary?.high || 0}
+• Medium: ${scan.vulnerabilitySummary?.medium || 0}
+• Low: ${scan.vulnerabilitySummary?.low || 0}
+• Execution Time: ${executionMinutes} minutes`,
+                            status: failedCount > 0 ? "warning" : "success",
+                            timestamp: Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
+                            action_text: "View Results",
+                            action_url: `https://suite.snapsec.co/scans/${scan._id}/results`,
+                            base_url: "https://suite.snapsec.co",
+                            subject: `Scan Completed - ${scan.stats.vulnerabilitiesFound || 0} Vulnerabilities Found - Snapsec`
+                        },
+                        orgCoverage: { roles: ["Member"] },
+                        authContext: 'system'
+                    };
+
+                    await mqbroker.publish("notification", "notification", scanFinishNotification);
+                } catch (notificationError) {
+                    console.error('Failed to send scan completion notification:', notificationError);
+                }
+            }
+        }, 5000); // Check every 5 seconds
+
+        // Set a timeout to prevent infinite checking
+        setTimeout(() => {
+            clearInterval(checkInterval);
+        }, 3600000); // 1 hour timeout
+
+    } catch (err) {
         console.error("[!] ERROR WHILE RUNNING SCAN:", err);
-        
-        await Scan.updateOne({ _id: _id }, { 
-            $set: { 
+
+        await Scan.updateOne({ _id: _id }, {
+            $set: {
                 status: "failed",
                 error: {
                     message: err.message,
                     stack: err.stack,
                     occurredAt: new Date()
                 }
-            } 
+            }
         });
-        
+
+        // Send failure notification
+        try {
+            const scanFailureNotification = {
+                store: true,
+                orgId: orgId,
+                channels: ["email"],
+                notification: {
+                    title: "Scan Failed",
+                    description: `Scan "${name}" has failed due to an error.`,
+                    resourceUrl: `/scans/${_id}`,
+                    origin: "aim",
+                    resourceMeta: {
+                        product: "aim",
+                        action: "scan_failed",
+                        resource: "scan"
+                    }
+                },
+                context: {
+                    name: "User",
+                    title: "Scan Failed",
+                    description: `Your API security scan "${name}" has encountered an error and could not complete. Error: ${err.message}`,
+                    status: "error",
+                    timestamp: Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
+                    action_text: "View Details",
+                    action_url: `https://suite.snapsec.co/scans/${_id}`,
+                    base_url: "https://suite.snapsec.co",
+                    subject: "Scan Failed - Snapsec"
+                },
+                orgCoverage: { roles: ["Member"] },
+                authContext: 'system'
+            };
+
+            await mqbroker.publish("notification", "notification", scanFailureNotification);
+        } catch (notificationError) {
+            console.error('Failed to send scan failure notification:', notificationError);
+        }
+
         // Mark all pending transformed requests as failed
         await TransformedRequest.updateMany(
-            { scanId: _id, state: { $in: ["pending", "running"] } }, 
-            { 
-                $set: { 
+            { scanId: _id, state: { $in: ["pending", "running"] } },
+            {
+                $set: {
                     state: "failed",
                     error: {
                         message: "Scan failed",
                         occurredAt: new Date()
                     }
-                } 
+                }
             }
         );
     }
@@ -201,7 +318,7 @@ async function runScan(payload, msg, channel) {
         //         $set: { executionTime }
         //     });
         // }
-        
+
         channel.ack(msg);
     }
 }
@@ -226,7 +343,7 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Update state
         await TransformedRequest.updateOne(
-            { _id: transformedRequest._id }, 
+            { _id: transformedRequest._id },
             { $set: { state: "running" } }
         );
 
@@ -252,7 +369,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                 ruleId: rule._id,
                 requestId: originalRequest._id,
                 transformedRequestId: transformedRequest._id,
-                
+
                 // Basic info from rule report
                 title: rule.report.title || `${rule.report.vulnerabilityType} in ${originalRequest.name}`,
                 type: rule.parsed_yaml.report.vulnerabilityType,
@@ -263,11 +380,11 @@ async function runAndMatchRequests(payload, msg, channel) {
                 stepsToReproduce: rule.parsed_yaml.report.stepsToReproduce,
                 mitigation: rule.parsed_yaml.report.mitigation,
                 tags: rule.parsed_yaml.report.tags?.split?.(",") || [],
-                
+
                 // Technical details
                 cwe: rule.parsed_yaml.report.cwe,
                 owasp: rule.parsed_yaml.report.owasp,
-                
+
                 // Request/Rule context
                 requestDetails: {
                     name: originalRequest.name,
@@ -280,7 +397,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                     name: rule.rule_name,
                     category: rule.category
                 },
-                
+
                 // Evidence
                 evidence: {
                     request: {
@@ -354,9 +471,9 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Update transformed request state
         await TransformedRequest.updateOne(
-            { _id: transformedRequest._id }, 
-            { 
-                $set: { 
+            { _id: transformedRequest._id },
+            {
+                $set: {
                     state: "complete",
                     executionResult: {
                         matched: matchResult.matched,
@@ -364,27 +481,27 @@ async function runAndMatchRequests(payload, msg, channel) {
                         responseStatus: response.status,
                         responseTime: response.time
                     }
-                } 
+                }
             }
         );
 
     } catch (requestError) {
         console.error(`[!] Error processing request ${transformedRequest._id}:`, requestError);
-        
+
         await TransformedRequest.updateOne(
-            { _id: transformedRequest._id }, 
-            { 
-                $set: { 
+            { _id: transformedRequest._id },
+            {
+                $set: {
                     state: "failed",
                     error: {
                         message: requestError.message,
                         occurredAt: new Date()
                     }
-                } 
+                }
             }
         );
-        
-        failedCount++;
+
+        // failedCount++;
     }
     finally {
         channel.ack(msg);
@@ -394,13 +511,13 @@ async function runAndMatchRequests(payload, msg, channel) {
 
 // sync requests from integration.
 async function syncIntegration(payload, msg, channel) {
-    const { integration, apiKey, environment } = payload; 
+    const { integration, apiKey, environment } = payload;
     console.log("[+] SYNCING INTEGRATION : ", integration);
 
     try {
         await integrationService.syncIntegration(integration, apiKey, environment);
     }
-    catch(err) {
+    catch (err) {
         console.log(err);
     }
     finally {
