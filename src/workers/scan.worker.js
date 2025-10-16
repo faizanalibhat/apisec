@@ -9,6 +9,7 @@ import Vulnerability from "../models/vulnerability.model.js";
 import { substituteVariables } from "../utils/variableSubstitution.js";
 import { PostmanParser } from "../utils/postman/postmanParser.js";
 import { IntegrationService } from "../services/integration.service.js";
+import TemplateEngine from "../utils/template.js"; // NEW IMPORT
 import "../db/mongoose.js";
 
 
@@ -361,7 +362,28 @@ async function runAndMatchRequests(payload, msg, channel) {
         console.log(`[+] Match result:`, matchResult);
 
         if (matchResult.matched) {
-            // Create vulnerability data
+            // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
+            const templateContext = TemplateEngine.createVulnerabilityContext({
+                transformedRequest,
+                originalRequest,
+                response,
+                rule,
+                matchResult,
+                scanName: name,
+                scanId: _id
+            });
+
+            // PROCESS TEMPLATE FIELDS FROM THE RULE
+            const reportFields = rule.parsed_yaml.report;
+            const processedReport = TemplateEngine.processFields({
+                title: reportFields.title,
+                description: reportFields.description,
+                impact: reportFields.impact,
+                stepsToReproduce: reportFields.stepsToReproduce,
+                mitigation: reportFields.mitigation
+            }, templateContext);
+
+            // Create vulnerability data with processed templates
             const vulnerabilityData = {
                 orgId,
                 scanName: name,
@@ -370,15 +392,15 @@ async function runAndMatchRequests(payload, msg, channel) {
                 requestId: originalRequest._id,
                 transformedRequestId: transformedRequest._id,
 
-                // Basic info from rule report
-                title: rule.report.title || `${rule.report.vulnerabilityType} in ${originalRequest.name}`,
+                // Use processed template values
+                title: processedReport.title || `${reportFields.vulnerabilityType} in ${originalRequest.name}`,
                 type: rule.parsed_yaml.report.vulnerabilityType,
                 severity: rule.parsed_yaml.report.severity,
                 cvssScore: rule.parsed_yaml.report.cvssScore,
-                description: rule.parsed_yaml.report.description,
-                impact: rule.parsed_yaml.report.impact,
-                stepsToReproduce: rule.parsed_yaml.report.stepsToReproduce,
-                mitigation: rule.parsed_yaml.report.mitigation,
+                description: processedReport.description,
+                impact: processedReport.impact,
+                stepsToReproduce: processedReport.stepsToReproduce,
+                mitigation: processedReport.mitigation,
                 tags: rule.parsed_yaml.report.tags?.split?.(",") || [],
 
                 // Technical details
@@ -425,43 +447,6 @@ async function runAndMatchRequests(payload, msg, channel) {
             } catch (vulnError) {
                 console.error("[!] Error creating vulnerabilities:", vulnError);
             }
-
-            // Also prepare finding for scan document
-            // scanFindings.push({
-            //     ruleId: rule._id,
-            //     ruleName: rule.rule_name,
-            //     requestId: originalRequest._id,
-            //     requestName: originalRequest.name,
-            //     requestUrl: originalRequest.url,
-            //     method: originalRequest.method,
-            //     vulnerability: {
-            //         type: rule.report.vulnerabilityType,
-            //         severity: rule.report.severity,
-            //         description: rule.report.description,
-            //         evidence: {
-            //             request: vulnerabilityData.evidence.request,
-            //             response: vulnerabilityData.evidence.response,
-            //             matchedCriteria: matchResult.matchedCriteria.description
-            //         }
-            //     },
-            //     detectedAt: new Date()
-            // });
-
-            // Send report if configured
-            // if (rule.report.sendReport) {
-            //     try {
-            //         await EngineService.sendReport({ 
-            //             report: {
-            //                 ...rule.report,
-            //                 scanId: _id,
-            //                 detectedAt: new Date(),
-            //                 evidence: vulnerabilityData.evidence
-            //             }
-            //         });
-            //     } catch (reportError) {
-            //         console.error("[!] Failed to send report:", reportError);
-            //     }
-            // }
 
             await Scan.updateOne({ _id: _id }, {
                 $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
