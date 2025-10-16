@@ -20,13 +20,9 @@ export function supressFilter(rules = [], supress) {
     else {
 
         return {
-            $not: [
-                {
-                    $or: [
-                        { requestId: { $in: requestIds } },
-                        { ruleIds: { $in: ruleIds } }
-                    ]
-                }
+            $nor: [
+                { requestId: { $in: requestIds } },
+                { ruleIds: { $in: ruleIds } }
             ]
         }
     }
