@@ -1,4 +1,4 @@
-const axios = require('axios')
+import axios from 'axios';
 
 
 const vmApi = axios.create({
@@ -9,7 +9,7 @@ const vmApi = axios.create({
 });
 
 
-class VmAPI {
+export class VmAPI {
 
     static async importVulns({ vulns, assessmentId }) {
         try {
@@ -29,6 +29,3 @@ class VmAPI {
     }
 
 }
-
-
-module.exports = { VmAPI };
