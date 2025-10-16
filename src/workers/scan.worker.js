@@ -17,7 +17,7 @@ const integrationService = new IntegrationService();
 
 
 async function transformationHandler(payload, msg, channel) {
-    const { _id, requestIds, ruleIds, environmentId, orgId } = payload;
+    const { _id, requestIds, ruleIds, environmentId, orgId, projectId } = payload;
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -92,6 +92,7 @@ async function transformationHandler(payload, msg, channel) {
                                 orgId,
                                 requestId: request._id,
                                 ruleId: rule._id,
+                                // projectId: projectId,
                                 ...t,
                                 // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, [])
                             }
@@ -136,7 +137,7 @@ async function transformationHandler(payload, msg, channel) {
 
 
 async function runScan(payload, msg, channel) {
-    const { _id, orgId, name } = payload;
+    const { _id, orgId, name, projectIds } = payload;
 
     try {
         console.log("[+] SCAN EXECUTION TRIGGERED : ", _id);
@@ -368,6 +369,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                 scanId: _id,
                 ruleId: rule._id,
                 requestId: originalRequest._id,
+                projectId: originalRequest.projectId,
                 transformedRequestId: transformedRequest._id,
 
                 // Basic info from rule report

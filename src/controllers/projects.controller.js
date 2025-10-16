@@ -112,8 +112,4 @@ export class ProjectController {
 
         return res.json(updated);
     }
-
-    static addCollaborator = async (req, res, next) => {}
-
-    static removeCollaborator = async (req, res, next) => {}
 }

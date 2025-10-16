@@ -14,6 +14,7 @@ import transformedRequestsRoutes from "./transformed_request.routes.js";
 import rawEnvironmentRoutes from "./rawEnvironment.routes.js";
 import collectionsRoutes from "./collections.routes.js";
 import configRoutes from "./config.routes.js";
+import projectRoutes from "./projects.routes.js";
 
 import { authenticateService } from '../middleware/auth.js';
 
@@ -32,6 +33,7 @@ router.use("/transformed_requests", authenticateService(), transformedRequestsRo
 router.use("/raw-environments", authenticateService(), rawEnvironmentRoutes);
 router.use("/collections", authenticateService(), collectionsRoutes);
 router.use("/config", authenticateService(), configRoutes);
+router.use("/projects", authenticateService(), projectRoutes);
 
 
 // 404 handler - catches all unmatched routes

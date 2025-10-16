@@ -16,6 +16,10 @@ const transformedRequestSchema = new mongoose.Schema({
     ref: 'RawRequest',
     required: true
   },
+  projectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'projects',
+  },
   ruleId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Rule',
