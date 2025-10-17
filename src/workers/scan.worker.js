@@ -36,7 +36,7 @@ async function transformationHandler(payload, msg, channel) {
         console.log("[+] TOTAL REQUSTS : ", requests.length);
         console.log("[+] TOTAL RULES : ", rules.length);
 
-        console.log("[+] RULE: ", JSON.stringify(rules));
+        // console.log("[+] RULE: ", JSON.stringify(rules));
 
         // Fetch environment variables if environmentId is provided
         let environmentVariables = {};
@@ -355,6 +355,8 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Send the request
         console.log(`[+] Sending request to: ${transformedRequest.url}`);
+
+        console.log("[+] REQAUEST: ", JSON.stringify(transformedRequest));
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
         // Check for matches using detailed matching

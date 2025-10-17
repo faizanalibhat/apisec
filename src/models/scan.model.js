@@ -76,7 +76,7 @@ const scanSchema = new mongoose.Schema({
   },
   // Environment for variable substitution
   environmentId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: [mongoose.Schema.Types.ObjectId],
     ref: 'RawEnvironment',
     required: false
   },
