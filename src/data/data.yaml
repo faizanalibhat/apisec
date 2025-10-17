@@ -1,0 +1,197 @@
+rules:
+    - rule_name: Unauth Success- Auth & Cookies Removed
+      transform:
+        headers:
+          remove:
+            - Authorization
+            - X-API-Key
+            - Cookie
+            - X-Auth-Token
+        cookies:
+          remove:
+            - session
+            - session_id
+            - auth
+            - auth_token
+        repeat_with_methods:
+          - GET
+      match_on:
+        status: 200
+        header_value:
+          Content-Type: application/json
+      report:
+        title: "Unauthorized access allowed ({{req.method}} {{endpoint}})"
+        description: |
+          The endpoint responded with 200 OK to an unauthenticated request.
+          Auth headers/cookies were removed before sending the request.
+
+          • Original URL: {{original.url}}
+          • Transformed URL: {{req.url}}
+          • Response status: {{res.status}}
+        cwe: "CWE-306" # Missing Authentication
+        cvssScore: "8.6"
+        severity: "critical"
+        mitigation: |
+          Enforce authentication on this endpoint via middleware/guards.
+          Return 401/403 for requests without valid credentials.
+        stepsToReproduce: |
+          1) Send the original request to {{original.url}}.
+          2) Remove Authorization/Cookie headers.
+          3) Send {{req.method}} {{req.url}} and observe {{res.status}} with protected content.
+        tags: "auth,unauthorized,missing-auth"
+        impact: "Unauthenticated users can access protected data or functions."
+
+    - rule_name: SQLi - boolean tautology in params
+      transform:
+        replace_params_one_by_one: "' OR '1'='1' -- "
+      match_on:
+        status: 200
+        response_contains:
+          - "syntax error"
+          - "sql"
+          - "mysql"
+          - "postgres"
+          - "database"
+          - "logged in"
+          - "welcome"
+      report:
+        title: "Possible SQL Injection (boolean tautology)"
+        description: "All parameter values were replaced with a boolean tautology. The response contains DB-related text or shows authenticated behavior. Original URL: {{original.url}} Test URL: {{req.url}}"
+        cwe: "CWE-89"
+        severity: "critical"
+        cvssScore: 9.0
+        mitigation: "Use parameterized/prepared statements and ORM parameter binding; validate and sanitize inputs."
+        stepsToReproduce: |
+          1. Replace all request parameters with: ' OR '1'='1' --
+          2. Send the request to {{req.url}}.
+          3. Observe status {{res.status}} and body for DB messages or authenticated indicators.
+        tags: "sql-injection,tautology,db"
+        impact: "Authentication bypass, data exposure, unauthorized data access."
+
+    - rule_name: Reflected XSS in response (all params)
+      transform:
+        replace_params_one_by_one: "<script>alert('x')</script>"
+      match_on:
+        status: 200
+        response_contains: "<script>alert('x')</script>"
+      report:
+        title: "Reflected XSS Detected"
+        description: "User-supplied input was reflected verbatim into the response without sanitization. Original URL: {{original.url}} Attack vector: {{req.url}}"
+        cwe: "CWE-79"
+        severity: "high"
+        cvssScore: 8.0
+        mitigation: "Context-aware output encoding/escaping for HTML, use Content-Security-Policy, and validate input."
+        stepsToReproduce: |
+          1. Replace parameters with: <script>alert('x')</script>
+          2. Send GET/POST to {{req.url}}.
+          3. Observe script present in response and executed in browser context.
+        tags: "xss,reflected,input-validation"
+        impact: "Session theft, account takeover, or malicious script execution in victim browsers."
+
+    - rule_name: SSRF via url param (all params)
+      transform:
+        replace_params_one_by_one: "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+      match_on:
+        status: 200
+        response_contains:
+          - "latest"
+          - "meta-data"
+          - "iam"
+      report:
+        title: "Possible SSRF - internal metadata access"
+        description: "A URL to instance metadata was injected and the response referenced metadata content — indicates SSRF risk. Original URL: {{original.url}}"
+        cwe: "CWE-918"
+        severity: "critical"
+        cvssScore: 9.0
+        mitigation: "Validate and restrict outbound URLs, use allowlists, block access to internal IP ranges, and sanitize URL inputs."
+        stepsToReproduce: |
+          1. Replace all params with: http://169.254.169.254/latest/meta-data/iam/security-credentials/
+          2. Send the request to {{req.url}}.
+          3. Observe presence of metadata-like content in response ({{res.body}}).
+        tags: "ssrf,metadata,internal"
+        impact: "Access to cloud instance metadata leading to credential disclosure and full compromise."
+
+    - rule_name: Command Injection - shell metacharacters (all params)
+      transform:
+        replace_params_one_by_one: "test; cat /etc/passwd"
+      match_on:
+        status: 200
+        response_contains:
+          - "root:"
+          - "/bin/bash"
+      report:
+        title: "Possible Command Injection"
+        description: "Shell metacharacters and file-read command were injected; response contains OS-level file contents. Original URL: {{original.url}}"
+        cwe: "CWE-77"
+        severity: "critical"
+        cvssScore: 9.5
+        mitigation: "Avoid shelling out with concatenated user input; use safe APIs, strong input validation, and least-privilege execution contexts."
+        stepsToReproduce: |
+          1. Replace all params with: test; cat /etc/passwd
+          2. Send the request to {{req.url}}.
+          3. Observe system file contents in response (e.g., lines starting with 'root:').
+        tags: "command-injection,os,remote-code-exec"
+        impact: "Arbitrary command execution leading to full system compromise."
+
+    - rule_name: Path Traversal - file read (all params)
+      transform:
+        replace_params_one_by_one: "../../../../etc/passwd"
+      match_on:
+        status: 200
+        response_contains:
+          - "root:x:"
+          - "/etc/passwd"
+      report:
+        title: "Path Traversal / File Disclosure"
+        description: "Path traversal payload returned content from a sensitive filesystem path. Original URL: {{original.url}}"
+        cwe: "CWE-22"
+        severity: "critical"
+        cvssScore: 9.0
+        mitigation: "Canonicalize and validate file paths, restrict filesystem access to allowed directories, and use safe file APIs."
+        stepsToReproduce: |
+          1. Replace params with: ../../../../etc/passwd
+          2. Send request to {{req.url}} and inspect response for passwd contents.
+        tags: "path-traversal,file-read,disclosure"
+        impact: "Local file disclosure, potential secrets/sensitive data leak."
+
+    - rule_name: NoSQLi - operator injection (all params)
+      transform:
+        replace_params_one_by_one: '{"$ne": null}'
+      match_on:
+        status: [200, 302]
+        response_contains:
+          - "mongo"
+          - "error"
+          - "{"
+      report:
+        title: "NoSQL Injection (operator injection)"
+        description: "Operator-style payloads were injected into parameters. Response indicates database/operator processing or altered query results. Original URL: {{original.url}}"
+        cwe: "CWE-943"
+        severity: "critical"
+        cvssScore: 9.0
+        mitigation: "Treat inputs as data (not operators); serialize/escape JSON inputs and use safe driver APIs; validate types server-side."
+        stepsToReproduce: |
+          1. Replace params with: {\"$ne\": null}
+          2. Send request to {{req.url}} and examine response for DB artifacts or unexpected results.
+        tags: "nosql-injection,mongo,operator"
+        impact: "Bypassing filters or retrieving unauthorized data from NoSQL databases."
+
+    - rule_name: SSTI - template expression in all params
+      transform:
+        replace_params_one_by_one: "{{7*7}}"
+      match_on:
+        status: 200
+        response_contains:
+          - "49"
+      report:
+        title: "Server-side Template Injection (SSTI)"
+        description: "A template expression was evaluated on the server (response contains evaluated result). This may allow remote code execution or data access. Original URL: {{original.url}}"
+        cwe: "CWE-94"
+        severity: "critical"
+        cvssScore: 9.5
+        mitigation: "Avoid evaluating user input in templates; use strict template engines, disable execution features, and validate inputs."
+        stepsToReproduce: |
+          1. Replace params with: {{7*7}}
+          2. Send the request to {{req.url}} and observe evaluated output (e.g., '49') in the response.
+        tags: "ssti,template-injection,code-execution"
+        impact: "Remote code execution, full system compromise or sensitive data exposure."
