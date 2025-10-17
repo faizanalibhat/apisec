@@ -15,7 +15,7 @@ export const sendRequest = async ({ request }) => {
   const config = {
     method: request.method.toLowerCase(),
     url: request.url,
-    headers: formatHeaders(request.headers),
+    headers: request.headers,
     data: request.body || undefined,
     validateStatus: () => true,
     timeout: REQUEST_TIMEOUT_MS,
