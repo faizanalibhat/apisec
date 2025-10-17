@@ -268,7 +268,7 @@ export class ScanService {
                     }
                 },
 
-                // 5. Compute counts
+                // 5. Compute counts and update stats
                 {
                     $addFields: {
                         completedRequests: {
@@ -282,7 +282,19 @@ export class ScanService {
                         },
                         totalRequests: { $size: "$transformedRequests" },
                         environmentId: "$environment._id",
-                        environmentName: "$environment.name"
+                        environmentName: "$environment.name",
+                        // Update stats with actual counts from database
+                        "stats.totalRequests": { $size: "$rawRequests" },
+                        "stats.totalTransformedRequests": { $size: "$transformedRequests" },
+                        "stats.processedRequests": {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "complete"] }
+                                }
+                            }
+                        }
                     }
                 },
 
