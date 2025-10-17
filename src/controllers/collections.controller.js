@@ -51,7 +51,7 @@ export class CollectionsController {
                     ],
                     as: "requests"
                 }
-            }
+            },
 
             // 3️⃣ Add totalRequests count
             {
