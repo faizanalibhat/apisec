@@ -260,7 +260,7 @@ class PostmanParser {
                 rawHttp: rawRequest,
                 collectionName: context.collectionName,
                 workspaceName: context.workspaceName,
-                collectionUid: context.collectionId,
+                collectionUid: context.collectionUid,
                 workspaceId: context.workspaceId,
 
                 // Optional fields
@@ -310,6 +310,7 @@ class PostmanParser {
                 ...context,
                 collectionName: collection.info?.name || 'Unknown Collection',
                 collectionId: collection.info?._postman_id || context.collectionId,
+                collectionUid: context.collectionId,
                 variables: allVariables
             };
 
