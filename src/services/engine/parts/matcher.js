@@ -345,7 +345,7 @@ export const createMatcher = () => {
      * @param {Object} rule - { status, body_contains, size, headers, ... }
      * @returns {Object} { matched, matchedCriteria, details }
      */
-    match(response, rule) {
+    match({ response, rule }) {
       const matchRule = rule.match_on || rule.response?.match || rule;
       const handlers = registry.getHandlers();
 
