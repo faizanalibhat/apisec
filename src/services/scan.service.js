@@ -248,17 +248,7 @@ export class ScanService {
                 },
                 { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
 
-                // 3. Lookup raw requests using requestIds
-                {
-                    $lookup: {
-                        from: "rawrequests",
-                        localField: "requestIds",
-                        foreignField: "_id",
-                        as: "rawRequests"
-                    }
-                },
-
-                // 4. Lookup transformed requests for each scan
+                // 3. Lookup transformed requests for each scan
                 {
                     $lookup: {
                         from: "transformedrequests",
@@ -268,7 +258,27 @@ export class ScanService {
                     }
                 },
 
-                // 5. Compute counts and update stats
+                // 4. Lookup raw requests based on requestIds
+                {
+                    $lookup: {
+                        from: "raw_requests",
+                        localField: "requestIds",
+                        foreignField: "_id",
+                        as: "rawRequests"
+                    }
+                },
+
+                // 5. Lookup rules based on ruleIds
+                {
+                    $lookup: {
+                        from: "rules",
+                        localField: "ruleIds",
+                        foreignField: "_id",
+                        as: "rules"
+                    }
+                },
+
+                // 6. Compute counts and override stats
                 {
                     $addFields: {
                         completedRequests: {
@@ -283,31 +293,24 @@ export class ScanService {
                         totalRequests: { $size: "$transformedRequests" },
                         environmentId: "$environment._id",
                         environmentName: "$environment.name",
-                        // Update stats with actual counts from database
+                        // Override stats values with actual counts
                         "stats.totalRequests": { $size: "$rawRequests" },
-                        "stats.totalTransformedRequests": { $size: "$transformedRequests" },
-                        "stats.processedRequests": {
-                            $size: {
-                                $filter: {
-                                    input: "$transformedRequests",
-                                    as: "req",
-                                    cond: { $eq: ["$$req.state", "complete"] }
-                                }
-                            }
-                        }
+                        "stats.totalRules": { $size: "$rules" },
+                        "stats.totalTransformedRequests": { $size: "$transformedRequests" }
                     }
                 },
 
-                // 6. Optionally remove the full transformedRequests array, environment array and findings to avoid large payloads
+                // 7. Remove the lookup arrays to avoid large payloads
                 {
                     $project: {
                         transformedRequests: 0,
-                        environment: 0,
-                        findings: 0 // same as your `.select('-findings')`
+                        rawRequests: 0,
+                        rules: 0,
+                        findings: 0
                     }
                 },
 
-                // 7. Sort, skip, limit
+                // 8. Sort, skip, limit
                 { $sort: sort },
                 { $skip: skip },
                 { $limit: limit }
