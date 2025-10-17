@@ -273,7 +273,7 @@ export class ScanService {
                                 $filter: {
                                     input: "$transformedRequests",
                                     as: "req",
-                                    cond: { $eq: ["$$req.state", "complete"] }
+                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
                                 }
                             }
                         },
