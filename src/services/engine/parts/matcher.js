@@ -1,289 +1,395 @@
-/**
- * Match the response against the rule and return detailed results
- * @param {Object} response - { status, body, headers, size, time }
- * @param {Object} rule - Parsed rule with match criteria
- * @returns {Object} { matched: boolean, matchedCriteria: Object }
- */
-export const matcher = ({ response, rule }) => {
-  const match = rule.match_on || rule.response?.match || {};
-  const headers = response.headers || {};
+const buildResponseContent = (response) => {
+  const parts = [];
   
-  // Store all match results
-  const matchResults = {
-    status: null,
-    bodyContains: null,
-    size: null,
-    headers: null,
-    headersExist: null,
-    headerHasValue: null,
-    contentType: null,
-    time: null
-  };
-
-  // Store the specific criteria that matched
-  let matchedCriteria = null;
-
-  // 1. Status code check
-  if (typeof match.status !== 'undefined') {
-    const statusMatched = response.status === match.status;
-    matchResults.status = {
-      matched: statusMatched,
-      expected: match.status,
-      actual: response.status,
-      type: 'status_code'
-    };
-    
-    if (statusMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'status_code',
-        operator: 'equals',
-        expected: match.status,
-        actual: response.status,
-        description: `Response status code equals ${match.status}`
-      };
-    }
+  // Include status
+  if (response.status) {
+    parts.push(response.status.toString());
   }
-
-  // 2. Body contains string(s)
-  if (typeof match.body_contains !== 'undefined') {
-    let bodyMatched = false;
-    let matchedValue = null;
-    
-    if (Array.isArray(match.body_contains)) {
-      for (const str of match.body_contains) {
-        if (bodyContains(response.body, str)) {
-          bodyMatched = true;
-          matchedValue = str;
-          break;
-        }
-      }
+  
+  // Include body
+  if (response.body) {
+    if (typeof response.body === 'string') {
+      parts.push(response.body);
     } else {
-      bodyMatched = bodyContains(response.body, match.body_contains);
-      matchedValue = match.body_contains;
-    }
-    
-    matchResults.bodyContains = {
-      matched: bodyMatched,
-      expected: match.body_contains,
-      matchedValue,
-      type: 'body_contains'
-    };
-    
-    if (bodyMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'body_contains',
-        operator: 'contains',
-        expected: match.body_contains,
-        actual: matchedValue,
-        description: `Response body contains "${matchedValue}"`
-      };
-    }
-  }
-
-  // 3. Response size
-  if (typeof match.size !== 'undefined') {
-    let actualSize = response.size;
-    if (typeof actualSize === 'undefined' && typeof response.body === 'string') {
-      actualSize = Buffer.byteLength(response.body, 'utf8');
-    }
-    
-    let sizeMatched = false;
-    let sizeDescription = '';
-    
-    if (typeof match.size === 'object' && match.size !== null) {
-      if (typeof match.size.min === 'number' && actualSize >= match.size.min) {
-        sizeMatched = true;
-        sizeDescription = `size >= ${match.size.min}`;
+      try {
+        parts.push(JSON.stringify(response.body));
+      } catch {
+        parts.push(String(response.body));
       }
-      if (typeof match.size.max === 'number' && actualSize <= match.size.max) {
-        sizeMatched = sizeMatched && true;
-        sizeDescription = sizeDescription ? 'size in range' : `size <= ${match.size.max}`;
-      }
-    } else if (typeof match.size === 'number') {
-      sizeMatched = actualSize === match.size;
-      sizeDescription = `size equals ${match.size}`;
-    }
-    
-    matchResults.size = {
-      matched: sizeMatched,
-      expected: match.size,
-      actual: actualSize,
-      type: 'response_size'
-    };
-    
-    if (sizeMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'response_size',
-        operator: typeof match.size === 'object' ? 'in_range' : 'equals',
-        expected: match.size,
-        actual: actualSize,
-        description: `Response ${sizeDescription} bytes`
-      };
     }
   }
-
-  // 4. Headers exact match
-  if (typeof match.headers !== 'undefined') {
-    const headersMatched = matchHeaders(headers, match.headers);
-    const matchedHeaders = Object.keys(match.headers).filter(key => 
-      headers[key.toLowerCase()] === match.headers[key]
-    );
-    
-    matchResults.headers = {
-      matched: headersMatched,
-      expected: match.headers,
-      matchedHeaders,
-      type: 'headers_match'
-    };
-    
-    if (headersMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'headers_match',
-        operator: 'equals',
-        expected: match.headers,
-        actual: matchedHeaders,
-        description: `Headers match: ${JSON.stringify(match.headers)}`
-      };
+  
+  // Include headers
+  if (response.headers && typeof response.headers === 'object') {
+    for (const [key, value] of Object.entries(response.headers)) {
+      parts.push(`${key}: ${value}`);
     }
   }
+  
+  return parts.join('\n');
+};
 
-  // 5. Headers exist
-  if (typeof match.headers_exist !== 'undefined') {
-    const expectedHeaders = Array.isArray(match.headers_exist) 
-      ? match.headers_exist 
-      : [match.headers_exist];
-    
-    const existingHeaders = expectedHeaders.filter(header => 
-      headers[header.toLowerCase()] !== undefined
-    );
-    const allExist = existingHeaders.length === expectedHeaders.length;
-    
-    matchResults.headersExist = {
-      matched: allExist,
-      expected: expectedHeaders,
-      existing: existingHeaders,
-      type: 'headers_exist'
-    };
-    
-    if (allExist && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'headers_exist',
-        operator: 'exists',
-        expected: expectedHeaders,
-        actual: existingHeaders,
-        description: `Headers exist: ${expectedHeaders.join(', ')}`
-      };
-    }
+// ============================================================================
+// EXPORT SINGLETON INSTANCE
+// ============================================================================/**
+
+// ============================================================================
+// HANDLER REGISTRY
+// ============================================================================
+
+class MatcherRegistry {
+  constructor() {
+    this.handlers = [];
   }
 
-  // 6. Header has value
-  if (typeof match.header_has_value !== 'undefined') {
-    let headerValueMatched = false;
-    let matchedHeader = null;
+  register(handler) {
+    if (!handler.key || !handler.match || !handler.describe) {
+      throw new Error('Handler must have: key, match(), and describe() methods');
+    }
+    this.handlers.push(handler);
+    return this;
+  }
+
+  getHandlers() {
+    return this.handlers;
+  }
+
+  clear() {
+    this.handlers = [];
+  }
+}
+
+// ============================================================================
+// BUILT-IN HANDLERS
+// ============================================================================
+
+const StatusCodeHandler = {
+  key: 'status',
+  match({ response, rule }) {
+    const expected = rule.status;
+    if (typeof expected === 'undefined') return null;
     
-    const checks = Array.isArray(match.header_has_value) 
-      ? match.header_has_value 
-      : [match.header_has_value];
-    
-    for (const check of checks) {
-      if (headerHasValue(headers, check.key, check.value)) {
-        headerValueMatched = true;
-        matchedHeader = check;
+    const matched = response.status === expected;
+    return {
+      matched,
+      expected,
+      actual: response.status,
+    };
+  },
+  describe(result) {
+    return `Response status code equals ${result.expected}`;
+  }
+};
+
+const BodyContainsHandler = {
+  key: 'body_contains',
+  match({ response, rule }) {
+    const expected = rule.body_contains;
+    if (typeof expected === 'undefined') return null;
+
+    const values = Array.isArray(expected) ? expected : [expected];
+    let matched = false;
+    let matchedValue = null;
+
+    for (const value of values) {
+      if (bodyContains(response.body, value)) {
+        matched = true;
+        matchedValue = value;
         break;
       }
     }
-    
-    matchResults.headerHasValue = {
-      matched: headerValueMatched,
-      expected: match.header_has_value,
-      matchedHeader,
-      type: 'header_value'
-    };
-    
-    if (headerValueMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'header_value',
-        operator: 'equals',
-        expected: matchedHeader,
-        actual: headers[matchedHeader.key.toLowerCase()],
-        description: `Header ${matchedHeader.key} equals "${matchedHeader.value}"`
-      };
-    }
-  }
 
-  // 7. Content-Type
-  if (typeof match.content_type !== 'undefined') {
-    const contentTypeMatched = contentTypeMatches(headers, match.content_type);
-    const actualContentType = headers['content-type'] || headers['Content-Type'];
-    
-    matchResults.contentType = {
-      matched: contentTypeMatched,
-      expected: match.content_type,
-      actual: actualContentType,
-      type: 'content_type'
+    return {
+      matched,
+      expected,
+      actual: matchedValue,
     };
-    
-    if (contentTypeMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'content_type',
-        operator: 'contains',
-        expected: match.content_type,
-        actual: actualContentType,
-        description: `Content-Type contains "${match.content_type}"`
-      };
-    }
+  },
+  describe(result) {
+    return `Response body contains "${result.actual}"`;
   }
+};
 
-  // 8. Response time
-  if (typeof match.time !== 'undefined' && typeof response.time !== 'undefined') {
-    let timeMatched = false;
-    let timeDescription = '';
-    
-    if (typeof match.time === 'object' && match.time !== null) {
-      if (typeof match.time.min === 'number' && response.time >= match.time.min) {
-        timeMatched = true;
-        timeDescription = `time >= ${match.time.min}ms`;
-      }
-      if (typeof match.time.max === 'number' && response.time <= match.time.max) {
-        timeMatched = timeMatched && true;
-        timeDescription = timeDescription ? 'time in range' : `time <= ${match.time.max}ms`;
-      }
-    } else if (typeof match.time === 'number') {
-      timeMatched = response.time === match.time;
-      timeDescription = `time equals ${match.time}ms`;
+const ResponseSizeHandler = {
+  key: 'size',
+  match({ response, rule }) {
+    const expected = rule.size;
+    if (typeof expected === 'undefined') return null;
+
+    let actual = response.size;
+    if (typeof actual === 'undefined' && typeof response.body === 'string') {
+      actual = Buffer.byteLength(response.body, 'utf8');
     }
+
+    let matched = false;
+
+    if (typeof expected === 'object' && expected !== null) {
+      matched = isInRange(actual, expected);
+    } else if (typeof expected === 'number') {
+      matched = actual === expected;
+    }
+
+    return {
+      matched,
+      expected,
+      actual,
+    };
+  },
+  describe(result) {
+    if (typeof result.expected === 'object') {
+      return `Response size in range [${result.expected.min || '∞'}, ${result.expected.max || '∞'}] bytes`;
+    }
+    return `Response size equals ${result.expected} bytes`;
+  }
+};
+
+const HeadersExactMatchHandler = {
+  key: 'headers',
+  match({ response, rule }) {
+    const expected = rule.headers;
+    if (typeof expected === 'undefined') return null;
+
+    const headers = normalizeHeaders(response.headers || {});
+    const expectedNorm = normalizeHeaderKeys(expected);
     
-    matchResults.time = {
-      matched: timeMatched,
-      expected: match.time,
+    const matched = Object.entries(expectedNorm).every(
+      ([key, value]) => headers[key] === value
+    );
+
+    const matchedHeaders = Object.keys(expectedNorm).filter(
+      key => headers[key] === expectedNorm[key]
+    );
+
+    return {
+      matched,
+      expected: expectedNorm,
+      actual: matchedHeaders,
+    };
+  },
+  describe(result) {
+    return `Headers match: ${JSON.stringify(result.expected)}`;
+  }
+};
+
+const HeadersExistHandler = {
+  key: 'headers_exist',
+  match({ response, rule }) {
+    const expected = rule.headers_exist;
+    if (typeof expected === 'undefined') return null;
+
+    const headers = normalizeHeaders(response.headers || {});
+    const expectedHeaders = Array.isArray(expected) ? expected : [expected];
+    
+    const existing = expectedHeaders.filter(
+      header => headers[header.toLowerCase()] !== undefined
+    );
+    const matched = existing.length === expectedHeaders.length;
+
+    return {
+      matched,
+      expected: expectedHeaders,
+      actual: existing,
+    };
+  },
+  describe(result) {
+    return `Headers exist: ${result.expected.join(', ')}`;
+  }
+};
+
+const HeaderHasValueHandler = {
+  key: 'header_has_value',
+  match({ response, rule }) {
+    const expected = rule.header_has_value;
+    if (typeof expected === 'undefined') return null;
+
+    const headers = normalizeHeaders(response.headers || {});
+    const checks = Array.isArray(expected) ? expected : [expected];
+
+    let matched = false;
+    let matchedCheck = null;
+
+    for (const check of checks) {
+      if (headers[check.key.toLowerCase()] === check.value) {
+        matched = true;
+        matchedCheck = check;
+        break;
+      }
+    }
+
+    return {
+      matched,
+      expected,
+      actual: matchedCheck,
+    };
+  },
+  describe(result) {
+    if (!result.actual) return '';
+    return `Header ${result.actual.key} equals "${result.actual.value}"`;
+  }
+};
+
+const ContentTypeHandler = {
+  key: 'content_type',
+  match({ response, rule }) {
+    const expected = rule.content_type;
+    if (typeof expected === 'undefined') return null;
+
+    const headers = normalizeHeaders(response.headers || {});
+    const actual = headers['content-type'];
+    const matched = actual ? actual.includes(expected) : false;
+
+    return {
+      matched,
+      expected,
+      actual,
+    };
+  },
+  describe(result) {
+    return `Content-Type contains "${result.expected}"`;
+  }
+};
+
+const ResponseTimeHandler = {
+  key: 'time',
+  match({ response, rule }) {
+    const expected = rule.time;
+    if (typeof expected === 'undefined' || typeof response.time === 'undefined') {
+      return null;
+    }
+
+    let matched = false;
+
+    if (typeof expected === 'object' && expected !== null) {
+      matched = isInRange(response.time, expected);
+    } else if (typeof expected === 'number') {
+      matched = response.time === expected;
+    }
+
+    return {
+      matched,
+      expected,
       actual: response.time,
-      type: 'response_time'
     };
-    
-    if (timeMatched && !matchedCriteria) {
-      matchedCriteria = {
-        type: 'response_time',
-        operator: typeof match.time === 'object' ? 'in_range' : 'equals',
-        expected: match.time,
-        actual: response.time,
-        description: `Response ${timeDescription}`
-      };
+  },
+  describe(result) {
+    if (typeof result.expected === 'object') {
+      return `Response time in range [${result.expected.min || '∞'}, ${result.expected.max || '∞'}]ms`;
     }
+    return `Response time equals ${result.expected}ms`;
   }
+};
 
-  // Determine overall match
-  const matched = Object.values(matchResults)
-    .filter(result => result !== null)
-    .some(result => result.matched === true);
+const ResponseContainsHandler = {
+  key: 'response_contains',
+  match({ response, rule }) {
+    const expected = rule.response_contains;
+    if (typeof expected === 'undefined') return null;
+
+    // Build searchable response string
+    const searchContent = buildResponseContent(response);
+    
+    const values = Array.isArray(expected) ? expected : [expected];
+    let matched = false;
+    let matchedValue = null;
+
+    for (const value of values) {
+      if (searchContent.includes(value)) {
+        matched = true;
+        matchedValue = value;
+        break;
+      }
+    }
+
+    return {
+      matched,
+      expected,
+      actual: matchedValue,
+    };
+  },
+  describe(result) {
+    return `Response contains "${result.actual}"`;
+  }
+};
+
+// ============================================================================
+// MAIN MATCHER FUNCTION
+// ============================================================================
+
+export const createMatcher = () => {
+  const registry = new MatcherRegistry();
+
+  // Register built-in handlers
+  registry.register(StatusCodeHandler);
+  registry.register(BodyContainsHandler);
+  registry.register(ResponseSizeHandler);
+  registry.register(HeadersExactMatchHandler);
+  registry.register(HeadersExistHandler);
+  registry.register(HeaderHasValueHandler);
+  registry.register(ContentTypeHandler);
+  registry.register(ResponseTimeHandler);
+  registry.register(ResponseContainsHandler);
 
   return {
-    matched,
-    matchedCriteria: matchedCriteria || null,
-    details: matchResults
+    /**
+     * Add a custom handler
+     * @param {Object} handler - { key, match, describe }
+     */
+    addHandler(handler) {
+      registry.register(handler);
+      return this;
+    },
+
+    /**
+     * Match response against rule
+     * @param {Object} response - { status, body, headers, size, time }
+     * @param {Object} rule - { status, body_contains, size, headers, ... }
+     * @returns {Object} { matched, matchedCriteria, details }
+     */
+    match(response, rule) {
+      const matchRule = rule.match_on || rule.response?.match || rule;
+      const handlers = registry.getHandlers();
+
+      const details = {};
+      let matchedCriteria = null;
+
+      // Run all handlers and collect results
+      for (const handler of handlers) {
+        const result = handler.match({ response, rule: matchRule });
+
+        if (result) {
+          details[handler.key] = {
+            ...result,
+            type: handler.key,
+          };
+
+          // First match wins
+          if (result.matched && !matchedCriteria) {
+            matchedCriteria = {
+              type: handler.key,
+              expected: result.expected,
+              actual: result.actual,
+              description: handler.describe(result),
+            };
+          }
+        }
+      }
+
+      // Overall match: at least one criterion matched
+      const matched = Object.values(details).some(d => d.matched === true);
+
+      return {
+        matched,
+        matchedCriteria,
+        details,
+      };
+    },
   };
 };
 
-// Helper functions
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 const bodyContains = (body, expected) => {
   if (typeof body === 'string') {
     return body.includes(expected);
@@ -296,32 +402,26 @@ const bodyContains = (body, expected) => {
   }
 };
 
-const matchHeaders = (actualHeaders, expectedHeaders) => {
-  for (const [key, expectedValue] of Object.entries(expectedHeaders)) {
-    const actualValue = actualHeaders[key.toLowerCase()];
-    if (!actualValue || actualValue !== expectedValue) {
-      return false;
-    }
+const normalizeHeaders = (headers) => {
+  const normalized = {};
+  for (const [key, value] of Object.entries(headers)) {
+    normalized[key.toLowerCase()] = value;
   }
-  return true;
+  return normalized;
 };
 
-const headersExist = (actualHeaders, expectedHeaderKeys) => {
-  for (const key of expectedHeaderKeys) {
-    if (!(key.toLowerCase() in actualHeaders)) {
-      return false;
-    }
+const normalizeHeaderKeys = (headers) => {
+  const normalized = {};
+  for (const [key, value] of Object.entries(headers)) {
+    normalized[key.toLowerCase()] = value;
   }
-  return true;
+  return normalized;
 };
 
-const headerHasValue = (actualHeaders, key, expectedValue) => {
-  const actualValue = actualHeaders[key.toLowerCase()];
-  return actualValue === expectedValue;
+const isInRange = (value, range) => {
+  const minOk = typeof range.min !== 'number' || value >= range.min;
+  const maxOk = typeof range.max !== 'number' || value <= range.max;
+  return minOk && maxOk;
 };
 
-const contentTypeMatches = (actualHeaders, expectedType) => {
-  const ct = actualHeaders['content-type'] || actualHeaders['Content-Type'];
-  if (!ct) return false;
-  return ct.includes(expectedType);
-};
+export const matcher = createMatcher();

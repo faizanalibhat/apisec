@@ -1,127 +1,320 @@
 import url from "url";
 
-/**
- * Helper: Convert headers array to object and back
- */
-const arrayToHeaderObject = (headersArray) => {
-  return headersArray
-  // return Object.fromEntries(
-  //   (headersArray || []).map(h => [h.key, h.value])
-  // );
+// ============================================================================
+// TRANSFORMER REGISTRY
+// ============================================================================
+
+class TransformerRegistry {
+  constructor() {
+    this.transformers = [];
+  }
+
+  register(transformer) {
+    if (!transformer.key || !transformer.transform) {
+      throw new Error('Transformer must have: key and transform() method');
+    }
+    this.transformers.push(transformer);
+    return this;
+  }
+
+  getTransformers() {
+    return this.transformers;
+  }
+
+  clear() {
+    this.transformers = [];
+  }
+}
+
+// ============================================================================
+// BUILT-IN TRANSFORMERS
+// ============================================================================
+
+const HeaderRemovalTransformer = {
+  key: 'header_removal',
+  transform(context) {
+    const remove = context.rule.transform?.headers?.remove || [];
+    if (remove.length === 0) return;
+
+    remove.forEach(key => {
+      delete context.headers[key];
+    });
+  }
 };
 
-const headerObjectToArray = (headersObj) => {
-  return Object.entries(headersObj).map(([key, value]) => ({
-    key,
-    value,
-    type: 'text',
-  }));
+const HeaderReplaceAllValuesTransformer = {
+  key: 'header_replace_all_values',
+  transform(context) {
+    const value = context.rule.transform?.headers?.replace_all_values;
+    if (!value) return;
+
+    Object.keys(context.headers).forEach(k => {
+      context.headers[k] = value;
+    });
+  }
 };
 
-/**
- * Apply transformation rules to a single request.
- * May return multiple transformed requests (for method repetition).
- */
-export const transform = ({ request, rule }) => {
-  const original = { ...request };
-
-
-  const baseUrl = new URL(original.url);
-
-  // === 1. Handle Header Transformations ===
-  // let headers = arrayToHeaderObject(original.headers || []);
-  let headers = original.headers;
-
-  // Remove headers
-  (rule.transform?.headers?.remove || []).forEach(key => {
-    delete headers[key];
-  });
-
-  // Replace all header values
-  if (rule.transform?.headers?.replace_all_values) {
-    Object.keys(headers).forEach(k => headers[k] = rule.transform.headers.replace_all_values);
+const HeaderAddTransformer = {
+  key: 'header_add',
+  transform(context) {
+    const toAdd = context.rule.transform?.headers?.add || {};
+    Object.entries(toAdd).forEach(([key, value]) => {
+      context.headers[key] = value;
+    });
   }
+};
 
-  // Add headers
-  Object.entries(rule.transform?.headers?.add || {}).forEach(([key, value]) => {
-    headers[key] = value;
-  });
+const CookieRemovalTransformer = {
+  key: 'cookie_removal',
+  transform(context) {
+    const remove = context.rule.transform?.cookies?.remove || [];
+    if (remove.length === 0) return;
 
-  // === 2. Handle Cookie Transformations ===
-  const cookieHeader = headers['Cookie'] || '';
-  const cookies = Object.fromEntries(cookieHeader.split(';').map(c => {
-    const [k, v] = c.trim().split('=');
-    return [k, v];
-  }).filter(([k]) => k));
-
-  // Remove cookies
-  (rule.transform?.cookies?.remove || []).forEach(k => delete cookies[k]);
-
-  // Add cookies
-  Object.entries(rule.transform?.cookies?.add || {}).forEach(([k, v]) => {
-    cookies[k] = v;
-  });
-
-  // Rebuild Cookie header
-  if (Object.keys(cookies).length > 0) {
-    headers['Cookie'] = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ');
-  } else {
-    delete headers['Cookie'];
+    remove.forEach(k => delete context.cookies[k]);
+    context.rebuildCookieHeader = true;
   }
+};
 
-  // === 3. Override Host ===
-  if (rule.transform?.override_host) {
-    baseUrl.host = rule.transform.override_host;
+const CookieAddTransformer = {
+  key: 'cookie_add',
+  transform(context) {
+    const toAdd = context.rule.transform?.cookies?.add || {};
+    Object.entries(toAdd).forEach(([k, v]) => {
+      context.cookies[k] = v;
+    });
+    context.rebuildCookieHeader = true;
   }
+};
 
-
-  if (rule.transform?.override_protocol) {
-    baseUrl.protocol = rule.transform.override_protocol;
+const HostOverrideTransformer = {
+  key: 'override_host',
+  transform(context) {
+    const host = context.rule.transform?.override_host;
+    if (!host) return;
+    context.baseUrl.host = host;
   }
+};
 
-
-  if (rule.transform?.override_port) {
-    baseUrl.port = rule.transform.override_port;
+const ProtocolOverrideTransformer = {
+  key: 'override_protocol',
+  transform(context) {
+    const protocol = context.rule.transform?.override_protocol;
+    if (!protocol) return;
+    context.baseUrl.protocol = protocol;
   }
+};
 
-  // === 4. Replace specific param value ===
-  const params = baseUrl.searchParams;
+const PortOverrideTransformer = {
+  key: 'override_port',
+  transform(context) {
+    const port = context.rule.transform?.override_port;
+    if (!port) return;
+    context.baseUrl.port = port;
+  }
+};
 
-  if (rule.transform?.replace_param_value) {
-    Object.entries(rule.transform.replace_param_value).forEach(([key, value]) => {
-      if (params.has(key)) {
-        params.set(key, value);
+const ReplaceParamValueTransformer = {
+  key: 'replace_param_value',
+  transform(context) {
+    const replacements = context.rule.transform?.replace_param_value || {};
+    Object.entries(replacements).forEach(([key, value]) => {
+      if (context.params.has(key)) {
+        context.params.set(key, value);
       }
     });
   }
+};
 
-  // === 5. Replace all param values ===
-  if (rule.transform?.replace_all_param_values) {
-    for (const key of params.keys()) {
-      params.set(key, rule.transform.replace_all_param_values);
+const ReplaceAllParamValuesTransformer = {
+  key: 'replace_all_param_values',
+  transform(context) {
+    const value = context.rule.transform?.replace_all_param_values;
+    if (!value) return;
+
+    for (const key of context.params.keys()) {
+      context.params.set(key, value);
     }
   }
-
-  // === 6. Add new query params ===
-  Object.entries(rule.transform?.add_query_params || {}).forEach(([key, value]) => {
-    params.set(key, value);
-  });
-
-  // === Finalize Transformed Base Request ===
-  const transformedRequest = {
-    ...original,
-    method: original.method,
-    headers: headerObjectToArray(headers),
-    url: baseUrl.toString(),
-  };
-
-  // === 7. Repeat request with multiple methods ===
-  const methodVariants = rule.transform?.repeat_with_methods || [transformedRequest.method];
-
-  const finalVariants = methodVariants.map(method => ({
-    ...transformedRequest,
-    method
-  }));
-
-  return finalVariants;
 };
+
+const ReplaceParamsOneByOneTransformer = {
+  key: 'replace_params_one_by_one',
+  transform(context) {
+    const value = context.rule.transform?.replace_params_one_by_one;
+    if (!value) return;
+
+    context.variantQueue = context.variantQueue || [];
+    const paramKeys = Array.from(context.params.keys());
+
+    for (const paramKey of paramKeys) {
+      const variantParams = new URLSearchParams(context.params);
+      variantParams.set(paramKey, value);
+      
+      context.variantQueue.push({
+        params: variantParams,
+        metadata: { replacedParam: paramKey, value }
+      });
+    }
+  }
+};
+
+const AddQueryParamsTransformer = {
+  key: 'add_query_params',
+  transform(context) {
+    const toAdd = context.rule.transform?.add_query_params || {};
+    Object.entries(toAdd).forEach(([key, value]) => {
+      context.params.set(key, value);
+    });
+  }
+};
+
+const RepeatWithMethodsTransformer = {
+  key: 'repeat_with_methods',
+  transform(context) {
+    const methods = context.rule.transform?.repeat_with_methods;
+    if (!methods || methods.length === 0) return;
+
+    context.methodVariants = methods;
+  }
+};
+
+// ============================================================================
+// MAIN TRANSFORMER FACTORY
+// ============================================================================
+
+export const createTransformer = () => {
+  const registry = new TransformerRegistry();
+
+  // Register built-in transformers
+  registry.register(HeaderRemovalTransformer);
+  registry.register(HeaderReplaceAllValuesTransformer);
+  registry.register(HeaderAddTransformer);
+  registry.register(CookieRemovalTransformer);
+  registry.register(CookieAddTransformer);
+  registry.register(HostOverrideTransformer);
+  registry.register(ProtocolOverrideTransformer);
+  registry.register(PortOverrideTransformer);
+  registry.register(ReplaceParamValueTransformer);
+  registry.register(ReplaceAllParamValuesTransformer);
+  registry.register(ReplaceParamsOneByOneTransformer);
+  registry.register(AddQueryParamsTransformer);
+  registry.register(RepeatWithMethodsTransformer);
+
+  return {
+    /**
+     * Add a custom transformer
+     * @param {Object} transformer - { key, transform(context) }
+     */
+    addTransformer(transformer) {
+      registry.register(transformer);
+      return this;
+    },
+
+    /**
+     * Transform a request based on rules
+     * @param {Object} request - { url, method, headers, ... }
+     * @param {Object} rule - { transform: { ... } }
+     * @returns {Array} Array of transformed request variants
+     */
+    transform({ request, rule }) {
+      const original = { ...request };
+      const baseUrl = new URL(original.url);
+      const params = baseUrl.searchParams;
+      const headers = { ...original.headers };
+
+      // Parse cookies from Cookie header
+      const cookieHeader = headers['Cookie'] || '';
+      const cookies = parseCookies(cookieHeader);
+
+      // Build transformation context
+      const context = {
+        original,
+        baseUrl,
+        params,
+        headers,
+        cookies,
+        rule,
+        rebuildCookieHeader: false,
+        variantQueue: [],
+        methodVariants: [original.method],
+      };
+
+      // Run all transformers
+      const transformers = registry.getTransformers();
+      for (const transformer of transformers) {
+        transformer.transform(context);
+      }
+
+      // Rebuild Cookie header if modified
+      if (context.rebuildCookieHeader) {
+        rebuildCookieHeader(headers, context.cookies);
+      }
+
+      // Build base transformed request
+      const baseTransformed = {
+        ...original,
+        method: original.method,
+        headers,
+        url: baseUrl.toString(),
+      };
+
+      // Generate variants
+      let variants = [];
+
+      if (context.variantQueue.length > 0) {
+        // One-by-one parameter replacements create multiple variants
+        variants = context.variantQueue.map(variant => {
+          const url = new URL(baseUrl.toString());
+          url.search = variant.params.toString();
+          return {
+            ...baseTransformed,
+            url: url.toString(),
+            _metadata: variant.metadata,
+          };
+        });
+      } else {
+        // Apply method variants to single request
+        variants = context.methodVariants.map(method => ({
+          ...baseTransformed,
+          method,
+        }));
+      }
+
+      return variants;
+    },
+  };
+};
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+const parseCookies = (cookieHeader) => {
+  if (!cookieHeader) return {};
+
+  return Object.fromEntries(
+    cookieHeader
+      .split(';')
+      .map(c => {
+        const [k, v] = c.trim().split('=');
+        return [k, v];
+      })
+      .filter(([k]) => k)
+  );
+};
+
+const rebuildCookieHeader = (headers, cookies) => {
+  if (Object.keys(cookies).length > 0) {
+    headers['Cookie'] = Object.entries(cookies)
+      .map(([k, v]) => `${k}=${v}`)
+      .join('; ');
+  } else {
+    delete headers['Cookie'];
+  }
+};
+
+// ============================================================================
+// EXPORT SINGLETON INSTANCE
+// ============================================================================
+
+export const transformer = createTransformer();
