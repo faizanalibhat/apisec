@@ -12,11 +12,15 @@ export class ProjectController {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
-        const [projects, total] = await Promise.all(
-            Projects.find({ orgId }).sort({ createdAt: -1 }).skip((page-1) * limit).limit(limit).lean(),
-            Projects.countDocuments({ orgId })
-        );
-
+        const [projects, total] = await Promise.all([
+        Projects.find({ orgId })
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .lean(),
+        Projects.countDocuments({ orgId })
+        ]);
+        
         return res.json({ data: projects, total });
     }
 

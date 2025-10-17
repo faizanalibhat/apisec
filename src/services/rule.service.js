@@ -1,5 +1,12 @@
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
+import fs from "fs";
+import yaml from "js-yaml";
+
+
+const default_yaml_content = fs.readFileSync("src/data/data.yaml");
+
+
 
 class RuleService {
     async createRule(ruleData) {
@@ -25,6 +32,22 @@ class RuleService {
 
     async getRules({ orgId, filters, page, limit, isActive }) {
         try {
+
+            const orgWideCount = await Rule.countDocuments({ orgId });
+
+            if (orgWideCount == 0) {
+                try {
+                    const parsed = yaml.load(default_yaml_content);
+
+                    const rules = parsed.rules || [];
+
+                    await Rule.create(rules.map(r => ({ orgId, ...r })));
+                }
+                catch(e) {
+                    console.log(e)
+                }
+            }
+
             const query = { orgId, ...filters };
 
             // Filter by active status if provided
