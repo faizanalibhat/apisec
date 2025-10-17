@@ -88,7 +88,6 @@ export class ScanService {
                 const scanStartNotification = {
                     store: true,
                     orgId: orgId,
-                    channels: ["email"],
                     notification: {
                         title: "Scan Started",
                         description: `Scan "${scan.name}" has been initiated with ${requests.length} requests and ${rules.length} rules.`,
@@ -100,18 +99,6 @@ export class ScanService {
                             resource: "scan"
                         }
                     },
-                    context: {
-                        name: scanData.userName || "User",
-                        title: "Scan Started",
-                        description: `Your API security scan "${scan.name}" has been successfully created and is being prepared for execution. The scan will test ${requests.length} API requests against ${rules.length} security rules.`,
-                        status: "success",
-                        timestamp: Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
-                        action_text: "View Scan",
-                        action_url: `https://suite.snapsec.co/scans/${scan._id}`,
-                        base_url: "https://suite.snapsec.co",
-                        subject: "API Security Scan Started - Snapsec"
-                    },
-                    orgCoverage: { roles: ["Member"] },
                     authContext: scanData.authContext || 'system'
                 };
 
