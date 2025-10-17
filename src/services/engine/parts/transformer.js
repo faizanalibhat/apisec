@@ -168,6 +168,76 @@ const AddQueryParamsTransformer = {
     }
 };
 
+const ReplaceQueryParamTransformer = {
+    key: 'replace_query_param',
+    transform(context) {
+        const config = context.rule.transform?.replace_query_param;
+        if (!config || !config.key || !config.value) return;
+
+        if (context.params.has(config.key)) {
+            context.params.set(config.key, config.value);
+        }
+    }
+};
+
+const ReplaceQueryParamsTransformer = {
+    key: 'replace_query_params',
+    transform(context) {
+        // This is an alias for the existing replace_param_value
+        const replacements = context.rule.transform?.replace_query_params || {};
+        Object.entries(replacements).forEach(([key, value]) => {
+            if (context.params.has(key)) {
+                context.params.set(key, value);
+            }
+        });
+    }
+};
+
+const ReplaceAllQueryParamsTransformer = {
+    key: 'replace_all_query_params',
+    transform(context) {
+        // This is an alias for the existing replace_all_param_values
+        const value = context.rule.transform?.replace_all_query_params;
+        if (!value) return;
+
+        for (const key of context.params.keys()) {
+            context.params.set(key, value);
+        }
+    }
+};
+
+const ReplaceQueryParamsOneByOneTransformer = {
+    key: 'replace_query_params_one_by_one',
+    transform(context) {
+        // This is an alias for the existing replace_params_one_by_one
+        const value = context.rule.transform?.replace_query_params_one_by_one;
+        if (!value) return;
+
+        context.variantQueue = context.variantQueue || [];
+        const paramKeys = Array.from(context.params.keys());
+
+        for (const paramKey of paramKeys) {
+            const variantParams = new URLSearchParams(context.params);
+            variantParams.set(paramKey, value);
+
+            context.variantQueue.push({
+                params: variantParams,
+                metadata: { replacedParam: paramKey, value }
+            });
+        }
+    }
+};
+
+const AddQueryParamTransformer = {
+    key: 'add_query_param',
+    transform(context) {
+        const config = context.rule.transform?.add_query_param;
+        if (!config || !config.key || config.value === undefined) return;
+
+        context.params.set(config.key, config.value);
+    }
+};
+
 const RepeatWithMethodsTransformer = {
     key: 'repeat_with_methods',
     transform(context) {
@@ -270,6 +340,74 @@ const RemoveBodyParamTransformer = {
     }
 };
 
+const ReplaceBodyParamTransformer = {
+    key: 'replace_body_param',
+    transform(context) {
+        const config = context.rule.transform?.replace_body_param;
+        if (!config || !config.key || config.value === undefined) return;
+        if (!context.bodyJson) return;
+
+        if (config.key in context.bodyJson) {
+            context.bodyJson[config.key] = config.value;
+        }
+
+        context.rebuildBody = true;
+    }
+};
+
+const ReplaceBodyParamsTransformer = {
+    key: 'replace_body_params',
+    transform(context) {
+        // This is an alias for the existing replace_body_param_value
+        const replacements = context.rule.transform?.replace_body_params || {};
+        if (Object.keys(replacements).length === 0) return;
+        if (!context.bodyJson) return;
+
+        Object.entries(replacements).forEach(([key, value]) => {
+            if (key in context.bodyJson) {
+                context.bodyJson[key] = value;
+            }
+        });
+
+        context.rebuildBody = true;
+    }
+};
+
+const ReplaceAllBodyParamsTransformer = {
+    key: 'replace_all_body_params',
+    transform(context) {
+        // This is an alias for the existing replace_all_body_values
+        const value = context.rule.transform?.replace_all_body_params;
+        if (!value) return;
+        if (!context.bodyJson) return;
+
+        Object.keys(context.bodyJson).forEach(key => {
+            context.bodyJson[key] = value;
+        });
+
+        context.rebuildBody = true;
+    }
+};
+
+const AddBodyParamsTransformer = {
+    key: 'add_body_params',
+    transform(context) {
+        // This is an alias for the existing add_body_param but with plural key
+        const toAdd = context.rule.transform?.add_body_params || {};
+        if (Object.keys(toAdd).length === 0) return;
+
+        if (!context.bodyJson) {
+            context.bodyJson = {};
+        }
+
+        Object.entries(toAdd).forEach(([key, value]) => {
+            context.bodyJson[key] = value;
+        });
+
+        context.rebuildBody = true;
+    }
+};
+
 // ============================================================================
 // MAIN TRANSFORMER FACTORY
 // ============================================================================
@@ -299,6 +437,20 @@ export const createTransformer = () => {
     registry.register(ReplaceBodyParamsOneByOneTransformer);
     registry.register(RemoveBodyParamTransformer);
 
+
+    // Register new query transformers
+    registry.register(ReplaceQueryParamTransformer);
+    registry.register(ReplaceQueryParamsTransformer);
+    registry.register(ReplaceAllQueryParamsTransformer);
+    registry.register(ReplaceQueryParamsOneByOneTransformer);
+    registry.register(AddQueryParamTransformer);
+
+    // Register new body transformers
+    registry.register(ReplaceBodyParamTransformer);
+    registry.register(ReplaceBodyParamsTransformer);
+    registry.register(ReplaceAllBodyParamsTransformer);
+    registry.register(AddBodyParamsTransformer);
+    
     return {
         /**
          * Add a custom transformer
