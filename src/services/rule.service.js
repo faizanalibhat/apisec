@@ -41,7 +41,7 @@ class RuleService {
 
                     const rules = parsed.rules || [];
 
-                    await Rule.create(rules.map(r => ({ orgId, ...r })));
+                    await Rule.create(rules.map(r => ({ orgId, ...r, raw_yaml: yaml.dump(r), parsed_yaml: r })));
                 }
                 catch(e) {
                     console.log(e)
