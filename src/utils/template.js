@@ -26,7 +26,17 @@ export class TemplateEngine {
             const value = this.getNestedValue(context, cleanPath);
 
             // Return the value or the original placeholder if not found
-            return value !== undefined && value !== null ? String(value) : match;
+            // return value !== undefined && value !== null ? String(value) : match;
+            
+            // Instead of String(value), we need:
+            if (value !== undefined && value !== null) {
+                // Handle objects and arrays
+                if (typeof value === 'object') {
+                    return JSON.stringify(value, null, 2); // Pretty-print JSON
+                }
+                return String(value);
+            }
+            return match;
         });
     }
 
@@ -67,7 +77,7 @@ export class TemplateEngine {
                 current = current[part];
             }
         }
-        
+
         return current;
     }
 
