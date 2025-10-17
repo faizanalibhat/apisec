@@ -1,4 +1,4 @@
-import { transform } from "./parts/transformer.js";
+import { transformer } from "./parts/transformer.js";
 import { matcher } from "./parts/matcher.js";
 import { sendReport, sendRequest } from "./parts/sender.js";
 
@@ -8,7 +8,7 @@ export class EngineService {
 
     static async transform({ request, rule }) {
 
-        const transformed_requests = transform({ request, rule });
+        const transformed_requests = transformer.transform({ request, rule });
 
         return transformed_requests;
 
@@ -31,7 +31,7 @@ export class EngineService {
 
     static async match({ response, rule }) {
         // Use the enhanced matcher that returns detailed results
-        const matchResult = matcher({ response, rule });
+        const matchResult = matcher.match({ response, rule });
         return matchResult;
     }
 }
