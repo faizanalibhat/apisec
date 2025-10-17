@@ -32,7 +32,7 @@ export class CollectionsController {
             // 2️⃣ Lookup to count related requests
             {
                 $lookup: {
-                    from: "rawrequests",
+                    from: "raw_requests",
                     localField: "collectionUid",
                     foreignField: "collectionUid",
                     as: "requests"
