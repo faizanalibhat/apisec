@@ -36,12 +36,16 @@ class RuleService {
             const orgWideCount = await Rule.countDocuments({ orgId });
 
             if (orgWideCount == 0) {
+                try {
+                    const parsed = yaml.load(default_yaml_content);
 
-                const parsed = yaml.safe_load(default_yaml_content);
+                    const rules = parsed.rules || [];
 
-                const rules = parsed.rules || [];
-
-                await Rule.create(rules.map(r => ({ orgId, ...r })));
+                    await Rule.create(rules.map(r => ({ orgId, ...r })));
+                }
+                catch(e) {
+                    console.log(e)
+                }
             }
 
             const query = { orgId, ...filters };
