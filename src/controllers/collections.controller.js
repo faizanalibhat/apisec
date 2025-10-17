@@ -32,9 +32,23 @@ export class CollectionsController {
             // 2️⃣ Lookup to count related requests
             {
                 $lookup: {
-                    from: "rawrequests",
-                    localField: "collectionUid",
-                    foreignField: "collectionUid",
+                    from: "raw_requests",
+                    let: { 
+                    collection_uid: "$collectionUid", 
+                    org_id: "$orgId" 
+                    },
+                    pipeline: [
+                    {
+                        $match: {
+                        $expr: {
+                            $and: [
+                            { $eq: ["$collectionUid", "$$collection_uid"] },
+                            { $eq: ["$orgId", "$$org_id"] }
+                            ]
+                        }
+                        }
+                    }
+                    ],
                     as: "requests"
                 }
             },
