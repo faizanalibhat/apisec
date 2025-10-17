@@ -57,6 +57,8 @@ export class ScanService {
                 filter.projectIds = { $in: projectIds };
             }
 
+            console.log("[+] APPLIED FILTER: ", filter);
+
             // Get all requests for the organization
             requests = await RawRequest.find(filter).lean();
 
