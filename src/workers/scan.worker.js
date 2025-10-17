@@ -403,7 +403,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                 impact: processedReport.impact,
                 stepsToReproduce: processedReport.stepsToReproduce,
                 mitigation: processedReport.mitigation,
-                tags: rule.parsed_yaml.report.tags?.split?.(",") || [],
+                tags: Array.isArray(rule.parsed_yaml.report.tags) ? rule.parsed_yaml.report.tags : rule.parsed_yaml.report?.tags?.split?.(",") || [],
 
                 // Technical details
                 cwe: rule.parsed_yaml.report.cwe,
