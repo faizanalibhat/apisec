@@ -248,17 +248,27 @@ export class ScanService {
                 },
                 { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
 
-                // 3. Lookup transformed requests for each scan
+                // 3. Lookup raw requests using requestIds
                 {
                     $lookup: {
-                        from: "transformedrequests", // MongoDB collection name (usually lowercase plural)
+                        from: "rawrequests",
+                        localField: "requestIds",
+                        foreignField: "_id",
+                        as: "rawRequests"
+                    }
+                },
+
+                // 4. Lookup transformed requests for each scan
+                {
+                    $lookup: {
+                        from: "transformedrequests",
                         localField: "_id",
                         foreignField: "scanId",
                         as: "transformedRequests"
                     }
                 },
 
-                // 4. Compute counts
+                // 5. Compute counts
                 {
                     $addFields: {
                         completedRequests: {
@@ -276,15 +286,16 @@ export class ScanService {
                     }
                 },
 
-                // 5. Optionally remove the full transformedRequests array to avoid large payloads
+                // 6. Optionally remove the full transformedRequests array, environment array and findings to avoid large payloads
                 {
                     $project: {
                         transformedRequests: 0,
+                        environment: 0,
                         findings: 0 // same as your `.select('-findings')`
                     }
                 },
 
-                // 6. Sort, skip, limit
+                // 7. Sort, skip, limit
                 { $sort: sort },
                 { $skip: skip },
                 { $limit: limit }
