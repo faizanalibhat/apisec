@@ -17,7 +17,7 @@ export class ScanService {
             const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds } = scanData;
 
             // Validate environment if provided
-            if (environmentId) {
+            if (environmentId && environmentId?.length) {
                 const environment = await RawEnvironment.findOne({
                     _id: environmentId,
                     orgId
