@@ -281,7 +281,6 @@ export class ScanService {
                             }
                         },
                         totalRequests: { $size: "$transformedRequests" },
-                        totalRawRequests: "$stats.totalRequests",  // NEW - copy the original value
                         environmentId: "$environment._id",
                         environmentName: "$environment.name",
                         // Update stats with actual counts from database
