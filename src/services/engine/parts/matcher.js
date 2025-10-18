@@ -375,7 +375,7 @@ export const createMatcher = () => {
       }
 
       // Overall match: at least one criterion matched
-      const matched = Object.values(details).some(d => d.matched === true);
+      const matched = Object.values(details).every(d => d.matched === true);
 
       return {
         matched,
