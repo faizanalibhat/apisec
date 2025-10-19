@@ -1,4 +1,4 @@
-import { transformer } from "./parts/transformer.js";
+import { transformer } from "./parts/transformer/transformer.js";
 import { matcher } from "./parts/matcher.js";
 import { sendReport, sendRequest } from "./parts/sender.js";
 
