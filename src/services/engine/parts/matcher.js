@@ -1,427 +1,479 @@
-const buildResponseContent = (response) => {
-  const parts = [];
-  
-  // Include status
-  if (response.status) {
-    parts.push(response.status.toString());
-  }
-  
-  // Include body
-  if (response.body) {
-    if (typeof response.body === 'string') {
-      parts.push(response.body);
-    } else {
-      try {
-        parts.push(JSON.stringify(response.body));
-      } catch {
-        parts.push(String(response.body));
-      }
-    }
-  }
-  
-  // Include headers
-  if (response.headers && typeof response.headers === 'object') {
-    for (const [key, value] of Object.entries(response.headers)) {
-      parts.push(`${key}: ${value}`);
-    }
-  }
-  
-  return parts.join('\n');
-};
-
-// ============================================================================
-// EXPORT SINGLETON INSTANCE
-// ============================================================================/**
-
-// ============================================================================
-// HANDLER REGISTRY
-// ============================================================================
-
-class MatcherRegistry {
+class Matcher {
   constructor() {
-    this.handlers = [];
+    this.operators = new Map();
+    this.registerDefaultOperators();
   }
 
-  register(handler) {
-    if (!handler.key || !handler.match || !handler.describe) {
-      throw new Error('Handler must have: key, match(), and describe() methods');
-    }
-    this.handlers.push(handler);
-    return this;
+  /**
+   * Register a custom operator for extending matcher functionality
+   * @param {string} name - Operator name
+   * @param {Function} handler - Function that takes (value, target) and returns boolean
+   */
+  registerOperator(name, handler) {
+    this.operators.set(name, handler);
   }
 
-  getHandlers() {
-    return this.handlers;
-  }
+  /**
+   * Register default built-in operators
+   */
+  registerDefaultOperators() {
+    // Equality check
+    this.registerOperator('equals', (value, target) => {
+      return target === value;
+    });
 
-  clear() {
-    this.handlers = [];
-  }
-}
+    // Exact match (alias for equals)
+    this.registerOperator('exact', (value, target) => {
+      return target === value;
+    });
 
-// ============================================================================
-// BUILT-IN HANDLERS
-// ============================================================================
+    // Not equal
+    this.registerOperator('not_equals', (value, target) => {
+      return target !== value;
+    });
 
-const StatusCodeHandler = {
-  key: 'status',
-  match({ response, rule }) {
-    const expected = rule.status;
-    if (typeof expected === 'undefined') return null;
-    
-    const matched = response.status === expected;
-    return {
-      matched,
-      expected,
-      actual: response.status,
-    };
-  },
-  describe(result) {
-    return `Response status code equals ${result.expected}`;
-  }
-};
+    // Strict equality
+    this.registerOperator('strict_equals', (value, target) => {
+      return target === value;
+    });
 
-const BodyContainsHandler = {
-  key: 'body_contains',
-  match({ response, rule }) {
-    const expected = rule.body_contains;
-    if (typeof expected === 'undefined') return null;
+    // Type checking
+    this.registerOperator('type', (value, target) => {
+      return typeof target === value;
+    });
 
-    const values = Array.isArray(expected) ? expected : [expected];
-    let matched = false;
-    let matchedValue = null;
-
-    for (const value of values) {
-      if (bodyContains(response.body, value)) {
-        matched = true;
-        matchedValue = value;
-        break;
+    // String contains (case-sensitive)
+    this.registerOperator('contains', (value, target) => {
+      if (typeof target !== 'string') {
+        target = String(target);
       }
-    }
-
-    return {
-      matched,
-      expected,
-      actual: matchedValue,
-    };
-  },
-  describe(result) {
-    return `Response body contains "${result.actual}"`;
-  }
-};
-
-const ResponseSizeHandler = {
-  key: 'size',
-  match({ response, rule }) {
-    const expected = rule.size;
-    if (typeof expected === 'undefined') return null;
-
-    let actual = response.size;
-    if (typeof actual === 'undefined' && typeof response.body === 'string') {
-      actual = Buffer.byteLength(response.body, 'utf8');
-    }
-
-    let matched = false;
-
-    if (typeof expected === 'object' && expected !== null) {
-      matched = isInRange(actual, expected);
-    } else if (typeof expected === 'number') {
-      matched = actual === expected;
-    }
-
-    return {
-      matched,
-      expected,
-      actual,
-    };
-  },
-  describe(result) {
-    if (typeof result.expected === 'object') {
-      return `Response size in range [${result.expected.min || '∞'}, ${result.expected.max || '∞'}] bytes`;
-    }
-    return `Response size equals ${result.expected} bytes`;
-  }
-};
-
-const HeadersExactMatchHandler = {
-  key: 'headers',
-  match({ response, rule }) {
-    const expected = rule.headers;
-    if (typeof expected === 'undefined') return null;
-
-    const headers = normalizeHeaders(response.headers || {});
-    const expectedNorm = normalizeHeaderKeys(expected);
-    
-    const matched = Object.entries(expectedNorm).every(
-      ([key, value]) => headers[key] === value
-    );
-
-    const matchedHeaders = Object.keys(expectedNorm).filter(
-      key => headers[key] === expectedNorm[key]
-    );
-
-    return {
-      matched,
-      expected: expectedNorm,
-      actual: matchedHeaders,
-    };
-  },
-  describe(result) {
-    return `Headers match: ${JSON.stringify(result.expected)}`;
-  }
-};
-
-const HeadersExistHandler = {
-  key: 'headers_exist',
-  match({ response, rule }) {
-    const expected = rule.headers_exist;
-    if (typeof expected === 'undefined') return null;
-
-    const headers = normalizeHeaders(response.headers || {});
-    const expectedHeaders = Array.isArray(expected) ? expected : [expected];
-    
-    const existing = expectedHeaders.filter(
-      header => headers[header.toLowerCase()] !== undefined
-    );
-    const matched = existing.length === expectedHeaders.length;
-
-    return {
-      matched,
-      expected: expectedHeaders,
-      actual: existing,
-    };
-  },
-  describe(result) {
-    return `Headers exist: ${result.expected.join(', ')}`;
-  }
-};
-
-const HeaderHasValueHandler = {
-  key: 'header_has_value',
-  match({ response, rule }) {
-    const expected = rule.header_has_value;
-    if (typeof expected === 'undefined') return null;
-
-    const headers = normalizeHeaders(response.headers || {});
-    const checks = Array.isArray(expected) ? expected : [expected];
-
-    let matched = false;
-    let matchedCheck = null;
-
-    for (const check of checks) {
-      if (headers[check.key.toLowerCase()] === check.value) {
-        matched = true;
-        matchedCheck = check;
-        break;
-      }
-    }
-
-    return {
-      matched,
-      expected,
-      actual: matchedCheck,
-    };
-  },
-  describe(result) {
-    if (!result.actual) return '';
-    return `Header ${result.actual.key} equals "${result.actual.value}"`;
-  }
-};
-
-const ContentTypeHandler = {
-  key: 'content_type',
-  match({ response, rule }) {
-    const expected = rule.content_type;
-    if (typeof expected === 'undefined') return null;
-
-    const headers = normalizeHeaders(response.headers || {});
-    const actual = headers['content-type'];
-    const matched = actual ? actual.includes(expected) : false;
-
-    return {
-      matched,
-      expected,
-      actual,
-    };
-  },
-  describe(result) {
-    return `Content-Type contains "${result.expected}"`;
-  }
-};
-
-const ResponseTimeHandler = {
-  key: 'time',
-  match({ response, rule }) {
-    const expected = rule.time;
-    if (typeof expected === 'undefined' || typeof response.time === 'undefined') {
-      return null;
-    }
-
-    let matched = false;
-
-    if (typeof expected === 'object' && expected !== null) {
-      matched = isInRange(response.time, expected);
-    } else if (typeof expected === 'number') {
-      matched = response.time === expected;
-    }
-
-    return {
-      matched,
-      expected,
-      actual: response.time,
-    };
-  },
-  describe(result) {
-    if (typeof result.expected === 'object') {
-      return `Response time in range [${result.expected.min || '∞'}, ${result.expected.max || '∞'}]ms`;
-    }
-    return `Response time equals ${result.expected}ms`;
-  }
-};
-
-const ResponseContainsHandler = {
-  key: 'response_contains',
-  match({ response, rule }) {
-    const expected = rule.response_contains;
-    if (typeof expected === 'undefined') return null;
-
-    // Build searchable response string
-    const searchContent = buildResponseContent(response);
-    
-    const values = Array.isArray(expected) ? expected : [expected];
-    let matched = false;
-    let matchedValue = null;
-
-    for (const value of values) {
-      if (searchContent.includes(value)) {
-        matched = true;
-        matchedValue = value;
-        break;
-      }
-    }
-
-    return {
-      matched,
-      expected,
-      actual: matchedValue,
-    };
-  },
-  describe(result) {
-    return `Response contains "${result.actual}"`;
-  }
-};
-
-// ============================================================================
-// MAIN MATCHER FUNCTION
-// ============================================================================
-
-export const createMatcher = () => {
-  const registry = new MatcherRegistry();
-
-  // Register built-in handlers
-  registry.register(StatusCodeHandler);
-  registry.register(BodyContainsHandler);
-  registry.register(ResponseSizeHandler);
-  registry.register(HeadersExactMatchHandler);
-  registry.register(HeadersExistHandler);
-  registry.register(HeaderHasValueHandler);
-  registry.register(ContentTypeHandler);
-  registry.register(ResponseTimeHandler);
-  registry.register(ResponseContainsHandler);
-
-  return {
-    /**
-     * Add a custom handler
-     * @param {Object} handler - { key, match, describe }
-     */
-    addHandler(handler) {
-      registry.register(handler);
-      return this;
-    },
-
-    /**
-     * Match response against rule
-     * @param {Object} response - { status, body, headers, size, time }
-     * @param {Object} rule - { status, body_contains, size, headers, ... }
-     * @returns {Object} { matched, matchedCriteria, details }
-     */
-    match({ response, rule }) {
-      const matchRule = rule.match_on || rule.response?.match || rule;
-      const handlers = registry.getHandlers();
-
-      const details = {};
-      let matchedCriteria = null;
-
-      // Run all handlers and collect results
-      for (const handler of handlers) {
-        const result = handler.match({ response, rule: matchRule });
-
-        if (result) {
-          details[handler.key] = {
-            ...result,
-            type: handler.key,
-          };
-
-          // First match wins
-          if (result.matched && !matchedCriteria) {
-            matchedCriteria = {
-              type: handler.key,
-              expected: result.expected,
-              actual: result.actual,
-              description: handler.describe(result),
-            };
+      if (typeof value === 'object' && value !== null) {
+        const searchValue = value.value;
+        const isRegex = value.regex || false;
+        
+        if (isRegex) {
+          try {
+            const regex = new RegExp(searchValue);
+            return regex.test(target);
+          } catch (e) {
+            return false;
           }
+        }
+        return target.includes(searchValue);
+      }
+      return target.includes(value);
+    });
+
+    // String not contains
+    this.registerOperator('not_contains', (value, target) => {
+      if (typeof target !== 'string') {
+        target = String(target);
+      }
+      if (typeof value === 'object' && value !== null) {
+        const searchValue = value.value;
+        const isRegex = value.regex || false;
+        
+        if (isRegex) {
+          try {
+            const regex = new RegExp(searchValue);
+            return !regex.test(target);
+          } catch (e) {
+            return true;
+          }
+        }
+        return !target.includes(searchValue);
+      }
+      return !target.includes(value);
+    });
+
+    // Case-insensitive contains
+    this.registerOperator('contains_i', (value, target) => {
+      if (typeof target !== 'string') {
+        target = String(target);
+      }
+      const searchValue = typeof value === 'string' ? value : value.value || '';
+      return target.toLowerCase().includes(searchValue.toLowerCase());
+    });
+
+    // Regex match
+    this.registerOperator('regex', (value, target) => {
+      if (typeof target !== 'string') {
+        target = String(target);
+      }
+      try {
+        const regex = new RegExp(value);
+        return regex.test(target);
+      } catch (e) {
+        return false;
+      }
+    });
+
+    // String starts with
+    this.registerOperator('starts_with', (value, target) => {
+      if (typeof target !== 'string') {
+        target = String(target);
+      }
+      return target.startsWith(value);
+    });
+
+    // String ends with
+    this.registerOperator('ends_with', (value, target) => {
+      if (typeof target !== 'string') {
+        target = String(target);
+      }
+      return target.endsWith(value);
+    });
+
+    // Numeric comparison operators
+    this.registerOperator('gt', (value, target) => {
+      return Number(target) > Number(value);
+    });
+
+    this.registerOperator('gte', (value, target) => {
+      return Number(target) >= Number(value);
+    });
+
+    this.registerOperator('lt', (value, target) => {
+      return Number(target) < Number(value);
+    });
+
+    this.registerOperator('lte', (value, target) => {
+      return Number(target) <= Number(value);
+    });
+
+    // Array operations
+    this.registerOperator('in', (value, target) => {
+      if (!Array.isArray(value)) {
+        value = [value];
+      }
+      return value.includes(target);
+    });
+
+    this.registerOperator('not_in', (value, target) => {
+      if (!Array.isArray(value)) {
+        value = [value];
+      }
+      return !value.includes(target);
+    });
+
+    // Array contains element
+    this.registerOperator('includes', (value, target) => {
+      if (!Array.isArray(target)) {
+        return false;
+      }
+      return target.includes(value);
+    });
+
+    // Null/undefined checks
+    this.registerOperator('exists', (value, target) => {
+      if (value === true || value === 'true') {
+        return target !== null && target !== undefined;
+      }
+      return target === null || target === undefined;
+    });
+
+    // Empty checks
+    this.registerOperator('empty', (value, target) => {
+      if (value === false || value === 'false') {
+        return target && target.length > 0;
+      }
+      return !target || target.length === 0;
+    });
+
+    // Length checks
+    this.registerOperator('length', (value, target) => {
+      return (target && target.length) === value;
+    });
+
+    this.registerOperator('length_gte', (value, target) => {
+      return (target && target.length) >= value;
+    });
+
+    this.registerOperator('length_lte', (value, target) => {
+      return (target && target.length) <= value;
+    });
+
+    // JSON parsing
+    this.registerOperator('json', (value, target) => {
+      try {
+        const parsed = typeof target === 'string' ? JSON.parse(target) : target;
+        if (typeof value === 'object' && value !== null) {
+          return this._deepMatch(parsed, value);
+        }
+        return !!parsed;
+      } catch (e) {
+        return false;
+      }
+    });
+  }
+
+  /**
+   * Main match function
+   * @param {Object} rule - Match rule from YAML
+   * @param {Object} response - Response object { status, headers, body }
+   * @returns {boolean} - True if response matches the rule
+   */
+  match({ rule, response }) {
+
+    const matchRule = rule.match_on;
+
+    if (!matchRule) return true;
+
+    try {
+      // Match status codes
+      if (matchRule.status !== undefined) {
+        if (!this._matchStatus(matchRule.status, response.status)) {
+          return false;
         }
       }
 
-      // Overall match: at least one criterion matched
-      const matched = Object.values(details).every(d => d.matched === true);
+      // Match headers
+      if (matchRule.header !== undefined) {
+        if (!this._matchHeaders(matchRule.header, response.headers)) {
+          return false;
+        }
+      }
 
-      return {
-        matched,
-        matchedCriteria,
-        details,
-      };
-    },
-  };
-};
+      // Match body
+      if (matchRule.body !== undefined) {
+        if (!this._matchBody(matchRule.body, response.body)) {
+          return false;
+        }
+      }
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-const bodyContains = (body, expected) => {
-  if (typeof body === 'string') {
-    return body.includes(expected);
+      return true;
+    } catch (error) {
+      console.error('Matcher error:', error);
+      return false;
+    }
   }
-  try {
-    const stringified = JSON.stringify(body);
-    return stringified.includes(expected);
-  } catch {
+
+  /**
+   * Match status codes
+   * @private
+   */
+  _matchStatus(statusRule, actualStatus) {
+    if (Array.isArray(statusRule)) {
+      return statusRule.includes(actualStatus);
+    }
+    if (typeof statusRule === 'object' && statusRule !== null) {
+      return this._matchWithOperators(statusRule, actualStatus);
+    }
+    return statusRule === actualStatus;
+  }
+
+  /**
+   * Match headers
+   * @private
+   */
+  _matchHeaders(headerRule, actualHeaders) {
+    for (const [key, value] of Object.entries(headerRule)) {
+      if (key === 'contains') {
+        if (!this._matchHeadersContains(value, actualHeaders)) {
+          return false;
+        }
+        continue;
+      }
+
+      const headerValue = this._findHeaderValue(key, actualHeaders);
+      
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (!this._matchWithOperators(value, headerValue)) {
+          return false;
+        }
+      } else {
+        if (headerValue !== value) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Match header contains operation (searches all headers)
+   * @private
+   */
+  _matchHeadersContains(containsRule, actualHeaders) {
+    if (typeof containsRule === 'string') {
+      return this._searchHeadersForValue(containsRule, actualHeaders);
+    }
+
+    if (typeof containsRule === 'object' && containsRule !== null) {
+      const { value, regex } = containsRule;
+      return this._searchHeadersForValue(value, actualHeaders, regex);
+    }
+
     return false;
   }
-};
 
-const normalizeHeaders = (headers) => {
-  const normalized = {};
-  for (const [key, value] of Object.entries(headers)) {
-    normalized[key.toLowerCase()] = value;
+  /**
+   * Search all header values for a match
+   * @private
+   */
+  _searchHeadersForValue(searchValue, headers, isRegex = false) {
+    for (const [key, headerValue] of Object.entries(headers)) {
+      const stringValue = typeof headerValue === 'string' ? headerValue : String(headerValue);
+
+      if (isRegex) {
+        try {
+          const regex = new RegExp(searchValue);
+          if (regex.test(stringValue)) return true;
+        } catch (e) {
+          continue;
+        }
+      } else {
+        if (stringValue.includes(searchValue)) return true;
+      }
+    }
+    return false;
   }
-  return normalized;
-};
 
-const normalizeHeaderKeys = (headers) => {
-  const normalized = {};
-  for (const [key, value] of Object.entries(headers)) {
-    normalized[key.toLowerCase()] = value;
+  /**
+   * Find a header value case-insensitively
+   * @private
+   */
+  _findHeaderValue(headerName, headers) {
+    const normalizedName = headerName.toLowerCase();
+    for (const [key, value] of Object.entries(headers)) {
+      if (key.toLowerCase() === normalizedName) {
+        return value;
+      }
+    }
+    return undefined;
   }
-  return normalized;
-};
 
-const isInRange = (value, range) => {
-  const minOk = typeof range.min !== 'number' || value >= range.min;
-  const maxOk = typeof range.max !== 'number' || value <= range.max;
-  return minOk && maxOk;
-};
+  /**
+   * Match body
+   * @private
+   */
+  _matchBody(bodyRule, actualBody) {
+    for (const [key, value] of Object.entries(bodyRule)) {
+      if (key === 'contains') {
+        if (!this._matchBodyContains(value, actualBody)) {
+          return false;
+        }
+        continue;
+      }
 
-export const matcher = createMatcher();
+      if (key === 'json') {
+        if (!this._matchBodyJson(value, actualBody)) {
+          return false;
+        }
+        continue;
+      }
+
+      // Deep match in body structure
+      if (!this._deepMatch(actualBody, { [key]: value })) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Match body contains operation
+   * @private
+   */
+  _matchBodyContains(containsRule, actualBody) {
+    const bodyString = typeof actualBody === 'string' ? actualBody : JSON.stringify(actualBody);
+
+    if (typeof containsRule === 'string') {
+      return bodyString.includes(containsRule);
+    }
+
+    if (typeof containsRule === 'object' && containsRule !== null) {
+      const { value, regex } = containsRule;
+      if (regex) {
+        try {
+          const regexObj = new RegExp(value);
+          return regexObj.test(bodyString);
+        } catch (e) {
+          return false;
+        }
+      }
+      return bodyString.includes(value);
+    }
+
+    return false;
+  }
+
+  /**
+   * Match body JSON structure
+   * @private
+   */
+  _matchBodyJson(jsonRule, actualBody) {
+    try {
+      const parsedBody = typeof actualBody === 'string' ? JSON.parse(actualBody) : actualBody;
+      return this._deepMatch(parsedBody, jsonRule);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * Match using operators
+   * @private
+   */
+  _matchWithOperators(operatorRule, target) {
+    for (const [operator, value] of Object.entries(operatorRule)) {
+      if (!this.operators.has(operator)) {
+        throw new Error(`Unknown operator: ${operator}`);
+      }
+
+      const handler = this.operators.get(operator);
+      if (!handler(value, target)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Deep match for nested structures
+   * @private
+   */
+  _deepMatch(actual, expected) {
+    for (const [key, value] of Object.entries(expected)) {
+      if (!(key in actual)) {
+        return false;
+      }
+
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Nested object - recurse
+        if (!this._deepMatch(actual[key], value)) {
+          return false;
+        }
+      } else if (typeof value === 'object' && value !== null && Object.keys(value).length > 0) {
+        // Check if it's an operator object
+        const keys = Object.keys(value);
+        const isOperatorObj = keys.some(k => this.operators.has(k));
+
+        if (isOperatorObj) {
+          if (!this._matchWithOperators(value, actual[key])) {
+            return false;
+          }
+        } else {
+          // Regular nested object
+          if (!this._deepMatch(actual[key], value)) {
+            return false;
+          }
+        }
+      } else if (Array.isArray(value)) {
+        if (!Array.isArray(actual[key])) {
+          return false;
+        }
+        if (!value.includes(actual[key])) {
+          return false;
+        }
+      } else {
+        if (actual[key] !== value) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+}
+
+export default Matcher;
