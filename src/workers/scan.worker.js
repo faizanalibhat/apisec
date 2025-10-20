@@ -93,8 +93,6 @@ async function transformationHandler(payload, msg, channel) {
                     continue;
                 }
 
-                console.log("[+] TOTAL TRANSFORMED: ", transformed.length, transformed[0]);
-
                 for (let t of transformed) {
                     bulkOps.push({
                         insertOne: {
