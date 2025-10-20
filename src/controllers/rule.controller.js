@@ -16,6 +16,7 @@ class RuleController {
         this.deleteRule = this.deleteRule.bind(this);
         this.searchRules = this.searchRules.bind(this);
         this.updateRuleStatus = this.updateRuleStatus.bind(this);
+        this.syncDefaultRules = this.syncDefaultRules.bind(this);
     }
 
     async createRule(req, res, next) {
@@ -191,5 +192,6 @@ export const {
     updateRule,
     deleteRule,
     searchRules,
-    updateRuleStatus
+    updateRuleStatus,
+    syncDefaultRules
 } = ruleController;

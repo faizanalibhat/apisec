@@ -105,9 +105,10 @@ export async function importYamlRules(orgId) {
 
 // Full flow: clone repo + import rules
 export async function syncRules(payload, msg, channel) {
+    const { orgId } = payload;
     try {
         await cloneOrUpdateRepo();
-        const rules = await importYamlRules();
+        const rules = await importYamlRules(orgId);
         return rules;
     }
     catch(err) {
