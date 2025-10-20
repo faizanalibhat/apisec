@@ -214,7 +214,7 @@ class Matcher {
    * @returns {boolean} - True if the request matches the target
    */
   matchTarget({ rule, transformedRequest }) {
-    const target = rule.parsed_yaml.Target;
+    const target = rule.Target;
 
     if (!target) {
       return true; // If no target is specified, the rule applies to all requests
