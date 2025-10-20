@@ -66,7 +66,7 @@ function parseYamlFile(filePath) {
             rule_name: parsed.rule_name || path.basename(filePath, path.extname(filePath)),
             parsed_yaml: parsed,
             raw_yaml: rawYaml,
-            active: false,
+            isActive: false,
         };
     }
     catch(err) {
