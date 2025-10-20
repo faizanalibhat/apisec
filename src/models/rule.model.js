@@ -12,35 +12,6 @@ const ruleSchema = new mongoose.Schema({
         trim: true
     },
 
-    Target: {
-        method: {
-            type: [String],
-        },
-        Request_contains: {
-            type: String,
-        },
-        body: {
-            contains: {
-                type: String,
-            }
-        },
-        Header: {
-            contains: {
-                type: String,
-            }
-        },
-        query: {
-            contains: {
-                type: String,
-            }
-        },
-        path: {
-            contains: {
-                type: String,
-            }
-        }
-    },
-
     endpoints: [{
         type: String,
         trim: true
