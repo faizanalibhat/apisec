@@ -39,19 +39,19 @@ export function cloneOrUpdateRepo(repoUrl = REPO_URL, localPath = LOCAL_DIR) {
 
 // Recursively read all YAML files
 function getAllYamlFiles(dirPath) {
-  let files = [];
+    let files = [];
 
-  for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
-    const fullPath = path.join(dirPath, entry.name);
+    for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+        const fullPath = path.join(dirPath, entry.name);
 
-    if (entry.isDirectory()) {
-      files = files.concat(getAllYamlFiles(fullPath));
-    } else if (entry.isFile() && /\.(ya?ml)$/i.test(entry.name)) {
-      files.push(fullPath);
+        if (entry.isDirectory()) {
+        files = files.concat(getAllYamlFiles(fullPath));
+        } else if (entry.isFile() && /\.(ya?ml)$/i.test(entry.name)) {
+        files.push(fullPath);
+        }
     }
-  }
 
-  return files;
+    return files;
 }
 
 
