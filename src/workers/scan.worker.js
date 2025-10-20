@@ -369,13 +369,12 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Send the request
         console.log(`[+] Sending request to: ${transformedRequest.url}`);
 
-        console.log("[+] REQAUEST: ", JSON.stringify(transformedRequest));
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        console.log(`[+] Match result:`, matchResult);
+        // console.log(`[+] Match result:`, matchResult);
 
         if (matchResult.matched) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
