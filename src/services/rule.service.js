@@ -173,7 +173,7 @@ class RuleService {
         try {
             const rule = await Rule.findOneAndUpdate(
                 { _id: ruleId, orgId },
-                { isActive },
+                { $set: { isActive } },
                 { new: true }
             );
 
