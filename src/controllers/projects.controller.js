@@ -109,10 +109,10 @@ export class ProjectController {
         const collectionUids = updated.collectionUids;
 
         // add the id to collections & raw requests
-        await PostmanCollections.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: created._id } });
+        await PostmanCollections.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: updated._id } });
 
         // add the id to collections & raw requests
-        await RawRequest.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: created._id } });
+        await RawRequest.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: updated._id } });
 
         return res.json(updated);
     }
