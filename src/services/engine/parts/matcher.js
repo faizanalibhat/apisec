@@ -220,6 +220,12 @@ class Matcher {
       return true; // If no target is specified, the rule applies to all requests
     }
 
+    // Ensure we have a valid URL to parse
+    if (!transformedRequest.url) {
+        return false;
+    }
+    const requestUrl = new URL(transformedRequest.url);
+
     if (target.method && !this._matchMethod(target.method, transformedRequest.method)) {
       return false;
     }
@@ -232,11 +238,11 @@ class Matcher {
         return false;
     }
 
-    if (target.query && !this._matchTargetContains(target.query, transformedRequest.query)) {
+    if (target.query && !this._matchTargetContains(target.query, requestUrl.search)) {
         return false;
     }
 
-    if (target.path && !this._matchTargetContains(target.path, transformedRequest.path)) {
+    if (target.path && !this._matchTargetContains(target.path, requestUrl.pathname)) {
         return false;
     }
 
@@ -248,6 +254,7 @@ class Matcher {
   }
 
   _matchMethod(targetMethod, requestMethod) {
+    if (!requestMethod) return false;
     if (Array.isArray(targetMethod)) {
       return targetMethod.map(m => m.toUpperCase()).includes(requestMethod.toUpperCase());
     }
@@ -255,6 +262,7 @@ class Matcher {
   }
 
   _matchRequestContains(targetContains, rawRequest) {
+    if (!rawRequest) return false;
     if (typeof rawRequest !== 'string') {
         rawRequest = JSON.stringify(rawRequest);
     }
@@ -262,11 +270,15 @@ class Matcher {
   }
 
   _matchTargetContains(target, requestPart) {
-    if (target.contains) {
-        const searchIn = typeof requestPart === 'string' ? requestPart : JSON.stringify(requestPart);
-        return searchIn.toLowerCase().includes(target.contains.toLowerCase());
+    if (!target.contains) {
+        return true; // No 'contains' condition, so this part matches.
     }
-    return true;
+    if (requestPart === undefined || requestPart === null) {
+        return false; // Can't find a substring in a null/undefined value.
+    }
+
+    const searchIn = typeof requestPart === 'string' ? requestPart : JSON.stringify(requestPart);
+    return searchIn.toLowerCase().includes(target.contains.toLowerCase());
   }
 
   /**
