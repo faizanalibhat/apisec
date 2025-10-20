@@ -100,8 +100,6 @@ export async function importYamlRules(orgId) {
         console.log(`✅ Imported ${rules.length} rules into MongoDB.`);
     } catch (err) {
         console.error("❌ MongoDB error:", err);
-    } finally {
-        await client.close();
     }
 
     return rules;
