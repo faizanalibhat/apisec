@@ -4,7 +4,7 @@ import fs from "fs";
 import yaml from "js-yaml";
 
 
-const default_yaml_content = fs.readFileSync("src/data/data.yaml");
+// const default_yaml_content = fs.readFileSync("src/data/data.yaml");
 
 
 
@@ -35,18 +35,18 @@ class RuleService {
 
             const orgWideCount = await Rule.countDocuments({ orgId });
 
-            if (orgWideCount == 0) {
-                try {
-                    const parsed = yaml.load(default_yaml_content);
+            // if (orgWideCount == 0) {
+            //     try {
+            //         const parsed = yaml.load(default_yaml_content);
 
-                    const rules = parsed.rules || [];
+            //         const rules = parsed.rules || [];
 
-                    await Rule.create(rules.map(r => ({ orgId, ...r, raw_yaml: yaml.dump(r), parsed_yaml: r })));
-                }
-                catch(e) {
-                    console.log(e)
-                }
-            }
+            //         await Rule.create(rules.map(r => ({ orgId, ...r, raw_yaml: yaml.dump(r), parsed_yaml: r })));
+            //     }
+            //     catch(e) {
+            //         console.log(e)
+            //     }
+            // }
 
             const query = { orgId, ...filters };
 
