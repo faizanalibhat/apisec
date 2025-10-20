@@ -208,6 +208,68 @@ class Matcher {
   }
 
   /**
+   * Match the target of a rule against a transformed request
+   * @param {Object} rule - The rule object
+   * @param {Object} transformedRequest - The transformed request object
+   * @returns {boolean} - True if the request matches the target
+   */
+  matchTarget({ rule, transformedRequest }) {
+    const target = rule.parsed_yaml.Target;
+
+    if (!target) {
+      return true; // If no target is specified, the rule applies to all requests
+    }
+
+    if (target.method && !this._matchMethod(target.method, transformedRequest.method)) {
+      return false;
+    }
+
+    if (target.Request_contains && !this._matchRequestContains(target.Request_contains, transformedRequest.raw)) {
+        return false;
+    }
+
+    if (target.Header && !this._matchTargetContains(target.Header, transformedRequest.headers)) {
+        return false;
+    }
+
+    if (target.query && !this._matchTargetContains(target.query, transformedRequest.query)) {
+        return false;
+    }
+
+    if (target.path && !this._matchTargetContains(target.path, transformedRequest.path)) {
+        return false;
+    }
+
+    if (target.body && !this._matchTargetContains(target.body, transformedRequest.body)) {
+        return false;
+    }
+
+    return true;
+  }
+
+  _matchMethod(targetMethod, requestMethod) {
+    if (Array.isArray(targetMethod)) {
+      return targetMethod.map(m => m.toUpperCase()).includes(requestMethod.toUpperCase());
+    }
+    return targetMethod.toUpperCase() === requestMethod.toUpperCase();
+  }
+
+  _matchRequestContains(targetContains, rawRequest) {
+    if (typeof rawRequest !== 'string') {
+        rawRequest = JSON.stringify(rawRequest);
+    }
+    return rawRequest.includes(targetContains);
+  }
+
+  _matchTargetContains(target, requestPart) {
+    if (target.contains) {
+        const searchIn = typeof requestPart === 'string' ? requestPart : JSON.stringify(requestPart);
+        return searchIn.toLowerCase().includes(target.contains.toLowerCase());
+    }
+    return true;
+  }
+
+  /**
    * Main match function
    * @param {Object} rule - Match rule from YAML
    * @param {Object} response - Response object { status, headers, body }
