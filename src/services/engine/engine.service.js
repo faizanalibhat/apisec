@@ -7,11 +7,9 @@ import { sendReport, sendRequest } from "./parts/sender.js";
 export class EngineService {
 
     static async transform({ request, rule }) {
-
         const transformed_requests = transformer.transform({ request, rule });
 
         return transformed_requests;
-
     }
 
     static async sendRequest({ request }) {
