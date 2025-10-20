@@ -169,6 +169,24 @@ class RuleService {
         }
     }
 
+    async updateRuleStatus(ruleId, isActive, orgId) {
+        try {
+            const rule = await Rule.findOneAndUpdate(
+                { _id: ruleId, orgId },
+                { isActive },
+                { new: true }
+            );
+
+            if (!rule) {
+                throw ApiError.notFound('Rule not found');
+            }
+
+            return rule;
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     // Common error handler for service
     handleError(error) {
         // Mongoose validation error

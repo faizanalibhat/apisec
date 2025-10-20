@@ -15,6 +15,7 @@ class RuleController {
         this.updateRule = this.updateRule.bind(this);
         this.deleteRule = this.deleteRule.bind(this);
         this.searchRules = this.searchRules.bind(this);
+        this.updateRuleStatus = this.updateRuleStatus.bind(this);
     }
 
     async createRule(req, res, next) {
@@ -153,6 +154,22 @@ class RuleController {
             next(error);
         }
     }
+
+    async updateRuleStatus(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { ruleId } = req.params;
+            const { isActive } = req.body;
+
+            const rule = await this.ruleService.updateRuleStatus(ruleId, isActive, orgId);
+
+            res.sendApiResponse(
+                ApiResponse.updated('Rule status updated successfully', rule)
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 // Create instance
@@ -164,5 +181,6 @@ export const {
     getRule,
     updateRule,
     deleteRule,
-    searchRules
+    searchRules,
+    updateRuleStatus
 } = ruleController;
