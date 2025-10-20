@@ -550,4 +550,6 @@ class Matcher {
   }
 }
 
-export default Matcher;
+const matcher = new Matcher();
+
+export { matcher };
