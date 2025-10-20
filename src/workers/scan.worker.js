@@ -77,16 +77,15 @@ async function transformationHandler(payload, msg, channel) {
 
                 const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });
 
-                console.log(targetMatch);
-
                 if (!targetMatch) {
-                    continue; // Skip to the next request if the target doesn't match
+                    continue;
                 }
 
                 // console.log("[+] PROCESSED REQUEST : ", processedRequest);
 
                 // Apply rule transformations
                 let transformed;
+
                 try {
                     transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
                 }
@@ -94,6 +93,8 @@ async function transformationHandler(payload, msg, channel) {
                     console.log(err.message);
                     continue;
                 }
+
+                console.log(transformed);
 
                 for (let t of transformed) {
                     bulkOps.push({
@@ -113,7 +114,7 @@ async function transformationHandler(payload, msg, channel) {
             }
         }
 
-        console.log(bulkOps);
+        console.log(`[+] CREATED ${bulkOps.length} TRANSFORMED REQUESTS`)
 
         // Write transformed requests to db
         if (bulkOps.length > 0) {
