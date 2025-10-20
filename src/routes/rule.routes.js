@@ -9,9 +9,9 @@ router.get('/search', controller.searchRules);
 router
     .get("/", controller.getRules)
     .post("/", controller.createRule)
-    .patch("/:ruleId/status", controller.updateRuleStatus)
     .get("/:ruleId", controller.getRule)
     .put("/:ruleId", controller.updateRule)
-    .delete("/:ruleId", controller.deleteRule);
+    .delete("/:ruleId", controller.deleteRule)
+    .patch("/:ruleId/status", controller.updateRuleStatus);
 
 export default router;
