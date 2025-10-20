@@ -31,7 +31,7 @@ async function transformationHandler(payload, msg, channel) {
 
         // Fetch all requests and rules
         const requests = await Requests.find({ _id: { $in: requestIds } }).lean();
-        const rules = await Rules.find({ _id: { $in: ruleIds } }).lean();
+        const rules = await Rules.find({ _id: { $in: ruleIds }, isActive: true }).lean();
 
         console.log("[+] TOTAL REQUSTS : ", requests.length);
         console.log("[+] TOTAL RULES : ", rules.length);
