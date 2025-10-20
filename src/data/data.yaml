@@ -1,4 +1,43 @@
 rules:
+    - rule_name: Detect Unauthorized Requests
+      Target:
+        method: [GET, POST]
+        Request_contains: "sometext"
+        body:
+          contains: "otp"
+        Header:
+          contains: "authorization"
+        query:
+          contains: "search"
+        path:
+          contains: "integrationId"
+      transform:
+        headers:
+          remove:
+            - Authorization
+      match_on:
+        status: 200
+      report:
+        title: "Unauthorized access allowed ({{req.method}} {{endpoint}})"
+        description: |
+          The endpoint responded with 200 OK to an unauthenticated request.
+          Auth headers/cookies were removed before sending the request.
+
+          • Original URL: {{original.url}}
+          • Transformed URL: {{req.url}}
+          • Response status: {{res.status}}
+        cwe: "CWE-306" # Missing Authentication
+        cvssScore: "8.6"
+        severity: "critical"
+        mitigation: |
+          Enforce authentication on this endpoint via middleware/guards.
+          Return 401/403 for requests without valid credentials.
+        stepsToReproduce: |
+          1) Send the original request to {{original.url}}.
+          2) Remove Authorization/Cookie headers.
+          3) Send {{req.method}} {{req.url}} and observe {{res.status}} with protected content.
+        tags: "auth,unauthorized,missing-auth"
+        impact: "Unauthenticated users can access protected data or functions."
     - rule_name: Unauth Success- Auth & Cookies Removed
       transform:
         headers:
