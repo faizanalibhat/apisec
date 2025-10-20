@@ -76,6 +76,7 @@ async function transformationHandler(payload, msg, channel) {
                 }
 
                 const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });
+
                 if (!targetMatch) {
                     continue; // Skip to the next request if the target doesn't match
                 }
@@ -92,6 +93,8 @@ async function transformationHandler(payload, msg, channel) {
                     continue;
                 }
 
+                console.log("[+] TOTAL TRANSFORMED: ", transformed.length, transformed[0]);
+
                 for (let t of transformed) {
                     bulkOps.push({
                         insertOne: {
@@ -100,9 +103,9 @@ async function transformationHandler(payload, msg, channel) {
                                 orgId,
                                 requestId: request._id,
                                 ruleId: rule._id,
-                                // projectId: projectId,
+                                projectId: projectId,
                                 ...t,
-                                // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, [])
+                                // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, []),
                             }
                         }
                     });

@@ -214,7 +214,7 @@ class Matcher {
    * @returns {boolean} - True if the request matches the target
    */
   matchTarget({ rule, transformedRequest }) {
-    const target = rule.Target;
+    const target = rule.target;
 
     if (!target) {
       return true; // If no target is specified, the rule applies to all requests
@@ -226,15 +226,17 @@ class Matcher {
     }
     const requestUrl = new URL(transformedRequest.url);
 
+    if (target == "all") return true;
+
     if (target.method && !this._matchMethod(target.method, transformedRequest.method)) {
       return false;
     }
 
-    if (target.Request_contains && !this._matchRequestContains(target.Request_contains, transformedRequest.raw)) {
+    if (target.request_contains && !this._matchRequestContains(target.request_contains, transformedRequest.raw)) {
         return false;
     }
 
-    if (target.Header && !this._matchTargetContains(target.Header, transformedRequest.headers)) {
+    if (target.header && !this._matchTargetContains(target.header, transformedRequest.headers)) {
         return false;
     }
 
