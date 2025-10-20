@@ -77,6 +77,8 @@ async function transformationHandler(payload, msg, channel) {
 
                 const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });
 
+                console.log(targetMatch);
+
                 if (!targetMatch) {
                     continue; // Skip to the next request if the target doesn't match
                 }
