@@ -1,6 +1,6 @@
 FROM node:18-alpine
 
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ git
 
 RUN npm install pm2 -g
 
@@ -20,8 +20,6 @@ COPY . .
 
 # Create a directory for keys
 RUN mkdir -p keys
-
-RUN chmod +x /app/launch.sh
 
 # Start command
 CMD ["pm2-runtime", "ecosystem.config.cjs"]

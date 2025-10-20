@@ -12,6 +12,8 @@ import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js"; // NEW IMPORT
 import "../db/mongoose.js";
 
+import { syncRulesFromGithub } from "./sync-rules.worker.js";
+
 
 const parser = new PostmanParser();
 const integrationService = new IntegrationService();
@@ -572,4 +574,5 @@ async function scanWorker() {
 }
 
 
-scanWorker()
+scanWorker();
+syncRulesFromGithub();

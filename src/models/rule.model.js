@@ -92,6 +92,8 @@ const ruleSchema = new mongoose.Schema({
 
     raw_yaml: { type: String, required: true },
     parsed_yaml: { type: mongoose.Schema.Types.Mixed, default: {} },
+
+    isUniversal: { type: Boolean },
 }, {
     timestamps: true
 });
