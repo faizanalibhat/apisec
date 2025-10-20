@@ -86,7 +86,7 @@ async function transformationHandler(payload, msg, channel) {
                 // Apply rule transformations
                 let transformed;
                 try {
-                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
+                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
                 }
                 catch (err) {
                     console.log(err.message);
@@ -110,6 +110,8 @@ async function transformationHandler(payload, msg, channel) {
                 }
             }
         }
+
+        console.log(bulkOps);
 
         // Write transformed requests to db
         if (bulkOps.length > 0) {
