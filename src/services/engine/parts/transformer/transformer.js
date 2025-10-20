@@ -5,8 +5,8 @@ import queryTransformer from './http/query.transformer.js';
 import pathTransformer from './http/path.transformer.js';
 
 
-export default {
-  transformer({ request, rule }) {
+export const transformer = {
+  transform({ request, rule }) {
     const transformRules = rule.transform;
 
     if (!transformRules) return [request];
