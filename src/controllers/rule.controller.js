@@ -170,6 +170,15 @@ class RuleController {
             next(error);
         }
     }
+
+
+    async syncDefaultRules(req, res, next) {
+        const { orgId } = req.authenticatedService;
+
+        await mqbroker.publish("apisec", "apisec.rules.sync", { orgId });
+
+        return res.json({ message: "Sync started" });
+    }
 }
 
 // Create instance
