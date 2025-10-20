@@ -12,12 +12,33 @@ const ruleSchema = new mongoose.Schema({
         trim: true
     },
 
-    target: {
-        type: String,
-        required: true,
-        default: 'all',
-        enum: ['all', 'specific'],
-        // If specific, endpoints array will be used
+    Target: {
+        method: {
+            type: [String],
+        },
+        Request_contains: {
+            type: String,
+        },
+        body: {
+            contains: {
+                type: String,
+            }
+        },
+        Header: {
+            contains: {
+                type: String,
+            }
+        },
+        query: {
+            contains: {
+                type: String,
+            }
+        },
+        path: {
+            contains: {
+                type: String,
+            }
+        }
     },
 
     endpoints: [{

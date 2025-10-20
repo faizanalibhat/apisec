@@ -34,4 +34,9 @@ export class EngineService {
         const matchResult = matcher.match({ response, rule });
         return matchResult;
     }
+
+    static async matchTarget({ rule, transformedRequest }) {
+        const matchResult = matcher.matchTarget({ rule, transformedRequest });
+        return matchResult;
+    }
 }
