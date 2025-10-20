@@ -59,14 +59,21 @@ function getAllYamlFiles(dirPath) {
 // Parse YAML file into structured object
 function parseYamlFile(filePath) {
     const rawYaml = fs.readFileSync(filePath, "utf8");
-    const parsed = yaml.load(rawYaml);
 
-    return {
-        rule_name: parsed.rule_name || path.basename(filePath, path.extname(filePath)),
-        parsed_yaml: parsed,
-        raw_yaml: rawYaml,
-        active: false,
-    };
+    try {
+        const parsed = yaml.load(rawYaml);
+        return {
+            rule_name: parsed.rule_name || path.basename(filePath, path.extname(filePath)),
+            parsed_yaml: parsed,
+            raw_yaml: rawYaml,
+            active: false,
+        };
+    }
+    catch(err) {
+        console.log(err.message);
+        return null;
+    }
+
 }
 
 
@@ -75,7 +82,7 @@ function parseYamlFile(filePath) {
 export async function importYamlRules(orgId) {
 
     const yamlFiles = getAllYamlFiles(APIDIR);
-    const rules = yamlFiles.map(parseYamlFile);
+    const rules = yamlFiles.map(parseYamlFile).filter(v => !!v);
 
     try {
 
