@@ -54,23 +54,36 @@ function substituteHeaders(headers, variables) {
 }
 
 /**
- * Main function to substitute variables in a request object
- * @param {Object} request - The raw request object
- * @param {Object} variables - Environment variables as key-value pairs
- * @returns {Object} - The request with substituted variables
+ * Substitutes variables only in the URL of a request object.
+ * @param {Object} request - The raw request object.
+ * @param {Object} variables - Environment variables.
+ * @returns {Object} - The request with a substituted URL.
  */
-export function substituteVariables(request, variables) {
+export function substituteUrlVariables(request, variables) {
     if (!variables || Object.keys(variables).length === 0) {
         // No variables to substitute
         return request;
     }
-
     const substituted = { ...request };
 
     // Substitute in URL
     if (substituted.url) {
         substituted.url = substituteValue(substituted.url, variables);
     }
+    return substituted;
+}
+
+/**
+ * Substitutes variables in all parts of a request object EXCEPT the URL.
+ * @param {Object} request - The request object (can have a resolved URL).
+ * @param {Object} variables - Environment variables.
+ * @returns {Object} - The request with substituted fields.
+ */
+export function substituteNonUrlVariables(request, variables) {
+    if (!variables || Object.keys(variables).length === 0) {
+        return request;
+    }
+    const substituted = { ...request };
 
     // Substitute in headers
     if (substituted.headers) {
@@ -91,6 +104,24 @@ export function substituteVariables(request, variables) {
     if (substituted.auth) {
         substituted.auth = substituteValue(substituted.auth, variables);
     }
+    return substituted;
+}
+
+
+/**
+ * Main function to substitute variables in a request object
+ * @param {Object} request - The raw request object
+ * @param {Object} variables - Environment variables as key-value pairs
+ * @returns {Object} - The request with substituted variables
+ */
+export function substituteVariables(request, variables) {
+    if (!variables || Object.keys(variables).length === 0) {
+        // No variables to substitute
+        return request;
+    }
+
+    let substituted = substituteUrlVariables(request, variables);
+    substituted = substituteNonUrlVariables(substituted, variables);
 
     // Log substitution for debugging
     // console.log(`[+] Variable substitution completed for request: ${substituted.name || substituted.url}`);

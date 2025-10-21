@@ -22,7 +22,7 @@ class ScanController {
   async createScan(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { name, description, ruleIds, requestIds, environmentId, collectionIds = [], projectIds = [] } = req.body;
+      const { name, description, ruleIds, requestIds, environmentId, collectionIds = [], projectIds = [], scope } = req.body;
       
       const scanData = {
         name,
@@ -32,7 +32,8 @@ class ScanController {
         environmentId,
         collectionIds,
         projectIds,
-        orgId 
+        orgId,
+        scope
       };
       
       const scan = await this.scanService.createScan(scanData);

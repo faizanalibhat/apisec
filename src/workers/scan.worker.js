@@ -6,10 +6,10 @@ import RawEnvironment from "../models/rawEnvironment.model.js";
 import TransformedRequest from "../models/transformedRequest.model.js";
 import { EngineService } from "../services/engine/engine.service.js";
 import Vulnerability from "../models/vulnerability.model.js";
-import { substituteVariables } from "../utils/variableSubstitution.js";
+import { substituteVariables, substituteUrlVariables, substituteNonUrlVariables } from "../utils/variableSubstitution.js";
 import { PostmanParser } from "../utils/postman/postmanParser.js";
 import { IntegrationService } from "../services/integration.service.js";
-import TemplateEngine from "../utils/template.js"; // NEW IMPORT
+import TemplateEngine from "../utils/template.js";
 import "../db/mongoose.js";
 
 import { syncRulesFromGithub } from "./sync-rules.worker.js";
@@ -20,7 +20,7 @@ const integrationService = new IntegrationService();
 
 
 async function transformationHandler(payload, msg, channel) {
-    const { _id, requestIds, ruleIds, environmentId, orgId, projectId } = payload;
+    const { _id, requestIds, ruleIds, environmentId, orgId, projectId, scope } = payload;
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -61,6 +61,10 @@ async function transformationHandler(payload, msg, channel) {
 
         console.log("[+] ENVIRONMENT VARIABLES: ", environmentVariables);
 
+        const scopeRegexes = (scope && scope.length > 0)
+            ? scope.map(pattern => new RegExp(pattern))
+            : null;
+
         // Generate transformed requests (cartesian product)
         for (let rule of rules) {
             for (let request of requests) {
@@ -71,8 +75,17 @@ async function transformationHandler(payload, msg, channel) {
                 let processedRequest = reqObject;
 
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
+                    const urlResolvedRequest = substituteUrlVariables(reqObject, environmentVariables);
 
-                    processedRequest = substituteVariables(reqObject, environmentVariables);
+                    if (scopeRegexes) {
+                        const url = urlResolvedRequest.url;
+                        const isInScope = scopeRegexes.some(regex => regex.test(url));
+
+                        if (!isInScope) {
+                            continue; // Skip this request
+                        }
+                    }
+                    processedRequest = substituteNonUrlVariables(urlResolvedRequest, environmentVariables);
                 }
 
                 const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });

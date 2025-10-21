@@ -150,7 +150,12 @@ class DashboardService {
         .limit(5)
         .populate('ruleId', 'ruleName category')
         .populate('requestId', 'name url method collectionName')
+        .populate('transformedRequestId', 'method url')
         .lean();
+
+        console.log("rule: ", topVulns.map(vuln => vuln.ruleId));
+        console.log("request: ", topVulns.map(vuln => vuln.requestId));
+        console.log("transformed req: ", topVulns.map(vuln => vuln.transformedRequestId));
 
         // Map severity to numeric value for proper sorting
         const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, informational: 4 };
