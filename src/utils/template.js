@@ -118,6 +118,7 @@ export class TemplateEngine {
         const context = {
             // Transformed request data
             req: {
+                id: transformedRequest._id,
                 method: transformedRequest.method,
                 url: transformedRequest.url,
                 headers: transformedRequest.headers || {},
