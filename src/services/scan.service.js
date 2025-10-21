@@ -14,7 +14,7 @@ export class ScanService {
 
     async createScan(scanData) {
         try {
-            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds } = scanData;
+            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope } = scanData;
 
             // Validate environment if provided
             if (environmentId && environmentId?.length) {
@@ -71,6 +71,7 @@ export class ScanService {
                 name,
                 description,
                 orgId,
+                scope,
                 ruleIds: rules.map(r => r._id),
                 requestIds: requests.map(r => r._id),
                 collectionIds,
