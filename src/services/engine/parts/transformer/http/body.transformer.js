@@ -115,6 +115,9 @@ export default {
     return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
       const newBody = _.cloneDeep(body);
+
+      console.log(newBody);
+
       this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
       req.body = newBody;
       return req;
