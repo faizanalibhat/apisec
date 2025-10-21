@@ -389,8 +389,8 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        if (transformedRequest.url?.match(/\/xss/g)) console.log("[+] RESPONSE: ", transformedRequest.url, response);
-            // console.log(`[+] Match result:`, matchResult);
+        if (transformedRequest.url?.match(/\/xss/g))
+            console.log(`[+] Match result:`, matchResult);
 
             // console.log("[+] FOUND VULN : ", {
             //     ruleId: rule._id,

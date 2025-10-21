@@ -160,6 +160,8 @@ class Matcher {
 
     // console.log("[+] USING : ", matchRule, response);
 
+    // console.log("[+] USING MATCH: ", rule, response);
+
 
     if (!matchRule) return { matched: false };
 
@@ -182,6 +184,8 @@ class Matcher {
 
       // Match body
       const bodyMatch = matchRule.body ? this._matchBody(matchRule.body, response.body) : { matched: true };
+
+      console.log("[+] MATCHING: ", rule.body, response.body);
 
       if (!bodyMatch.matched) return { matched: false };
 
