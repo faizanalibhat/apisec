@@ -157,6 +157,10 @@ class Matcher {
    */
   match({ rule, response }) {
     const matchRule = rule.match_on;
+
+    console.log("[+] USING : ", matchRule);
+
+
     if (!matchRule) return { matched: false };
 
     try {
