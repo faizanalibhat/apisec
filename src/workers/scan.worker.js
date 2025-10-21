@@ -81,6 +81,10 @@ async function transformationHandler(payload, msg, channel) {
                         const url = urlResolvedRequest.url;
                         const isInScope = scopeRegexes.some(regex => regex.test(url));
 
+                        console.log("url: ", url);
+                        console.log("isInScope: ", isInScope)
+
+
                         if (!isInScope) {
                             continue; // Skip this request
                         }
