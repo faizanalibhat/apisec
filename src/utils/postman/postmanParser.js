@@ -253,7 +253,7 @@ class PostmanParser {
                 }
             }
 
-            const body_format = body.options?.raw?.language || "unknown";
+            const body_format = body.mode == "raw" ? body.options?.raw?.language : body.mode || "unknown";
 
             return {
                 // Required fields with correct names
