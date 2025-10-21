@@ -108,6 +108,8 @@ export default {
   _replaceAllOneByOne(originalRequest, body, replacement) {
     const values = [];
 
+    if (!body) return [_.cloneDeep(originalRequest)]
+
     // if body is json parsable
     let json = null;
 
