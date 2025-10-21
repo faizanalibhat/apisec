@@ -124,7 +124,7 @@ export default {
     }
     catch(err) {
       console.log(err.message);
-      console.log("not json body : ", body.replace(/[\s\n\t]+/g, ''), typeof body);
+      console.log("not json body : ", body);
       return [_.cloneDeep(originalRequest)]
     }
 
