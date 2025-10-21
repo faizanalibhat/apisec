@@ -4,27 +4,34 @@ export default {
   transform(request, bodyRules) {
     if (!bodyRules) return [request];
 
+
+    let requests = [];
+
     // Handle transformations array (creates separate requests for each transformation)
-    if (bodyRules.transformations && Array.isArray(bodyRules.transformations)) {
-      const requests = [];
-      bodyRules.transformations.forEach(transformation => {
+    if (Array.isArray(bodyRules.transformations)) {
+      for (const transformation of bodyRules.transformations) {
         const req = _.cloneDeep(request);
         const body = req.body || {};
         this._applyTransformation(body, transformation);
         req.body = body;
         requests.push(req);
-      });
-
-      // If there are global transformations, apply them to all generated requests
-      if (bodyRules.add || bodyRules.remove || bodyRules.modify || 
-          bodyRules.replace_all || bodyRules.replace_all_one_by_one) {
-        return requests.flatMap(req => this._applyGlobalRules(req, bodyRules));
       }
-
-      return requests;
     }
 
-    return this._applyGlobalRules(request, bodyRules);
+    // If no transformation rules were applied, start with the original
+    if (requests.length === 0) requests = [_.cloneDeep(request)];
+
+    // Apply global rules (if any)
+    if (bodyRules.add || bodyRules.remove || bodyRules.modify ||
+        bodyRules.replace_all || bodyRules.replace_all_one_by_one) {
+      const globalReqs = requests.flatMap(req => this._applyGlobalRules(req, bodyRules));
+      if (globalReqs.length > 0) {
+        requests = globalReqs;
+      }
+    }
+
+    // ✅ Always return at least one request
+    return requests.length > 0 ? requests : [_.cloneDeep(request)];
   },
 
   _applyTransformation(body, transformation) {
@@ -32,9 +39,7 @@ export default {
       if (operator === 'add' && typeof config === 'object') {
         Object.assign(body, config);
       } else if (operator === 'remove' && Array.isArray(config)) {
-        config.forEach(field => {
-          delete body[field];
-        });
+        config.forEach(field => delete body[field]);
       } else if (operator === 'modify' && typeof config === 'object') {
         Object.entries(config).forEach(([field, cfg]) => {
           body[field] = this._applyModification(body[field], cfg);
@@ -48,15 +53,11 @@ export default {
     const body = requests[0].body || {};
 
     // Add fields
-    if (bodyRules.add) {
-      Object.assign(body, bodyRules.add);
-    }
+    if (bodyRules.add) Object.assign(body, bodyRules.add);
 
     // Remove fields
-    if (bodyRules.remove && Array.isArray(bodyRules.remove)) {
-      bodyRules.remove.forEach(field => {
-        delete body[field];
-      });
+    if (Array.isArray(bodyRules.remove)) {
+      bodyRules.remove.forEach(field => delete body[field]);
     }
 
     // Modify fields
@@ -73,7 +74,9 @@ export default {
 
     // Replace all values one by one (create separate requests)
     if (bodyRules.replace_all_one_by_one) {
-      return this._replaceAllOneByOne(request, body, bodyRules.replace_all_one_by_one);
+      const replaced = this._replaceAllOneByOne(request, body, bodyRules.replace_all_one_by_one);
+      // ✅ ensure we never return empty
+      return replaced.length > 0 ? replaced : [_.cloneDeep(request)];
     }
 
     requests[0].body = body;
@@ -85,17 +88,10 @@ export default {
       return config;
     } else if (typeof config === 'object') {
       let newValue = config.value !== undefined ? config.value : currentValue;
-
-      if (config.prefix) {
-        newValue = config.prefix + newValue;
-      }
-      if (config.suffix) {
-        newValue = newValue + config.suffix;
-      }
-
+      if (config.prefix) newValue = config.prefix + newValue;
+      if (config.suffix) newValue = newValue + config.suffix;
       return newValue;
     }
-
     return currentValue;
   },
 
@@ -111,15 +107,44 @@ export default {
 
   _replaceAllOneByOne(originalRequest, body, replacement) {
     const values = [];
-    this._collectAllValues(body, values);
-    
-    return values.map((_, index) => {
+
+    if (!body) return [_.cloneDeep(originalRequest)]
+
+    // if body is json parsable
+    let json = null;
+
+    console.log(body);
+
+    try {
+      let body_payload = body;
+
+      body_payload = body_payload?.replace?.(/[\s\n\t]+/g, '');
+
+      json = JSON.parse(body_payload);
+    }
+    catch(err) {
+      console.log(err.message);
+      console.log("not json body : ", body);
+      return [_.cloneDeep(originalRequest)]
+    }
+
+    if (!json) {
+        return [_.cloneDeep(originalRequest)]
+    }
+
+    this._collectAllValues(json, values);
+
+    // ✅ if no values to replace, return original
+    if (values.length === 0) return [_.cloneDeep(originalRequest)];
+
+    return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
-      const newBody = _.cloneDeep(body);
-      let count = 0;
-      
-      this._replaceValueAtIndex(newBody, replacement, index, count);
+      const newBody = _.cloneDeep(json);
+      this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
       req.body = newBody;
+
+      console.log("after replacement: ", newBody);
+
       return req;
     });
   },
@@ -134,7 +159,7 @@ export default {
     });
   },
 
-  _replaceValueAtIndex(obj, replacement, targetIndex, counter = { count: 0 }) {
+  _replaceValueAtIndex(obj, replacement, targetIndex, counter) {
     Object.keys(obj).forEach(key => {
       if (typeof obj[key] === 'string' || typeof obj[key] === 'number') {
         if (counter.count === targetIndex) {

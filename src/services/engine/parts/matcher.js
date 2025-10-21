@@ -157,11 +157,16 @@ class Matcher {
    */
   match({ rule, response }) {
     const matchRule = rule.match_on;
-    if (!matchRule) return { matched: true };
+
+    console.log("[+] USING : ", matchRule);
+
+
+    if (!matchRule) return { matched: false };
 
     try {
       // Match status codes
       let statusMatch = { matched: true };
+
       if (matchRule.status !== undefined) {
         statusMatch = this._matchStatus(matchRule.status, response.status);
         if (!statusMatch.matched) {
@@ -172,11 +177,14 @@ class Matcher {
       // Match headers
       const headerMatch = matchRule.header ? this._matchHeaders(matchRule.header, response.headers) : { matched: true };
       if (!headerMatch.matched) return { matched: false };
+
       // Match body
+      console.log("[+] MATCHING BODY: ", matchRule.body, response.body);
       const bodyMatch = matchRule.body ? this._matchBody(matchRule.body, response.body) : { matched: true };
       if (!bodyMatch.matched) return { matched: false };
 
       const highlight = bodyMatch.highlight || headerMatch.highlight || statusMatch.highlight;
+      
       return { matched: true, highlight };
 
     } catch (error) {
@@ -296,19 +304,21 @@ class Matcher {
   _matchBodyContains(containsRule, actualBody) {
     const bodyString = typeof actualBody === 'string' ? actualBody : JSON.stringify(actualBody);
     const searchValue = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.value : containsRule;
-    const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : false;
+    const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : true;
 
-    if (isRegex) {
-      try {
-        const regex = new RegExp(searchValue);
-        const match = bodyString.match(regex);
-        return { matched: !!match, highlight: match ? match[0] : undefined };
-      } catch (e) {
-        return { matched: false };
-      }
+    console.log("[+] STRING : ", bodyString, searchValue);
+
+    try {
+      const regex = new RegExp(searchValue);
+      const match = bodyString.match(regex);
+      return { matched: !!match, highlight: match ? match[0] : undefined };
+    } catch (e) {
+      return { matched: false };
     }
-    const matched = bodyString.includes(searchValue);
-    return { matched, highlight: matched ? searchValue : undefined };
+
+    // const matched = bodyString.includes(searchValue);
+
+    // return { matched, highlight: matched ? searchValue : undefined };
   }
 
   /**

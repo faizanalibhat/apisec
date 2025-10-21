@@ -7,9 +7,10 @@ export default {
     let requests = [_.cloneDeep(request)];
 
     // Handle transformations array (creates separate requests for each transformation)
-    if (queryRules.transformations && Array.isArray(queryRules.transformations)) {
-      requests = [];
-      queryRules.transformations.forEach(transformation => {
+    if (Array.isArray(queryRules.transformations)) {
+      const transformedReqs = [];
+
+      for (const transformation of queryRules.transformations) {
         const req = _.cloneDeep(request);
         const params = req.query || {};
 
@@ -17,29 +18,30 @@ export default {
           if (operator === 'add' && typeof config === 'object') {
             Object.assign(params, config);
           } else if (operator === 'remove' && Array.isArray(config)) {
-            config.forEach(param => {
-              delete params[param];
-            });
+            config.forEach(param => delete params[param]);
           }
         });
 
         req.query = params;
-        requests.push(req);
-      });
-
-      // If there are global transformations, apply them to all generated requests
-      if (queryRules.add || queryRules.remove || queryRules.modify || 
-          queryRules.replace_all_values || queryRules.replace_all_values_one_by_one) {
-        requests = requests.flatMap(req => 
-          this._applyGlobalRules(req, queryRules)
-        );
+        transformedReqs.push(req);
       }
 
-      return requests;
+      // Combine original + transformed
+      requests = [...requests, ...transformedReqs];
+
+      // Apply global rules if any
+      if (queryRules.add || queryRules.remove || queryRules.modify || queryRules.replace_all_values || queryRules.replace_all_values_one_by_one) {
+        const globalReqs = requests.flatMap(req => this._applyGlobalRules(req, queryRules));
+        if (globalReqs.length > 0) requests = globalReqs;
+      }
+    } else {
+      // Apply global rules directly
+      const globalReqs = requests.flatMap(req => this._applyGlobalRules(req, queryRules));
+      if (globalReqs.length > 0) requests = globalReqs;
     }
 
-    // Apply global rules if no transformations array
-    return requests.flatMap(req => this._applyGlobalRules(req, queryRules));
+    // ✅ Always return at least the original request
+    return requests.length > 0 ? requests : [_.cloneDeep(request)];
   },
 
   _applyGlobalRules(request, queryRules) {
@@ -47,36 +49,30 @@ export default {
     const params = requests[0].query || {};
 
     // Add parameters
-    if (queryRules.add) {
-      Object.assign(params, queryRules.add);
-    }
+    if (queryRules.add) Object.assign(params, queryRules.add);
 
     // Remove parameters
-    if (queryRules.remove && Array.isArray(queryRules.remove)) {
-      queryRules.remove.forEach(param => {
-        delete params[param];
-      });
-    }
+    if (Array.isArray(queryRules.remove))
+      queryRules.remove.forEach(param => delete params[param]);
 
     // Modify parameters
-    if (queryRules.modify) {
+    if (queryRules.modify)
       Object.entries(queryRules.modify).forEach(([param, newVal]) => {
         params[param] = newVal;
       });
-    }
 
     // Replace all values
-    if (queryRules.replace_all_values) {
+    if (queryRules.replace_all_values)
       Object.keys(params).forEach(key => {
         params[key] = queryRules.replace_all_values;
       });
-    }
 
     // Replace all values one by one (create separate requests)
     if (queryRules.replace_all_values_one_by_one) {
       const paramKeys = Object.keys(params);
-      requests[0].query = params;
-      return paramKeys.map((key, index) => {
+      if (paramKeys.length === 0) return [_.cloneDeep(request)];
+
+      return paramKeys.map(key => {
         const req = _.cloneDeep(request);
         const newParams = _.cloneDeep(params);
         newParams[key] = queryRules.replace_all_values_one_by_one;

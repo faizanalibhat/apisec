@@ -238,17 +238,22 @@ class PostmanParser {
 
             // Extract body content based on mode
             let bodyContent = null;
-            if (body && body.content) {
-                if (body.mode === 'raw') {
-                    bodyContent = body.content;
-                } else if (body.mode === 'urlencoded' || body.mode === 'formdata') {
-                    bodyContent = body.content;
-                } else if (body.mode === 'graphql') {
-                    bodyContent = body.content;
+            if (body && body?.content) {
+                // if (body.mode == "raw" && body?.options?.raw?.language == "json") {
+                //     bodyContent = JSON.stringify(body.content);
+                // }
+                if (body?.mode === 'raw') {
+                    bodyContent = body?.content;
+                } else if (body?.mode === 'urlencoded' || body?.mode === 'formdata') {
+                    bodyContent = body?.content;
+                } else if (body?.mode === 'graphql') {
+                    bodyContent = body?.content;
                 } else if (body.mode === 'file') {
-                    bodyContent = body.content;
+                    bodyContent = body?.content;
                 }
             }
+
+            const body_format = body?.mode == "raw" ? body?.options?.raw?.language : body?.mode || "unknown";
 
             return {
                 // Required fields with correct names
@@ -267,6 +272,7 @@ class PostmanParser {
                 headers: headersMap,
                 params: paramsMap,
                 body: bodyContent,
+                body_format: body_format,
                 folderName: folderPath || null,
                 postmanId: item._postman_id || request._postman_id || null,
                 description: request.description || item.description || null,
