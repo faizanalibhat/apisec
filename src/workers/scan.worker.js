@@ -473,8 +473,10 @@ async function runAndMatchRequests(payload, msg, channel) {
                 }
             };
 
+            console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
+
             try {
-                await Vulnerability.create([vulnerabilityData], { strict: false });
+                await Vulnerability.create([vulnerabilityData]);
                 console.log(`[+] Created vulnerability record - ${vulnerabilityData.title}`);
             } catch (vulnError) {
                 console.error("[!] Error creating vulnerabilities:", vulnError);
