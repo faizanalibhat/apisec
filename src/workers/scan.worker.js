@@ -389,7 +389,8 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        console.log(`[+] Match result:`, matchResult);
+        if (transformedRequest.url?.match(/\/xss/g))
+            console.log(`[+] Match result:`, matchResult);
 
         if (matchResult.matched) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
