@@ -26,6 +26,16 @@ export const validateCreateScan = [
     .trim()
     .isLength({ max: 500 }).withMessage('Description must not exceed 500 characters'),
   
+  body('scope')
+    .optional()
+    .isArray().withMessage('Scope must be an array of strings.')
+    .custom((value) => {
+      if (value && !value.every(item => typeof item === 'string')) {
+        throw new Error('All items in scope must be strings.');
+      }
+      return true;
+    }),
+
   body('ruleIds')
     .isArray({ min: 1 }).withMessage('At least one rule ID is required')
     .custom((value) => {
