@@ -392,12 +392,12 @@ async function runAndMatchRequests(payload, msg, channel) {
         if (transformedRequest.url?.match(/\/xss/g))
             console.log(`[+] Match result:`, matchResult);
 
-            console.log("[+] FOUND VULN : ", {
-                ruleId: rule._id,
-                requestId: originalRequest._id,
-                projectId: originalRequest.projectId,
-                transformedRequestId: transformedRequest._id,
-            })
+            // console.log("[+] FOUND VULN : ", {
+            //     ruleId: rule._id,
+            //     requestId: originalRequest._id,
+            //     projectId: originalRequest.projectId,
+            //     transformedRequestId: transformedRequest._id,
+            // })
         
 
         if (matchResult.matched) {
