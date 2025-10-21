@@ -18,6 +18,7 @@ export const sendRequest = async ({ request }) => {
   const config = {
     method: request.method.toLowerCase(),
     url: cleanUrl,
+    params: request.params,
     headers: request.headers,
     data: request.body || undefined,
     validateStatus: () => true,
