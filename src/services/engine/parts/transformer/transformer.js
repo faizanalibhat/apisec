@@ -43,7 +43,9 @@ export const transformer = {
 
     if (transformRules.body) {
       requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
+      console.log("transformed body: ", requests);
     }
+
 
     return requests;
   },
