@@ -160,9 +160,11 @@ class Matcher {
     if (!matchRule) return { matched: true };
 
     try {
-            // Match status codes
+      // Match status codes
+      let statusMatch = { matched: true };
       if (matchRule.status !== undefined) {
-        if (!this._matchStatus(matchRule.status, response.status).matched) {
+        statusMatch = this._matchStatus(matchRule.status, response.status);
+        if (!statusMatch.matched) {
           return { matched: false };
         }
       }
@@ -170,12 +172,11 @@ class Matcher {
       // Match headers
       const headerMatch = matchRule.header ? this._matchHeaders(matchRule.header, response.headers) : { matched: true };
       if (!headerMatch.matched) return { matched: false };
-
       // Match body
       const bodyMatch = matchRule.body ? this._matchBody(matchRule.body, response.body) : { matched: true };
       if (!bodyMatch.matched) return { matched: false };
 
-      const highlight = bodyMatch.highlight || headerMatch.highlight;
+      const highlight = bodyMatch.highlight || headerMatch.highlight || statusMatch.highlight;
       return { matched: true, highlight };
 
     } catch (error) {
@@ -189,11 +190,18 @@ class Matcher {
    * @private
    */
   _matchStatus(statusRule, actualStatus) {
+    let result;
     if (typeof statusRule === 'object' && statusRule !== null && !Array.isArray(statusRule)) {
-      return this._matchWithOperators(statusRule, actualStatus);
+      result = this._matchWithOperators(statusRule, actualStatus);
+    } else {
+      const statuses = Array.isArray(statusRule) ? statusRule : [statusRule];
+      result = { matched: statuses.includes(actualStatus) };
     }
-    const statuses = Array.isArray(statusRule) ? statusRule : [statusRule];
-    return { matched: statuses.includes(actualStatus) };
+
+    if (result.matched) {
+      return { matched: true, highlight: String(actualStatus) };
+    }
+    return { matched: false };
   }
 
   /**
