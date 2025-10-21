@@ -484,12 +484,11 @@ async function runAndMatchRequests(payload, msg, channel) {
                 }
             };
 
-            // log ids for rule, raw request and transformed req
-            console.log("thissssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss", rule._id, originalRequest._id, transformedRequest._id)
+            // console.log("thissssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss", rule._id, originalRequest._id, transformedRequest._id)
 
-            console.log("Vulnerability Rule Id: " + vulnerabilityData.ruleId);
-            console.log("Original Request Id: " + vulnerabilityData.requestId);
-            console.log("Transformed Request Id: " + vulnerabilityData.transformedRequestId);
+            // console.log("Vulnerability Rule Id: " + vulnerabilityData.ruleId);
+            // console.log("Original Request Id: " + vulnerabilityData.requestId);
+            // console.log("Transformed Request Id: " + vulnerabilityData.transformedRequestId);
             // console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
 
             try {
