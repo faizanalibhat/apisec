@@ -381,6 +381,11 @@ async function runAndMatchRequests(payload, msg, channel) {
         
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
+        if (response.error) {
+            console.log("[+] request errored out ", response.message);
+            return;
+        }
+
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
