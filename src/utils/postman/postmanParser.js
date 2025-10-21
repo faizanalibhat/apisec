@@ -239,6 +239,9 @@ class PostmanParser {
             // Extract body content based on mode
             let bodyContent = null;
             if (body && body.content) {
+                // if (body.mode == "raw" && body?.options?.raw?.language == "json") {
+                //     bodyContent = JSON.stringify(body.content);
+                // }
                 if (body.mode === 'raw') {
                     bodyContent = body.content;
                 } else if (body.mode === 'urlencoded' || body.mode === 'formdata') {
@@ -249,6 +252,8 @@ class PostmanParser {
                     bodyContent = body.content;
                 }
             }
+
+            const bodyLanguage = body.options?.raw?.language || "unknown";
 
             return {
                 // Required fields with correct names
@@ -267,6 +272,7 @@ class PostmanParser {
                 headers: headersMap,
                 params: paramsMap,
                 body: bodyContent,
+                bodyLanguage: bodyLanguage,
                 folderName: folderPath || null,
                 postmanId: item._postman_id || request._postman_id || null,
                 description: request.description || item.description || null,
