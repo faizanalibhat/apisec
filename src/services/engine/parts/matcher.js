@@ -255,11 +255,14 @@ class Matcher {
   _searchHeadersForValue(searchValue, headers, isRegex = false) {
     for (const headerValue of Object.values(headers)) {
       const stringValue = String(headerValue);
+
       if (isRegex) {
         try {
           const regex = new RegExp(searchValue);
           const match = stringValue.match(regex);
+
           if (match) return { matched: true, highlight: match[0] };
+
         } catch (e) { /* ignore invalid regex */ }
       } else {
         if (stringValue.includes(searchValue)) return { matched: true, highlight: searchValue };
@@ -308,22 +311,24 @@ class Matcher {
   _matchBodyContains(containsRule, actualBody) {
     const bodyString = typeof actualBody === 'string' ? actualBody : JSON.stringify(actualBody);
     const searchValue = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.value : containsRule;
-    const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : true;
+    const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : false;
 
     console.log("[+] MATCHING BODY : ", bodyString, searchValue);
 
-    try {
-      const regex = new RegExp(searchValue);
-      const match = bodyString.match(regex);
-      return { matched: !!match, highlight: match ? match[0] : undefined };
-    } catch (e) {
-      console.log(e.message);
-      return { matched: false };
+    if (isRegex) {
+      try {
+        const regex = new RegExp(searchValue);
+        const match = bodyString.match(regex);
+        return { matched: !!match, highlight: match ? match[0] : undefined };
+      } catch (e) {
+        console.log(e.message);
+        return { matched: false };
+      }
     }
 
-    // const matched = bodyString.includes(searchValue);
+    const matched = bodyString.includes(searchValue);
 
-    // return { matched, highlight: matched ? searchValue : undefined };
+    return { matched, highlight: matched ? searchValue : undefined };
   }
 
   /**
