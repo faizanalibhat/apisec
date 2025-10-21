@@ -70,7 +70,6 @@ export default {
 
     // Replace all values one by one (create separate requests)
     if (queryRules.replace_all_values_one_by_one) {
-      console.log("[+] replacing values one by one.");
       const paramKeys = Object.keys(params);
       if (paramKeys.length === 0) return [_.cloneDeep(request)];
 
@@ -78,9 +77,6 @@ export default {
         const req = _.cloneDeep(request);
         const newParams = _.cloneDeep(params);
         newParams[key] = queryRules.replace_all_values_one_by_one;
-
-        console.log("replaced query: ", key, queryRules.replace_all_values_one_by_one);
-
         req.params = newParams;
         return req;
       });

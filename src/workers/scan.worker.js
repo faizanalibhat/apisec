@@ -77,14 +77,9 @@ async function transformationHandler(payload, msg, channel) {
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
                     const urlResolvedRequest = substituteUrlVariables(reqObject, environmentVariables);
 
-                    console.log("[+] SCOPE CHECK - URL: ", urlResolvedRequest.url);
-                    console.log("[+] SCOPE CHECK - REGEX: ", scopeRegexes);
-
                     if (scopeRegexes) {
                         const url = urlResolvedRequest.url;
                         const isInScope = scopeRegexes.some(regex => regex.test(url));
-
-                        console.log("[+] SCOPE CHECK - IS IN SCOPE: ", isInScope);
 
                         if (!isInScope) {
                             continue; // Skip this request
@@ -394,6 +389,8 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
+
+        console.log(matchResult);
 
         if (transformedRequest.url?.match(/\/xss/g))
             console.log(`[+] Match result:`, matchResult);
