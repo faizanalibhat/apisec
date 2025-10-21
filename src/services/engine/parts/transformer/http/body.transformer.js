@@ -113,10 +113,12 @@ export default {
     // if body is json parsable
     let json = null;
 
+    console.log(body);
+
     try {
       let body_payload = body;
 
-      body_payload = body_payload.replace(/[\s\n\t]+/g, '');
+      body_payload = body_payload?.replace?.(/[\s\n\t]+/g, '');
 
       json = JSON.parse(body_payload);
     }
@@ -126,13 +128,9 @@ export default {
       return [_.cloneDeep(originalRequest)]
     }
 
-    console.log("replacing : ", json, " by: ", replacement);
-
     if (!json) {
         return [_.cloneDeep(originalRequest)]
     }
-
-    console.log("values: ", values);
 
     this._collectAllValues(json, values);
 
@@ -144,7 +142,9 @@ export default {
       const newBody = _.cloneDeep(json);
       this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
       req.body = newBody;
+
       console.log("after replacement: ", newBody);
+
       return req;
     });
   },
