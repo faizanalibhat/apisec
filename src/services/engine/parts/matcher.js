@@ -158,7 +158,7 @@ class Matcher {
   match({ rule, response }) {
     const matchRule = rule.match_on;
 
-    console.log("[+] USING : ", matchRule, response);
+    // console.log("[+] USING : ", matchRule, response);
 
 
     if (!matchRule) return { matched: false };
@@ -170,8 +170,6 @@ class Matcher {
       if (matchRule.status !== undefined) {
         statusMatch = this._matchStatus(matchRule.status, response.status);
 
-        console.log("[+] STATUS MATCH : ", statusMatch, typeof matchRule.status, typeof response.status);
-
         if (!statusMatch.matched) {
           return { matched: false };
         }
@@ -180,13 +178,9 @@ class Matcher {
       // Match headers
       const headerMatch = matchRule.header ? this._matchHeaders(matchRule.header, response.headers) : { matched: true };
 
-      console.log("[+] MATCHING HEADER: ", headerMatch);
-
       if (!headerMatch.matched) return { matched: false };
 
       // Match body
-      console.log("[+] MATCHING BODY: ", response.body);
-
       const bodyMatch = matchRule.body ? this._matchBody(matchRule.body, response.body) : { matched: true };
 
       if (!bodyMatch.matched) return { matched: false };
