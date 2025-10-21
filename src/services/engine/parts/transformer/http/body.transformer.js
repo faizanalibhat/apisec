@@ -128,6 +128,8 @@ export default {
       return [_.cloneDeep(originalRequest)]
     }
 
+    console.log("replacing : ", json, " by: ", replacement);
+
     return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
       const newBody = _.cloneDeep(json);
