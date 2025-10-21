@@ -387,9 +387,7 @@ async function runAndMatchRequests(payload, msg, channel) {
             return;
         }
 
-        // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
-
 
         if (transformedRequest.url?.match(/\/xss/g)) console.log("[+] RESPONSE: ", transformedRequest.url, response);
             // console.log(`[+] Match result:`, matchResult);
