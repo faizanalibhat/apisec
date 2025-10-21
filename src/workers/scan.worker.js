@@ -387,13 +387,14 @@ async function runAndMatchRequests(payload, msg, channel) {
             return;
         }
 
+        console.log("[+] RESPONSE: ", response);
+
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        console.log(matchResult);
 
-        if (transformedRequest.url?.match(/\/xss/g))
-            console.log(`[+] Match result:`, matchResult);
+        // if (transformedRequest.url?.match(/\/xss/g))
+        //     console.log(`[+] Match result:`, matchResult);
 
             // console.log("[+] FOUND VULN : ", {
             //     ruleId: rule._id,
