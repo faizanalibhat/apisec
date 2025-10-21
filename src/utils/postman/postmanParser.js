@@ -253,7 +253,7 @@ class PostmanParser {
                 }
             }
 
-            const bodyLanguage = body.options?.raw?.language || "unknown";
+            const body_format = body.options?.raw?.language || "unknown";
 
             return {
                 // Required fields with correct names
@@ -272,7 +272,7 @@ class PostmanParser {
                 headers: headersMap,
                 params: paramsMap,
                 body: bodyContent,
-                bodyLanguage: bodyLanguage,
+                body_format: body_format,
                 folderName: folderPath || null,
                 postmanId: item._postman_id || request._postman_id || null,
                 description: request.description || item.description || null,
