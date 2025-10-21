@@ -119,7 +119,7 @@ export default {
       json = JSON.parse(body);
     }
     catch(err) {
-      console.log("not json body");
+      console.log("not json body ", body);
       return [_.cloneDeep(originalRequest)]
     }
 
