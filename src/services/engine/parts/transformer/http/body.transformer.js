@@ -135,6 +135,7 @@ export default {
       const newBody = _.cloneDeep(json);
       this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
       req.body = newBody;
+      console.log("after replacement: ", newBody);
       return req;
     });
   },
