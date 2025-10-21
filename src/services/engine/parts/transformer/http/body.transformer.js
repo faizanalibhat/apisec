@@ -124,7 +124,7 @@ export default {
     }
     catch(err) {
       console.log(err.message);
-      console.log("not json body : ", body);
+      // console.log("not json body : ", body);
       return [_.cloneDeep(originalRequest)]
     }
 
@@ -142,9 +142,6 @@ export default {
       const newBody = _.cloneDeep(json);
       this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
       req.body = newBody;
-
-      console.log("after replacement: ", newBody);
-
       return req;
     });
   },
