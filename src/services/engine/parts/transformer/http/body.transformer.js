@@ -116,10 +116,14 @@ export default {
     const json = null;
 
     try {
-      json = JSON.parse(body);
+      let body_payload = body;
+
+      body_payload = body_payload.replace(/[\s\n\t]+/g, '');
+
+      json = JSON.parse(body_payload);
     }
     catch(err) {
-      console.log("not json body ", body, typeof body);
+      console.log("not json body : ", body.replace(/[\s\n\t]+/g, ''), typeof body);
       return [_.cloneDeep(originalRequest)]
     }
 
