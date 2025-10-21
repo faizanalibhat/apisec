@@ -71,6 +71,8 @@ async function transformationHandler(payload, msg, channel) {
                 // Remove fields
                 const { _id: reqId, __v: _, ...reqObject } = request;
 
+                console.log("[+] URL & PARAMS: ", reqObject.params, reqObject.params);
+
                 // Apply environment variable substitution if environment is provided
                 let processedRequest = reqObject;
 
