@@ -1,6 +1,7 @@
 import { RuleService } from '../services/rule.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
+import { mqbroker } from '../services/rabbitmq.service.js';
 import yaml from "js-yaml";
 
 
@@ -16,6 +17,7 @@ class RuleController {
         this.deleteRule = this.deleteRule.bind(this);
         this.searchRules = this.searchRules.bind(this);
         this.updateRuleStatus = this.updateRuleStatus.bind(this);
+        this.syncDefaultRules = this.syncDefaultRules.bind(this);
     }
 
     async createRule(req, res, next) {
@@ -170,6 +172,15 @@ class RuleController {
             next(error);
         }
     }
+
+
+    async syncDefaultRules(req, res, next) {
+        const { orgId } = req.authenticatedService;
+
+        await mqbroker.publish("apisec", "apisec.rules.sync", { orgId });
+
+        return res.json({ message: "Sync started" });
+    }
 }
 
 // Create instance
@@ -182,5 +193,6 @@ export const {
     updateRule,
     deleteRule,
     searchRules,
-    updateRuleStatus
+    updateRuleStatus,
+    syncDefaultRules
 } = ruleController;

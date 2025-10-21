@@ -1,12 +1,12 @@
 import _ from 'lodash';
-import bodyTransformer from './body.transformer.js';
-import headersTransformer from './headers.transformer.js';
-import queryTransformer from './query.transformer.js';
-import pathTransformer from './path.transformer.js';
+import bodyTransformer from './http/body.transformer.js';
+import headersTransformer from './http/header.transformer.js';
+import queryTransformer from './http/query.transformer.js';
+import pathTransformer from './http/path.transformer.js';
 
 
-export default {
-  transformer({ request, rule }) {
+export const transformer = {
+  transform({ request, rule }) {
     const transformRules = rule.transform;
 
     if (!transformRules) return [request];

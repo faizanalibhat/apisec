@@ -214,12 +214,7 @@ class Matcher {
    * @returns {boolean} - True if the request matches the target
    */
   matchTarget({ rule, transformedRequest }) {
-    const target = rule.Target;
-    console.log('--- Matcher Debug ---');
-    console.log('Rule ID:', rule._id);
-    console.log('Rule Target:', JSON.stringify(target, null, 2));
-    console.log('Request URL:', transformedRequest.url);
-    console.log('Request Method:', transformedRequest.method);
+    const target = rule.target;
 
     if (!target) {
       console.log('No target specified. Applying rule to all requests.');
@@ -233,22 +228,22 @@ class Matcher {
     }
     const requestUrl = new URL(transformedRequest.url);
 
+    if (target == "all") return true;
+
+    if (target == "all") return true;
+
     if (target.method) {
       const methodMatch = this._matchMethod(target.method, transformedRequest.method);
       console.log('Method Match:', methodMatch);
       if (!methodMatch) return false;
     }
 
-    if (target.Request_contains) {
-        const requestContainsMatch = this._matchRequestContains(target.Request_contains, transformedRequest.raw);
-        console.log('Request Contains Match:', requestContainsMatch);
-        if (!requestContainsMatch) return false;
+    if (target.request_contains && !this._matchRequestContains(target.request_contains, transformedRequest.raw)) {
+        return false;
     }
 
-    if (target.Header) {
-        const headerMatch = this._matchTargetContains(target.Header, transformedRequest.headers);
-        console.log('Header Match:', headerMatch);
-        if (!headerMatch) return false;
+    if (target.header && !this._matchTargetContains(target.header, transformedRequest.headers)) {
+        return false;
     }
 
     if (target.query) {
@@ -570,4 +565,6 @@ class Matcher {
   }
 }
 
-export default Matcher;
+const matcher = new Matcher();
+
+export { matcher };

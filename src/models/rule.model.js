@@ -12,35 +12,6 @@ const ruleSchema = new mongoose.Schema({
         trim: true
     },
 
-    Target: {
-        method: {
-            type: [String],
-        },
-        Request_contains: {
-            type: String,
-        },
-        body: {
-            contains: {
-                type: String,
-            }
-        },
-        Header: {
-            contains: {
-                type: String,
-            }
-        },
-        query: {
-            contains: {
-                type: String,
-            }
-        },
-        path: {
-            contains: {
-                type: String,
-            }
-        }
-    },
-
     endpoints: [{
         type: String,
         trim: true
@@ -92,6 +63,8 @@ const ruleSchema = new mongoose.Schema({
 
     raw_yaml: { type: String, required: true },
     parsed_yaml: { type: mongoose.Schema.Types.Mixed, default: {} },
+
+    isUniversal: { type: Boolean },
 }, {
     timestamps: true
 });

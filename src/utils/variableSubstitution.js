@@ -93,7 +93,7 @@ export function substituteVariables(request, variables) {
     }
 
     // Log substitution for debugging
-    console.log(`[+] Variable substitution completed for request: ${substituted.name || substituted.url}`);
+    // console.log(`[+] Variable substitution completed for request: ${substituted.name || substituted.url}`);
 
     return substituted;
 }

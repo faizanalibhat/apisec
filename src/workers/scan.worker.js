@@ -12,6 +12,8 @@ import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js"; // NEW IMPORT
 import "../db/mongoose.js";
 
+import { syncRulesFromGithub } from "./sync-rules.worker.js";
+
 
 const parser = new PostmanParser();
 const integrationService = new IntegrationService();
@@ -74,21 +76,25 @@ async function transformationHandler(payload, msg, channel) {
                 }
 
                 const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });
+
                 if (!targetMatch) {
-                    continue; // Skip to the next request if the target doesn't match
+                    continue;
                 }
 
                 // console.log("[+] PROCESSED REQUEST : ", processedRequest);
 
                 // Apply rule transformations
                 let transformed;
+
                 try {
-                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml }); // check later
+                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
                 }
                 catch (err) {
                     console.log(err.message);
                     continue;
                 }
+
+                console.log(transformed);
 
                 for (let t of transformed) {
                     bulkOps.push({
@@ -98,15 +104,17 @@ async function transformationHandler(payload, msg, channel) {
                                 orgId,
                                 requestId: request._id,
                                 ruleId: rule._id,
-                                // projectId: projectId,
+                                projectId: projectId,
                                 ...t,
-                                // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, [])
+                                // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, []),
                             }
                         }
                     });
                 }
             }
         }
+
+        console.log(`[+] CREATED ${bulkOps.length} TRANSFORMED REQUESTS`)
 
         // Write transformed requests to db
         if (bulkOps.length > 0) {
@@ -361,13 +369,12 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Send the request
         console.log(`[+] Sending request to: ${transformedRequest.url}`);
 
-        console.log("[+] REQAUEST: ", JSON.stringify(transformedRequest));
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        console.log(`[+] Match result:`, matchResult);
+        // console.log(`[+] Match result:`, matchResult);
 
         if (matchResult.matched) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
@@ -572,4 +579,5 @@ async function scanWorker() {
 }
 
 
-scanWorker()
+scanWorker();
+syncRulesFromGithub();
