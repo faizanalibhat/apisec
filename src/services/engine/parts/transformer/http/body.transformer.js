@@ -107,10 +107,6 @@ export default {
 
   _replaceAllOneByOne(originalRequest, body, replacement) {
     const values = [];
-    this._collectAllValues(body, values);
-
-    // ✅ if no values to replace, return original
-    if (values.length === 0) return [_.cloneDeep(originalRequest)];
 
     // if body is json parsable
     let json = null;
@@ -135,6 +131,11 @@ export default {
     }
 
     console.log("values: ", values);
+
+    this._collectAllValues(json, values);
+
+    // ✅ if no values to replace, return original
+    if (values.length === 0) return [_.cloneDeep(originalRequest)];
 
     return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
