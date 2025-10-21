@@ -2,6 +2,9 @@ import _ from 'lodash';
 
 export default {
   transform(request, queryRules) {
+
+    console.log("[+] INSIDE TRANSFORMER, TRANSFORMING QUERY: ", request.params, queryRules);
+
     if (!queryRules) return [request];
 
     let requests = [_.cloneDeep(request)];

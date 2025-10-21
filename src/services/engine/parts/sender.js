@@ -12,9 +12,12 @@ const formatHeaders = (headersArray) => {
 
 export const sendRequest = async ({ request }) => {
 
+  const url = new URL(request.url);
+  const cleanUrl = `${url.origin}${url.pathname}`;
+
   const config = {
     method: request.method.toLowerCase(),
-    url: request.url,
+    url: cleanUrl,
     headers: request.headers,
     data: request.body || undefined,
     validateStatus: () => true,
