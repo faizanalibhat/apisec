@@ -4,6 +4,7 @@ export default {
   transform(request, bodyRules) {
     if (!bodyRules) return [request];
 
+
     let requests = [];
 
     // Handle transformations array (creates separate requests for each transformation)
@@ -111,7 +112,7 @@ export default {
     // ✅ if no values to replace, return original
     if (values.length === 0) return [_.cloneDeep(originalRequest)];
 
-    return values.map((_, index) => {
+    return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
       const newBody = _.cloneDeep(body);
       this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
