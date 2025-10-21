@@ -49,7 +49,7 @@ export default {
 
   _applyGlobalRules(request, queryRules) {
     const requests = [_.cloneDeep(request)];
-    const params = requests[0].query || {};
+    const params = requests[0].params || {};
 
     // Add parameters
     if (queryRules.add) Object.assign(params, queryRules.add);
@@ -72,6 +72,7 @@ export default {
 
     // Replace all values one by one (create separate requests)
     if (queryRules.replace_all_values_one_by_one) {
+      console.log("[+] replacing values one by one.");
       const paramKeys = Object.keys(params);
       if (paramKeys.length === 0) return [_.cloneDeep(request)];
 
