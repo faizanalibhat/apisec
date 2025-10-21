@@ -112,12 +112,20 @@ export default {
     // ✅ if no values to replace, return original
     if (values.length === 0) return [_.cloneDeep(originalRequest)];
 
+    // if body is json parsable
+    const json = null;
+
+    try {
+      json = JSON.parse(body);
+    }
+    catch(err) {
+      console.log("not json body");
+      return [_.cloneDeep(originalRequest)]
+    }
+
     return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
-      const newBody = _.cloneDeep(body);
-
-      console.log(newBody);
-
+      const newBody = _.cloneDeep(json);
       this._replaceValueAtIndex(newBody, replacement, index, { count: 0 });
       req.body = newBody;
       return req;
