@@ -123,7 +123,7 @@ export default {
       json = JSON.parse(body_payload);
     }
     catch(err) {
-      console.log(err.message);
+      // console.log(err.message);
       // console.log("not json body : ", body);
       return [_.cloneDeep(originalRequest)]
     }
