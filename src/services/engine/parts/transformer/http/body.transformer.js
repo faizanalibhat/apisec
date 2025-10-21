@@ -123,6 +123,7 @@ export default {
       json = JSON.parse(body_payload);
     }
     catch(err) {
+      console.log(err.message);
       console.log("not json body : ", body.replace(/[\s\n\t]+/g, ''), typeof body);
       return [_.cloneDeep(originalRequest)]
     }
