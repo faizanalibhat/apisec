@@ -415,6 +415,13 @@ async function runAndMatchRequests(payload, msg, channel) {
                 mitigation: reportFields.mitigation
             }, templateContext);
 
+            console.log("[+] FOUND VULN : ", {
+                ruleId: rule._id,
+                requestId: originalRequest._id,
+                projectId: originalRequest.projectId,
+                transformedRequestId: transformedRequest._id,
+            })
+
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
                 orgId,
