@@ -34,6 +34,7 @@ export const transformer = {
 
 
     if (transformRules.query) {
+      console.log("[+] appliying rules: ", transformRules.query);
       requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
     }
 
