@@ -68,6 +68,8 @@ class RawRequestController {
         }
       }
 
+      console.log("final filter: ", filters);
+
       const paginationOptions = {
         page: parseInt(page) || 1,
         limit: parseInt(limit) || 10,
