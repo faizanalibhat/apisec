@@ -300,17 +300,19 @@ class Matcher {
     const searchValue = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.value : containsRule;
     const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : true;
 
-    if (isRegex) {
-      try {
-        const regex = new RegExp(searchValue);
-        const match = bodyString.match(regex);
-        return { matched: !!match, highlight: match ? match[0] : undefined };
-      } catch (e) {
-        return { matched: false };
-      }
+    console.log("[+] STRING : ", bodyString, searchValue);
+
+    try {
+      const regex = new RegExp(searchValue);
+      const match = bodyString.match(regex);
+      return { matched: !!match, highlight: match ? match[0] : undefined };
+    } catch (e) {
+      return { matched: false };
     }
-    const matched = bodyString.includes(searchValue);
-    return { matched, highlight: matched ? searchValue : undefined };
+
+    // const matched = bodyString.includes(searchValue);
+
+    // return { matched, highlight: matched ? searchValue : undefined };
   }
 
   /**
