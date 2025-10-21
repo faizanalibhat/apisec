@@ -113,7 +113,7 @@ export default {
     if (values.length === 0) return [_.cloneDeep(originalRequest)];
 
     // if body is json parsable
-    const json = null;
+    let json = null;
 
     try {
       let body_payload = body;
