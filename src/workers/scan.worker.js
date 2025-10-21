@@ -77,13 +77,14 @@ async function transformationHandler(payload, msg, channel) {
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
                     const urlResolvedRequest = substituteUrlVariables(reqObject, environmentVariables);
 
+                    console.log("[+] SCOPE CHECK - URL: ", urlResolvedRequest.url);
+                    console.log("[+] SCOPE CHECK - REGEX: ", scopeRegexes);
+
                     if (scopeRegexes) {
                         const url = urlResolvedRequest.url;
                         const isInScope = scopeRegexes.some(regex => regex.test(url));
 
-                        console.log("url: ", url);
-                        console.log("isInScope: ", isInScope)
-
+                        console.log("[+] SCOPE CHECK - IS IN SCOPE: ", isInScope);
 
                         if (!isInScope) {
                             continue; // Skip this request
