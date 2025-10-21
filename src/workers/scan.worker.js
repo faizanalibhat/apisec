@@ -353,7 +353,7 @@ Summary:
 // this function is what handles scan on individual transformed requests
 async function runAndMatchRequests(payload, msg, channel) {
     const { scan: scanObj, request } = payload;
-    console.log("[+] Payloaddddddddddddddddddddddddddddddddd: ", payload);
+    // console.log("[+] Payloaddddddddddddddddddddddddddddddddd: ", payload);
 
     const { _id, orgId, name } = scanObj;
     const transformedRequest = request;
@@ -375,6 +375,10 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Get the associated rule for matching
         const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
         const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
+
+        console.log(`[+] For transformed request ID: ${transformedRequest._id}`);
+        console.log(`[+] Searching for original request with ID: ${transformedRequest.requestId}`);
+        console.log(`[+] Found original request:`, originalRequest);
 
 
         // Send the request
