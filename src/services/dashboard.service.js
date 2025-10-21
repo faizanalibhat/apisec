@@ -150,7 +150,7 @@ class DashboardService {
         .limit(5)
         .populate('ruleId', 'ruleName category')
         .populate('requestId', 'name url method collectionName')
-        // .populate('transformedRequestId', 'name url method collectionName')
+        .populate('transformedRequestId', 'method url')
         .lean();
 
         // Map severity to numeric value for proper sorting
