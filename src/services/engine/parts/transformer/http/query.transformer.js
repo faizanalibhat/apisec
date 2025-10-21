@@ -76,6 +76,9 @@ export default {
         const req = _.cloneDeep(request);
         const newParams = _.cloneDeep(params);
         newParams[key] = queryRules.replace_all_values_one_by_one;
+
+        console.log("replaced query: ", key, queryRules.replace_all_values_one_by_one);
+
         req.query = newParams;
         return req;
       });
