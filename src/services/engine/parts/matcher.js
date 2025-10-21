@@ -173,7 +173,9 @@ class Matcher {
       // Match headers
       const headerMatch = matchRule.header ? this._matchHeaders(matchRule.header, response.headers) : { matched: true };
       if (!headerMatch.matched) return { matched: false };
+
       // Match body
+      console.log("[+] MATCHING BODY: ", matchRule.body, response.body);
       const bodyMatch = matchRule.body ? this._matchBody(matchRule.body, response.body) : { matched: true };
       if (!bodyMatch.matched) return { matched: false };
 
