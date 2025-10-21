@@ -94,7 +94,7 @@ async function transformationHandler(payload, msg, channel) {
                     continue;
                 }
 
-                console.log(transformed);
+                console.log(rule.parsed_yaml, transformed);
 
                 for (let t of transformed) {
                     bulkOps.push({
