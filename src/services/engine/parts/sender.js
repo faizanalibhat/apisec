@@ -30,7 +30,7 @@ export const sendRequest = async ({ request }) => {
       body: response.data,
     };
   } catch (error) {
-    console.log(error);
+    // console.log("[+] error: ", error.message);
     return {
       error: true,
       message: error.message,
