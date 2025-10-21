@@ -13,13 +13,9 @@ export class EngineService {
     }
 
     static async sendRequest({ request }) {
-
         const sent = await sendRequest({ request });
-
         return sent;
-
     }
-
 
     static async sendReport({ report }) {
         const reported = await sendReport(report);

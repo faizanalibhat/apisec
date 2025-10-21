@@ -304,7 +304,7 @@ class Matcher {
 
     const matchRule = rule.match_on;
 
-    if (!matchRule) return true;
+    if (!matchRule) return false;
 
     try {
       // Match status codes
