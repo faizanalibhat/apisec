@@ -185,8 +185,6 @@ class Matcher {
       // Match body
       const bodyMatch = matchRule.body ? this._matchBody(matchRule.body, response.body) : { matched: true };
 
-      console.log("[+] MATCHING: ", rule.body, response.body);
-
       if (!bodyMatch.matched) return { matched: false };
 
       const highlight = bodyMatch.highlight || headerMatch.highlight || statusMatch.highlight;
@@ -312,7 +310,7 @@ class Matcher {
     const searchValue = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.value : containsRule;
     const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : true;
 
-    // console.log("[+] STRING : ", bodyString, searchValue);
+    console.log("[+] MATCHING BODY : ", bodyString, searchValue);
 
     try {
       const regex = new RegExp(searchValue);
