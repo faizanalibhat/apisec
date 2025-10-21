@@ -397,6 +397,14 @@ async function runAndMatchRequests(payload, msg, channel) {
         if (transformedRequest.url?.match(/\/xss/g))
             console.log(`[+] Match result:`, matchResult);
 
+            console.log("[+] FOUND VULN : ", {
+                ruleId: rule._id,
+                requestId: originalRequest._id,
+                projectId: originalRequest.projectId,
+                transformedRequestId: transformedRequest._id,
+            })
+        
+
         if (matchResult.matched) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
             const templateContext = TemplateEngine.createVulnerabilityContext({
@@ -419,12 +427,6 @@ async function runAndMatchRequests(payload, msg, channel) {
                 mitigation: reportFields.mitigation
             }, templateContext);
 
-            console.log("[+] FOUND VULN : ", {
-                ruleId: rule._id,
-                requestId: originalRequest._id,
-                projectId: originalRequest.projectId,
-                transformedRequestId: transformedRequest._id,
-            })
 
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
