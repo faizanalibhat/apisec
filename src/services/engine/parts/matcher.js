@@ -215,41 +215,61 @@ class Matcher {
    */
   matchTarget({ rule, transformedRequest }) {
     const target = rule.Target;
+    console.log('--- Matcher Debug ---');
+    console.log('Rule ID:', rule._id);
+    console.log('Rule Target:', JSON.stringify(target, null, 2));
+    console.log('Request URL:', transformedRequest.url);
+    console.log('Request Method:', transformedRequest.method);
 
     if (!target) {
+      console.log('No target specified. Applying rule to all requests.');
       return true; // If no target is specified, the rule applies to all requests
     }
 
     // Ensure we have a valid URL to parse
     if (!transformedRequest.url) {
+        console.log('Request has no URL. Skipping.');
         return false;
     }
     const requestUrl = new URL(transformedRequest.url);
 
-    if (target.method && !this._matchMethod(target.method, transformedRequest.method)) {
-      return false;
+    if (target.method) {
+      const methodMatch = this._matchMethod(target.method, transformedRequest.method);
+      console.log('Method Match:', methodMatch);
+      if (!methodMatch) return false;
     }
 
-    if (target.Request_contains && !this._matchRequestContains(target.Request_contains, transformedRequest.raw)) {
-        return false;
+    if (target.Request_contains) {
+        const requestContainsMatch = this._matchRequestContains(target.Request_contains, transformedRequest.raw);
+        console.log('Request Contains Match:', requestContainsMatch);
+        if (!requestContainsMatch) return false;
     }
 
-    if (target.Header && !this._matchTargetContains(target.Header, transformedRequest.headers)) {
-        return false;
+    if (target.Header) {
+        const headerMatch = this._matchTargetContains(target.Header, transformedRequest.headers);
+        console.log('Header Match:', headerMatch);
+        if (!headerMatch) return false;
     }
 
-    if (target.query && !this._matchTargetContains(target.query, requestUrl.search)) {
-        return false;
+    if (target.query) {
+        const queryMatch = this._matchTargetContains(target.query, requestUrl.search);
+        console.log('Query Match:', queryMatch);
+        if (!queryMatch) return false;
     }
 
-    if (target.path && !this._matchTargetContains(target.path, requestUrl.pathname)) {
-        return false;
+    if (target.path) {
+        const pathMatch = this._matchTargetContains(target.path, requestUrl.pathname);
+        console.log('Path Match:', pathMatch);
+        if (!pathMatch) return false;
     }
 
-    if (target.body && !this._matchTargetContains(target.body, transformedRequest.body)) {
-        return false;
+    if (target.body) {
+        const bodyMatch = this._matchTargetContains(target.body, transformedRequest.body);
+        console.log('Body Match:', bodyMatch);
+        if (!bodyMatch) return false;
     }
 
+    console.log('--- Matcher Result: MATCH ---');
     return true;
   }
 
