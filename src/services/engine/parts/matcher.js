@@ -230,8 +230,6 @@ class Matcher {
 
     if (target == "all") return true;
 
-    if (target == "all") return true;
-
     if (target.method) {
       const methodMatch = this._matchMethod(target.method, transformedRequest.method);
       console.log('Method Match:', methodMatch);
