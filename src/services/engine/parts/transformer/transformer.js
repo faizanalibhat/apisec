@@ -45,8 +45,8 @@ export const transformer = {
       console.log("[+] STEP 5 ", requests);
     }
 
-    if (transformRules.headers) {
-      requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.headers));
+    if (transformRules.header) {
+      requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
       console.log("[+] STEP 6 ", requests);
     }
 

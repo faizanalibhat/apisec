@@ -157,11 +157,12 @@ class Matcher {
    */
   match({ rule, response }) {
     const matchRule = rule.match_on;
-    if (!matchRule) return { matched: true };
+    if (!matchRule) return { matched: false };
 
     try {
       // Match status codes
       let statusMatch = { matched: true };
+
       if (matchRule.status !== undefined) {
         statusMatch = this._matchStatus(matchRule.status, response.status);
         if (!statusMatch.matched) {
@@ -177,6 +178,7 @@ class Matcher {
       if (!bodyMatch.matched) return { matched: false };
 
       const highlight = bodyMatch.highlight || headerMatch.highlight || statusMatch.highlight;
+      
       return { matched: true, highlight };
 
     } catch (error) {
