@@ -3,8 +3,6 @@ import _ from 'lodash';
 export default {
   transform(request, queryRules) {
 
-    console.log("[+] INSIDE TRANSFORMER, TRANSFORMING QUERY: ", request.params, queryRules);
-
     if (!queryRules) return [request];
 
     let requests = [_.cloneDeep(request)];
@@ -83,12 +81,12 @@ export default {
 
         console.log("replaced query: ", key, queryRules.replace_all_values_one_by_one);
 
-        req.query = newParams;
+        req.params = newParams;
         return req;
       });
     }
 
-    requests[0].query = params;
+    requests[0].params = params;
     return requests;
   }
 };
