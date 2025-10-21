@@ -130,6 +130,12 @@ export default {
 
     console.log("replacing : ", json, " by: ", replacement);
 
+    if (!json) {
+        return [_.cloneDeep(originalRequest)]
+    }
+
+    console.log("values: ", values);
+
     return values.map((x, index) => {
       const req = _.cloneDeep(originalRequest);
       const newBody = _.cloneDeep(json);
