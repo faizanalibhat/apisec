@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const REQUEST_TIMEOUT_MS = 3000;
+const REQUEST_TIMEOUT_MS = 10000;
 
 const formatHeaders = (headersArray) => {
   const headers = {};
@@ -30,6 +30,7 @@ export const sendRequest = async ({ request }) => {
       body: response.data,
     };
   } catch (error) {
+    console.log(error);
     return {
       error: true,
       message: error.message,
