@@ -378,7 +378,7 @@ async function runAndMatchRequests(payload, msg, channel) {
 
 
         // Send the request
-        console.log(`[+] Sending request to: ${transformedRequest.url}`);
+        // console.log(`[+] Sending request to: ${transformedRequest.url}`);
         
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
