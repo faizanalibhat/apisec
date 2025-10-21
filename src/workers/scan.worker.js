@@ -353,7 +353,6 @@ Summary:
 // this function is what handles scan on individual transformed requests
 async function runAndMatchRequests(payload, msg, channel) {
     const { scan: scanObj, request } = payload;
-    // console.log("[+] Payloaddddddddddddddddddddddddddddddddd: ", payload);
 
     const { _id, orgId, name } = scanObj;
     const transformedRequest = request;
@@ -375,10 +374,6 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Get the associated rule for matching
         const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
         const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
-
-        console.log(`[+] For transformed request ID: ${transformedRequest._id}`);
-        console.log(`[+] Searching for original request with ID: ${transformedRequest.requestId}`);
-        console.log(`[+] Found original request:`, originalRequest);
 
 
         // Send the request
@@ -418,11 +413,6 @@ async function runAndMatchRequests(payload, msg, channel) {
                 stepsToReproduce: reportFields.stepsToReproduce,
                 mitigation: reportFields.mitigation
             }, templateContext);
-
-            // log ids of rule, raw_request, and transformed request
-            console.log("Rule id:", rule._id);
-            console.log("Raw request id:", originalRequest._id);
-            console.log("Transformed request id:", transformedRequest._id)
 
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
@@ -484,7 +474,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                 }
             };
 
-            // console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
+            console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
 
             try {
                 await Vulnerability.create([vulnerabilityData]);
