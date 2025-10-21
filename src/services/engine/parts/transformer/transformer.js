@@ -13,34 +13,49 @@ export const transformer = {
 
     let requests = [_.cloneDeep(request)];
 
+    console.log("[+] STEP 1 ", requests);
+
     // Apply global operators (method, http_version)
     if (transformRules.method) {
       requests = this._applyMethod(requests, transformRules.method);
+
+      console.log("[+] STEP 2 ", requests);
     }
+
 
     if (transformRules.http_version) {
       requests = requests.map(req => {
         req.http_version = transformRules.http_version;
         return req;
       });
+
+      console.log("[+] STEP II ", requests);
     }
+
 
     // Apply component transformers
     if (transformRules.path) {
       requests = requests.flatMap(req => pathTransformer.transform(req, transformRules.path));
+      console.log("[+] STEP 4 ", requests);
     }
+
 
     if (transformRules.query) {
       requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
+      console.log("[+] STEP 5 ", requests);
     }
 
     if (transformRules.headers) {
       requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.headers));
+      console.log("[+] STEP 6 ", requests);
     }
 
     if (transformRules.body) {
       requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
+      console.log("[+] STEP 7 ", requests);
     }
+
+    console.log("[+] STEP 8 ", requests);
 
     return requests;
   },
