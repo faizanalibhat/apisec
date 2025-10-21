@@ -132,6 +132,7 @@ export class TemplateEngine {
 
             // Original request data
             original: {
+                id: originalRequest._id,
                 name: originalRequest.name,
                 method: originalRequest.method,
                 url: originalRequest.url,
@@ -157,6 +158,7 @@ export class TemplateEngine {
 
             // Rule data
             rule: {
+                id: rule._id,
                 name: rule.rule_name,
                 category: rule.category,
                 severity: rule.parsed_yaml?.report?.severity || rule.report?.severity,
