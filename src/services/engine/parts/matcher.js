@@ -298,7 +298,7 @@ class Matcher {
   _matchBodyContains(containsRule, actualBody) {
     const bodyString = typeof actualBody === 'string' ? actualBody : JSON.stringify(actualBody);
     const searchValue = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.value : containsRule;
-    const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : false;
+    const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : true;
 
     if (isRegex) {
       try {
