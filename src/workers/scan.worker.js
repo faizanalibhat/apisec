@@ -346,8 +346,6 @@ async function runAndMatchRequests(payload, msg, channel) {
     const { _id, orgId, name } = scanObj;
     const transformedRequest = request;
 
-    console.log("[+] RUNNING SCAN ON THE REQUEST ", request.url);
-
     try {
 
         const scan = await Scan.findOne({ _id: _id });
@@ -366,15 +364,16 @@ async function runAndMatchRequests(payload, msg, channel) {
         const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
         const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
 
+
         // Send the request
         console.log(`[+] Sending request to: ${transformedRequest.url}`);
-
+        
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
         // Check for matches using detailed matching
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        // console.log(`[+] Match result:`, matchResult);
+        console.log(`[+] Match result:`, matchResult);
 
         if (matchResult.matched) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS

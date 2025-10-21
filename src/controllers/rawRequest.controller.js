@@ -2,6 +2,8 @@ import RawRequestService from '../services/rawRequest.service.js';
 import RawRequest from '../models/rawRequest.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
+import mongoose from 'mongoose';
+const { ObjectId } = mongoose.Types;
 
 class RawRequestController {
   constructor() {
@@ -53,7 +55,7 @@ class RawRequestController {
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
         ...(hasVulns && { hasVulns }),
-        ...(projectId && { projectIds: projectId })
+        ...(projectId && { projectIds: ObjectId.createFromHexString(projectId) })
       };
 
       // Parse sort parameter
@@ -67,6 +69,8 @@ class RawRequestController {
           sortOptions = { [field]: order === 'asc' ? 1 : -1 };
         }
       }
+
+      console.log("final filter: ", filters);
 
       const paginationOptions = {
         page: parseInt(page) || 1,
