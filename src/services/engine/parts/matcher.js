@@ -158,7 +158,7 @@ class Matcher {
   match({ rule, response }) {
     const matchRule = rule.match_on;
 
-    console.log("[+] USING : ", matchRule);
+    console.log("[+] USING : ", matchRule, response);
 
 
     if (!matchRule) return { matched: false };
@@ -170,7 +170,7 @@ class Matcher {
       if (matchRule.status !== undefined) {
         statusMatch = this._matchStatus(matchRule.status, response.status);
 
-        console.log("[+] STATUS MATCH : ", statusMatch);
+        console.log("[+] STATUS MATCH : ", statusMatch, typeof matchRule.status, typeof response.status);
 
         if (!statusMatch.matched) {
           return { matched: false };
