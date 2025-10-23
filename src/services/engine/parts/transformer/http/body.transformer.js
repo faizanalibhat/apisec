@@ -3,28 +3,44 @@ import _ from 'lodash';
 
 
 // helper functions one for each operation
-function add(body, newParams) {
-  Object.assign(body, newParams);
+function add(body, newParams, format) {
+  if (format === 'json') {
+    let newBody = JSON.parse(body);
+    newBody = Object.assign(newBody, newParams);
+    body = JSON.stringify(newBody);
+
+    return body;
+  } else {
+    // add other logic here
+  }
 }
 
-function remove(body, removeParams) {
-  removeParams.forEach(param => delete body[param]);
+function remove(body, removeParams, format) {
+  if (format === 'json') {
+    let newBody = JSON.parse(body);
+    removeParams.forEach(param => delete newBody[param]);
+
+    body = JSON.stringify(newBody);
+
+    return body;
+  }
+  else {}
 }
 
-function modify(body, modifyParams) {
+function modify(body, modifyParams, format) {
   Object.entries(modifyParams).forEach(([key, value]) => {
     if (body[key]) body[key] = value;
   });
 }
 
-function replace_all_values(body, value) {
+function replace_all_values(body, value, format) {
   Object.keys(body).forEach(key => {
     body[key] = value;
   });
 }
 
 
-function replace_all_values_one_by_one(body, value) {
+function replace_all_values_one_by_one(body, value, format) {
   const paramKeys = Object.keys(body);
 
   const clonedList = [];
@@ -40,52 +56,51 @@ function replace_all_values_one_by_one(body, value) {
 }
 
 
-function handleTransformation(body, transformations) {
+function handleTransformation(body, transformations, format) {
   const allParams = [];
 
   for (let transformation of transformations) {
     const cloneParam = _.cloneDeep(body);
-    allParams.push(...(applyRules(cloneParam, transformation) || []));
+    allParams.push(...(applyRules(cloneParam, transformation, format) || []));
   }
 
   return allParams;
 }
 
 
-
-function applyRules(body, rules) {
-  let allParams = [];
+function applyRules(body, rules, format) {
+  let allBodies = [];
 
   if (rules.transformations) {
-    allParams = handleTransformation(body, rules.transformations);
+    allBodies = handleTransformation(body, rules.transformations, format);
 
-    return allParams;
+    return allBodies;
   }
 
+  let modified = body;
+
   if (rules.add) {
-    add(body, rules.add);
+    modified = add(modified, rules.add, format);
   }
 
   if (rules.remove) {
-    remove(body, rules.remove);
+    modified = remove(modified, rules.remove, format);
   }
 
   if (rules.modify) {
-    modify(body, rules.modify);
+    modified = modify(modified, rules.modify, format);
   }
 
   if (rules.replace_all_values) {
-    replace_all_values(body, rules.replace_all_values);
+    modified = replace_all_values(modified, rules.replace_all_values, format);
   }
 
   if (rules.replace_all_values_one_by_one) {
-    allParams = replace_all_values_one_by_one(body, rules.replace_all_values_one_by_one);
+    allBodies = replace_all_values_one_by_one(modified, rules.replace_all_values_one_by_one, format);
   }
 
-  return allParams.length > 0 ? allParams : [params];
+  return allBodies.length > 0 ? allBodies : [modified];
 }
-
-
 
 
 export default {
@@ -96,10 +111,11 @@ export default {
     let requests = [_.cloneDeep(request)];
 
     const targetBody = requests[0].body || {};
+    const bodyFormat = requests[0].body_format || 'json';
 
-    const transformedParams = applyRules(targetBody, bodyRules);
+    const transformedBodies = applyRules(targetBody, bodyRules, bodyFormat);
 
-    requests = transformedParams.map(body => {
+    requests = transformedBodies.map(body => {
       const newRequest = _.cloneDeep(request);
       newRequest.body = body;
       return newRequest;
