@@ -422,6 +422,8 @@ async function runAndMatchRequests(payload, msg, channel) {
                 mitigation: reportFields.mitigation
             }, templateContext);
 
+            console.log("[+] report; ", rule.parsed_yaml.report);
+
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
                 orgId,
@@ -490,7 +492,7 @@ async function runAndMatchRequests(payload, msg, channel) {
             // console.log("Vulnerability Rule Id: " + vulnerabilityData.ruleId);
             // console.log("Original Request Id: " + vulnerabilityData.requestId);
             // console.log("Transformed Request Id: " + vulnerabilityData.transformedRequestId);
-            console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
+            // console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
 
             try {
                 await Vulnerability.create([vulnerabilityData]);
