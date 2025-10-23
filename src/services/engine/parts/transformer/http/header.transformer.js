@@ -29,7 +29,7 @@ function replace_all_values_one_by_one(headers, value) {
   const clonedList = [];
 
   for (let key of paramKeys) {
-    const clonedParams = _.cloneDeep(params);
+    const clonedParams = _.cloneDeep(headers);
     clonedParams[key] = value;
 
     clonedList.push(clonedParams);
