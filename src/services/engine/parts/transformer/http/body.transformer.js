@@ -67,7 +67,7 @@ function replace_all_values_one_by_one(body, value, format) {
     const clonedList = [];
 
     for (let key of paramKeys) {
-      const clonedParams = _.cloneDeep(body);
+      const clonedParams = _.cloneDeep(newBody);
       clonedParams[key] = value;
 
       clonedList.push(JSON.stringify(clonedParams));
