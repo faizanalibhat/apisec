@@ -32,17 +32,17 @@ export const transformer = {
     //   requests = requests.flatMap(req => pathTransformer.transform(req, transformRules.path));
     // }
 
-    if (transformRules.query) {
-      requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
-    }
+    // if (transformRules.query) {
+    //   requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
+    // }
 
     // if (transformRules.header) {
     //   requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
     // }
 
-    // if (transformRules.body) {
-    //   requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
-    // }
+    if (transformRules.body) {
+      requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
+    }
 
     requests = requests.map(req => this._rebuildUrl(req));
 

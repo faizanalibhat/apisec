@@ -28,31 +28,52 @@ function remove(body, removeParams, format) {
 }
 
 function modify(body, modifyParams, format) {
-  Object.entries(modifyParams).forEach(([key, value]) => {
-    if (body[key]) body[key] = value;
-  });
+  if (format === 'json') {
+    let newBody = JSON.parse(body);
+    modifyParams.forEach((param, value) => {
+      if (newBody[param]) newBody[param] = value;
+    });
+
+    body = JSON.stringify(newBody);
+
+    return body;
+  }
+  else {}
 }
 
 function replace_all_values(body, value, format) {
-  Object.keys(body).forEach(key => {
-    body[key] = value;
-  });
+  if (format === 'json') {
+    let newBody = JSON.parse(body);
+    Object.keys(newBody).forEach(key => {
+      newBody[key] = value;
+    });
+
+    body = JSON.stringify(newBody);
+
+    return body;
+  }
+  else {}
 }
 
 
 function replace_all_values_one_by_one(body, value, format) {
-  const paramKeys = Object.keys(body);
 
-  const clonedList = [];
+  if (format === 'json') {
+    let newBody = JSON.parse(body);
 
-  for (let key of paramKeys) {
-    const clonedParams = _.cloneDeep(body);
-    clonedParams[key] = value;
+    const paramKeys = Object.keys(newBody);
 
-    clonedList.push(clonedParams);
+    const clonedList = [];
+
+    for (let key of paramKeys) {
+      const clonedParams = _.cloneDeep(body);
+      clonedParams[key] = value;
+
+      clonedList.push(clonedParams);
+    }
+
+    return clonedList;
   }
-
-  return clonedList;
 }
 
 
