@@ -13,7 +13,7 @@ export function supressFilter(rules = [], supress) {
         return {
             $and: [
                 { requestId: { $in: requestIds } },
-                { ruleIds: { $in: ruleIds } }
+                { ruleId: { $in: ruleIds } }
             ]
         }
     }
@@ -22,7 +22,7 @@ export function supressFilter(rules = [], supress) {
         return {
             $nor: [
                 { requestId: { $in: requestIds } },
-                { ruleIds: { $in: ruleIds } }
+                { ruleId: { $in: ruleIds } }
             ]
         }
     }
