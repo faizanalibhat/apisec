@@ -30,7 +30,8 @@ function remove(body, removeParams, format) {
 function modify(body, modifyParams, format) {
   if (format === 'json') {
     let newBody = JSON.parse(body);
-    modifyParams.forEach((param, value) => {
+
+    Object.entries(modifyParams).forEach((param, value) => {
       if (newBody[param]) newBody[param] = value;
     });
 
