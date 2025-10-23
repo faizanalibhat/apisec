@@ -46,8 +46,33 @@ export const transformer = {
       requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
     }
 
+    requests = requests.map(req => this._rebuildUrl(req));
+
 
     return requests;
+  },
+
+  _rebuildUrl(request) {
+    if (!request.url) return request;
+
+    let baseUrl = request.url.split('?')[0];
+    const queryParams = [];
+
+    if (request.query) {
+      for (const key in request.query) {
+        if (request.query.hasOwnProperty(key)) {
+          queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(request.query[key])}`);
+        }
+      }
+    }
+
+    if (queryParams.length > 0) {
+      request.url = `${baseUrl}?${queryParams.join('&')}`;
+    } else {
+      request.url = baseUrl;
+    }
+
+    return request;
   },
 
   _applyMethod(requests, methods) {
