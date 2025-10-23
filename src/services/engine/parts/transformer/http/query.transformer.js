@@ -44,8 +44,8 @@ function handleTransformation(params, transformations) {
   const allParams = [];
 
   for (let transformation of transformations) {
-    console.log("applying this: ", transformation);
-    allParams.push(...(applyRules(params, transformation) || []));
+    const cloneParam = _.cloneDeep(params);
+    allParams.push(...(applyRules(cloneParam, transformation) || []));
   }
 
   return allParams;
