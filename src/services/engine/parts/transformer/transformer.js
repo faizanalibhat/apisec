@@ -61,7 +61,8 @@ export const transformer = {
     if (request.query) {
       for (const key in request.query) {
         if (request.query.hasOwnProperty(key)) {
-          queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(request.query[key])}`);
+          // queryParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(request.query[key])}`);
+          queryParams.push(`${key}=${request.query[key]}`);
         }
       }
     }
