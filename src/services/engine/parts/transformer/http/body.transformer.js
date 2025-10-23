@@ -70,7 +70,7 @@ function replace_all_values_one_by_one(body, value, format) {
       const clonedParams = _.cloneDeep(body);
       clonedParams[key] = value;
 
-      clonedList.push(clonedParams);
+      clonedList.push(JSON.stringify(clonedParams));
     }
 
     return clonedList;
