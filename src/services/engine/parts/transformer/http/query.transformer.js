@@ -13,7 +13,7 @@ function remove(params, removeParams) {
 
 function modify(params, modifyParams) {
   Object.entries(modifyParams).forEach(([key, value]) => {
-    params[key] = value;
+    if (params[key]) params[key] = value;
   });
 }
 
