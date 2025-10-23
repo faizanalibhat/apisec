@@ -422,6 +422,8 @@ async function runAndMatchRequests(payload, msg, channel) {
                 mitigation: reportFields.mitigation
             }, templateContext);
 
+            console.log("[+] report; ", rule.parsed_yaml.report);
+
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
                 orgId,
@@ -493,10 +495,10 @@ async function runAndMatchRequests(payload, msg, channel) {
             // console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
 
             try {
-                await Vulnerability.create([vulnerabilityData]);
+                await Vulnerability.create([vulnerabilityData], { strict: false });
                 console.log(`[+] Created vulnerability record - ${vulnerabilityData.title}`);
             } catch (vulnError) {
-                console.error("[!] Error creating vulnerabilities:", vulnError);
+                console.error("[!] Error creating vulnerabilities:", vulnError.message);
             }
 
             // Also prepare finding for scan document
