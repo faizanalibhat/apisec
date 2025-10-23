@@ -379,6 +379,8 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Send the request
         // console.log(`[+] Sending request to: ${transformedRequest.url}`);
+
+        console.log(JSON.stringify(transformedRequest, null, 2));
         
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
@@ -421,8 +423,6 @@ async function runAndMatchRequests(payload, msg, channel) {
                 stepsToReproduce: reportFields.stepsToReproduce,
                 mitigation: reportFields.mitigation
             }, templateContext);
-
-            console.log("[+] report; ", rule.parsed_yaml.report);
 
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
