@@ -44,6 +44,7 @@ function handleTransformation(params, transformations) {
   const allParams = [];
 
   for (let transformation of transformations) {
+    console.log("applying this: ", transformation);
     allParams.push(...(applyRules(params, transformation) || []));
   }
 
