@@ -48,15 +48,13 @@ class RawRequestController {
       } = req.query;
 
       // Build filters
-      const filters = {
-        orgId,
-        ...(method && { method: method.toUpperCase() }),
-        ...(workspace && { workspaceName: workspace }),
-        ...(collectionName && { collectionName }),
-        ...(integrationId && { integrationId }),
-        ...(hasVulns && { hasVulns }),
-        ...(projectId && { projectIds: ObjectId.createFromHexString(projectId) })
-      };
+      const filters = { orgId };
+      if (method) filters.method = method;
+      if (workspace) filters.workspaceName = workspace;
+      if (collectionName) filters.collectionName = collectionName;
+      if (integrationId) filters.integrationId = integrationId;
+      if (hasVulns) filters.hasVulns = hasVulns;
+      if (projectId) filters.projectIds = projectId;
 
       // Parse sort parameter
       let sortOptions = { createdAt: -1 };

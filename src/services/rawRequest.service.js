@@ -192,8 +192,32 @@ class RawRequestService {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
 
-            // Extract hasVulns filter
-            const { hasVulns, ...mongoFilters } = additionalFilters;
+            const { hasVulns, orgId, ...otherFilters } = additionalFilters;
+            const mongoFilters = { orgId };
+
+            for (const key in otherFilters) {
+                if (Object.prototype.hasOwnProperty.call(otherFilters, key)) {
+                    const value = otherFilters[key];
+                    if (typeof value === 'string' && value.includes(',')) {
+                        const arr = value.split(',').map(item => item.trim());
+                        if (key === 'integrationId' || key === 'projectIds') {
+                            mongoFilters[key] = { $in: arr.map(id => mongoose.Types.ObjectId.createFromHexString(id)) };
+                        } else if (key === 'method') {
+                            mongoFilters[key] = { $in: arr.map(m => m.toUpperCase()) };
+                        } else {
+                            mongoFilters[key] = { $in: arr };
+                        }
+                    } else {
+                        if (key === 'integrationId' || key === 'projectIds') {
+                            mongoFilters[key] = mongoose.Types.ObjectId.createFromHexString(value);
+                        } else if (key === 'method') {
+                            mongoFilters[key] = value.toUpperCase();
+                        } else {
+                            mongoFilters[key] = value;
+                        }
+                    }
+                }
+            }
 
             // For search, we need to use aggregation pipeline instead of find()
             const pipeline = [
@@ -247,16 +271,27 @@ class RawRequestService {
 
             // Add vulnerability filtering
             if (hasVulns) {
-                if (hasVulns === 'true') {
+                const severities = typeof hasVulns === 'string' ? hasVulns.split(',').map(s => s.trim()) : (Array.isArray(hasVulns) ? hasVulns : [hasVulns]);
+                const orConditions = [];
+                let matchTrue = false;
+                let matchFalse = false;
+
+                severities.forEach(severity => {
+                    if (severity === 'true') {
+                        matchTrue = true;
+                    } else if (severity === 'false') {
+                        matchFalse = true;
+                    } else if (['critical', 'high', 'medium', 'low', 'info'].includes(severity)) {
+                        orConditions.push({ [`vulnCounts.${severity}`]: { $gt: 0 } });
+                    }
+                });
+
+                if (matchTrue) {
                     pipeline.push({ $match: { hasVulnerabilities: true } });
-                } else if (hasVulns === 'false') {
+                } else if (matchFalse) {
                     pipeline.push({ $match: { hasVulnerabilities: false } });
-                } else if (['critical', 'high', 'medium', 'low'].includes(hasVulns)) {
-                    pipeline.push({
-                        $match: {
-                            [`vulnCounts.${hasVulns}`]: { $gt: 0 }
-                        }
-                    });
+                } else if (orConditions.length > 0) {
+                    pipeline.push({ $match: { $or: orConditions } });
                 }
             }
 
