@@ -7,7 +7,7 @@ function add(headers, newHeaders) {
 }
 
 function remove(headers, removeHeaders) {
-  removeHeaders.forEach(header => delete headers[header]);
+  removeHeaders.forEach(header => delete headers[header?.toLowerCase?.()]);
 }
 
 function modify(headers, modifyHeaders) {
