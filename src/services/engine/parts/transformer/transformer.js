@@ -32,9 +32,9 @@ export const transformer = {
     //   requests = requests.flatMap(req => pathTransformer.transform(req, transformRules.path));
     // }
 
-    // if (transformRules.query) {
-    //   requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
-    // }
+    if (transformRules.query) {
+      requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
+    }
 
     // if (transformRules.header) {
     //   requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
