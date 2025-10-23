@@ -10,7 +10,7 @@ import { mqbroker } from "../services/rabbitmq.service.js";
 
 const REPO_URL = "https://github.com/Snap-sec/Suite-Yaml-Rule-Guides.git";
 const LOCAL_DIR = path.resolve("./src/data/Suite-Yaml-Rule-Guides");
-const APIDIR = path.join(LOCAL_DIR, "apisec");
+const APIDIR = path.join(LOCAL_DIR, "rules", "apisec");
 
 
 

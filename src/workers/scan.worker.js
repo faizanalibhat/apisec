@@ -490,13 +490,13 @@ async function runAndMatchRequests(payload, msg, channel) {
             // console.log("Vulnerability Rule Id: " + vulnerabilityData.ruleId);
             // console.log("Original Request Id: " + vulnerabilityData.requestId);
             // console.log("Transformed Request Id: " + vulnerabilityData.transformedRequestId);
-            // console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
+            console.log("[+] Vulnerability data to be saved:", vulnerabilityData);
 
             try {
                 await Vulnerability.create([vulnerabilityData]);
                 console.log(`[+] Created vulnerability record - ${vulnerabilityData.title}`);
             } catch (vulnError) {
-                console.error("[!] Error creating vulnerabilities:", vulnError);
+                console.error("[!] Error creating vulnerabilities:", vulnError.message);
             }
 
             // Also prepare finding for scan document
