@@ -67,19 +67,21 @@ class RawRequestService {
 
             // Add vulnerability filtering
             if (hasVulns) {
-                if (hasVulns === 'true') {
-                    // Has any vulnerabilities
-                    pipeline.push({ $match: { hasVulnerabilities: true } });
-                } else if (hasVulns === 'false') {
-                    // Has no vulnerabilities
-                    pipeline.push({ $match: { hasVulnerabilities: false } });
-                } else if (['critical', 'high', 'medium', 'low'].includes(hasVulns)) {
-                    // Has specific severity
-                    pipeline.push({
-                        $match: {
-                            [`vulnCounts.${hasVulns}`]: { $gt: 0 }
-                        }
-                    });
+                const conditions = [];
+                const severities = Array.isArray(hasVulns) ? hasVulns : [hasVulns];
+
+                severities.forEach(severity => {
+                    if (severity === 'true') {
+                        conditions.push({ hasVulnerabilities: true });
+                    } else if (severity === 'false') {
+                        conditions.push({ hasVulnerabilities: false });
+                    } else if (['critical', 'high', 'medium', 'low'].includes(severity)) {
+                        conditions.push({ [`vulnCounts.${severity}`]: { $gt: 0 } });
+                    }
+                });
+
+                if (conditions.length > 0) {
+                    pipeline.push({ $match: { $or: conditions } });
                 }
             }
 

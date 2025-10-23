@@ -50,13 +50,20 @@ class RawRequestController {
       // Build filters
       const filters = {
         orgId,
-        ...(method && { method: method.toUpperCase() }),
-        ...(workspace && { workspaceName: workspace }),
         ...(collectionName && { collectionName }),
         ...(integrationId && { integrationId }),
-        ...(hasVulns && { hasVulns }),
         ...(projectId && { projectIds: ObjectId.createFromHexString(projectId) })
       };
+
+      if (method) {
+        filters.method = { $in: method.split(',').map(m => m.toUpperCase()) };
+      }
+      if (workspace) {
+        filters.workspaceName = { $in: workspace.split(',') };
+      }
+      if (hasVulns) {
+        filters.hasVulns = { $in: hasVulns.split(',') };
+      }
 
       // Parse sort parameter
       let sortOptions = { createdAt: -1 };
