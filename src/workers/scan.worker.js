@@ -379,18 +379,20 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Send the request
         // console.log(`[+] Sending request to: ${transformedRequest.url}`);
+
+        console.log(JSON.stringify(transformedRequest, null, 2));
         
         const response = await EngineService.sendRequest({ request: transformedRequest });
 
         if (response.error) {
             console.log("[+] request errored out ", response.message);
-            return;
+            throw Error("Timeout");
         }
 
         const matchResult = await EngineService.match({ response, rule: rule.parsed_yaml });
 
-        if (transformedRequest.url?.match(/\/xss/g))
-            console.log(`[+] Match result:`, matchResult);
+        // if (transformedRequest.url?.match(/\/xss/g))
+        //     console.log(`[+] Match result:`, matchResult);
 
             // console.log("[+] FOUND VULN : ", {
             //     ruleId: rule._id,
@@ -421,8 +423,6 @@ async function runAndMatchRequests(payload, msg, channel) {
                 stepsToReproduce: reportFields.stepsToReproduce,
                 mitigation: reportFields.mitigation
             }, templateContext);
-
-            console.log("[+] report; ", rule.parsed_yaml.report);
 
             // Create vulnerability data with processed templates
             const vulnerabilityData = {
