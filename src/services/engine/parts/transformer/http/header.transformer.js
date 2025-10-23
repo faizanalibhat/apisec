@@ -12,7 +12,7 @@ function remove(headers, removeHeaders) {
 
 function modify(headers, modifyHeaders) {
   Object.entries(modifyHeaders).forEach(([key, value]) => {
-    if (params[key]) headers[key] = value;
+    if (headers[key]) headers[key] = value;
   });
 }
 
