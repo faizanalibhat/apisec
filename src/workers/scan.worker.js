@@ -429,10 +429,15 @@ async function runAndMatchRequests(payload, msg, channel) {
                 orgId,
                 scanName: name,
                 scanId: _id,
-                ruleId: rule._id,
-                requestId: originalRequest._id,
-                projectId: originalRequest.projectId,
-                transformedRequestId: transformedRequest._id,
+            // Deprecated
+            // ruleId: rule._id,
+            // requestId: originalRequest._id,
+            // transformedRequestId: transformedRequest._id,
+
+            ruleSnapshot: rule,
+            requestSnapshot: originalRequest,
+            transformedRequestSnapshot: transformedRequest,
+            projectId: originalRequest.projectId, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
                 // ruleId: templateContext.ruleId,
                 // requestId: templateContext.requestId,
                 // transformedRequestId: templateContext.transformedRequestId,
