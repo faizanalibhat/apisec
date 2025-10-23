@@ -36,9 +36,9 @@ export const transformer = {
       requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
     }
 
-    // if (transformRules.header) {
-    //   requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
-    // }
+    if (transformRules.header) {
+      requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
+    }
 
     if (transformRules.body) {
       requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
