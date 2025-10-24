@@ -55,7 +55,9 @@ class RawEnvironmentController {
 
             // Parse sort parameter
             let sortOptions = { createdAt: -1 }; // Default sort
-            if (sort) {
+            if (search) {
+                sortOptions = { score: { $meta: 'textScore' } };
+            } else if (sort) {
                 const [field, order] = sort.split(':');
                 const allowedSortFields = ['createdAt', 'name', 'workspaceName', 'postmanUpdatedAt'];
 
