@@ -439,6 +439,36 @@ export class ScanService {
         }
     }
 
+    async rescan(originalScanId, orgId) {
+        try {
+            const originalScan = await Scan.findOne({
+                _id: originalScanId,
+                orgId
+            }).lean();
+
+            if (!originalScan) {
+                throw ApiError.notFound('Original scan not found');
+            }
+
+            const scanData = {
+                name: `[Rescan] ${originalScan.name}`,
+                description: `Rescan of "${originalScan.name}" initiated on ${new Date().toISOString()}`,
+                ruleIds: originalScan.ruleIds,
+                requestIds: originalScan.requestIds,
+                environmentId: originalScan.environmentId,
+                collectionIds: originalScan.collectionIds,
+                orgId: originalScan.orgId,
+                projectIds: originalScan.projectIds,
+                scope: originalScan.scope,
+                originalScanId: originalScan._id
+            };
+
+            return await this.createScan(scanData);
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     handleError(error) {
         console.error('ScanService Error:', error);
 

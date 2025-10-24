@@ -17,6 +17,7 @@ class ScanController {
     this.getScanFindings = this.getScanFindings.bind(this);
     this.deleteScan = this.deleteScan.bind(this);
     this.updateScanExecution = this.updateScanExecution.bind(this);
+    this.rescan = this.rescan.bind(this);
   }
 
   async createScan(req, res, next) {
@@ -168,6 +169,21 @@ class ScanController {
 
     return res.json({ message: "Scan execution state updated", data: updated });
   }
+
+  async rescan(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { id } = req.params;
+
+      const scan = await this.scanService.rescan(id, orgId);
+
+      res.sendApiResponse(
+        ApiResponse.created('Rescan created successfully and processing started', scan)
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 const scanController = new ScanController();
@@ -178,5 +194,6 @@ export const {
   getScan,
   updateScanExecution,
   getScanFindings,
-  deleteScan
+  deleteScan,
+  rescan
 } = scanController;
