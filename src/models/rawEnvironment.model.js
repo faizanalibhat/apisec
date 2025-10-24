@@ -92,7 +92,7 @@ const rawEnvironmentSchema = new mongoose.Schema(
 );
 
 // Indexes for search functionality
-rawEnvironmentSchema.index({ name: 'text' });
+rawEnvironmentSchema.index({ name: 'text', 'values.key': 'text', 'values.value': 'text' });
 rawEnvironmentSchema.index({ workspaceId: 1, orgId: 1 });
 rawEnvironmentSchema.index({ postmanEnvironmentId: 1, orgId: 1 }, { unique: true });
 

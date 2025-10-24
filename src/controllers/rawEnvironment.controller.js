@@ -12,7 +12,6 @@ class RawEnvironmentController {
         this.getOne = this.getOne.bind(this);
         this.update = this.update.bind(this);
         this.delete = this.delete.bind(this);
-        this.search = this.search.bind(this);
         this.getByWorkspace = this.getByWorkspace.bind(this);
         this.bulkDelete = this.bulkDelete.bind(this);
         this.addVariable = this.addVariable.bind(this);
@@ -42,7 +41,8 @@ class RawEnvironmentController {
                 sort,
                 workspaceId,
                 integrationId,
-                isEdited
+                isEdited,
+                search
             } = req.query;
 
             // Build filters
@@ -72,44 +72,12 @@ class RawEnvironmentController {
             const result = await this.service.findAll(
                 filters,
                 sortOptions,
-                paginationOptions
+                paginationOptions,
+                search
             );
 
             const response = ApiResponse.paginated(
                 'Raw environments retrieved successfully',
-                result.data,
-                {
-                    currentPage: result.currentPage,
-                    totalPages: result.totalPages,
-                    totalItems: result.totalItems,
-                    itemsPerPage: result.itemsPerPage,
-                }
-            );
-
-            res.sendApiResponse(response);
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    async search(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { q, page = 1, limit = 10 } = req.query;
-
-            if (!q || q.trim().length === 0) {
-                return res.sendApiResponse(ApiResponse.badRequest('Search query is required'));
-            }
-
-            const paginationOptions = {
-                page: parseInt(page) || 1,
-                limit: parseInt(limit) || 10,
-            };
-
-            const result = await this.service.search(q, orgId, paginationOptions);
-
-            const response = ApiResponse.paginated(
-                'Search results retrieved successfully',
                 result.data,
                 {
                     currentPage: result.currentPage,
@@ -253,7 +221,6 @@ export const {
     getOne,
     update,
     delete: deleteEnvironment,
-    search,
     getByWorkspace,
     bulkDelete,
     addVariable,
