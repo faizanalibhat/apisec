@@ -90,18 +90,22 @@ function headerMatch(header, match) {
 const match = ({ rule, response }) => {
   const allMatches = [];
 
-  if (rule.status) {
-    const statusMatchResult = statusMatch(response.status, rule.status);
+  const matchRule = rule.match_on;
+
+  if (!matchRule) return { match: false };
+
+  if (matchRule.status) {
+    const statusMatchResult = statusMatch(response.status, matchRule.status);
     allMatches.push(statusMatchResult);
   }
 
-  if (rule.body) {
-    const bodyMatchResult = bodyMatch(response.body, rule.body);
+  if (matchRule.body) {
+    const bodyMatchResult = bodyMatch(response.body, matchRule.body);
     allMatches.push(bodyMatchResult);
   }
 
-  if (rule.header) {
-    const headerMatchResult = headerMatch(response.headers, rule.header);
+  if (matchRule.header) {
+    const headerMatchResult = headerMatch(response.headers, matchRule.header);
     allMatches.push(headerMatchResult);
   }
 
