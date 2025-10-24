@@ -280,7 +280,7 @@ export class ScanService {
                                 $filter: {
                                     input: "$transformedRequests",
                                     as: "req",
-                                    cond: { $in: ["$req.state", ["complete", "failed"]] }
+                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
                                 }
                             }
                         },
