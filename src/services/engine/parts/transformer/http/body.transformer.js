@@ -60,20 +60,25 @@ function replace_all_values(body, value, format) {
 function replace_all_values_one_by_one(body, value, format) {
 
   if (format === 'json') {
-    let newBody = JSON.parse(body);
+    try {
+      let newBody = JSON.parse(body);
 
-    const paramKeys = Object.keys(newBody);
+      const paramKeys = Object.keys(newBody);
 
-    const clonedList = [];
+      const clonedList = [];
 
-    for (let key of paramKeys) {
-      const clonedParams = _.cloneDeep(newBody);
-      clonedParams[key] = value;
+      for (let key of paramKeys) {
+        const clonedParams = _.cloneDeep(newBody);
+        clonedParams[key] = value;
 
-      clonedList.push(JSON.stringify(clonedParams));
+        clonedList.push(JSON.stringify(clonedParams));
+      }
+
+      return clonedList;
     }
-
-    return clonedList;
+    catch(err) {
+      return [];
+    }
   }
 }
 
