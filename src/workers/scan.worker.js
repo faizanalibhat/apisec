@@ -400,7 +400,7 @@ async function runAndMatchRequests(payload, msg, channel) {
             // })
         
 
-        if (matchResult.matched) {
+        if (matchResult.match) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
             const templateContext = TemplateEngine.createVulnerabilityContext({
                 transformedRequest,
@@ -485,7 +485,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                         size: response.size || 0,
                         responseTime: response.time || 0
                     },
-                    highlight: matchResult.highlight,
+                    highlight: matchResult?.highlight || "",
                     // matchedCriteria: matchResult.matchedCriteria
                 }
             };

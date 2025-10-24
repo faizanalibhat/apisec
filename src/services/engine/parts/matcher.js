@@ -111,7 +111,9 @@ const match = ({ rule, response }) => {
 
   console.log(allMatches)
 
-  const match = allMatches.every(v => v);
+  const match = allMatches.every(m => m);
+
+  console.log("final match: ", match);
 
   return { match }
 }
