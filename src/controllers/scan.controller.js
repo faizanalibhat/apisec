@@ -50,7 +50,7 @@ class ScanController {
   async getScans(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { page = 1, limit = 10, status, sortBy = 'createdAt', order = 'desc' } = req.query;
+      const { page = 1, limit = 10, status, sortBy = 'createdAt', order = 'desc', search } = req.query;
       
       const options = {
         page: parseInt(page),
@@ -58,7 +58,8 @@ class ScanController {
         status,
         sortBy,
         order,
-        orgId 
+        orgId, 
+        search
       };
       
       const result = await this.scanService.getScans(options);

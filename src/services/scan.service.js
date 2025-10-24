@@ -207,21 +207,29 @@ export class ScanService {
 
     async getScans(options) {
         try {
-            const { page, limit, status, sortBy, order, orgId } = options;
+            const { page, limit, status, sortBy, order, orgId, search } = options;
 
             const query = { orgId };
             if (status) {
                 query.status = status;
             }
 
+            if (search) {
+                query.$text = { $search: search };
+            }
+
             const sort = {};
-            sort[sortBy] = order === 'asc' ? 1 : -1;
+            if (search) {
+                sort.score = { $meta: 'textScore' };
+            } else {
+                sort[sortBy] = order === 'asc' ? 1 : -1;
+            }
 
             const total = await Scan.countDocuments(query);
             const pages = Math.ceil(total / limit);
             const skip = (page - 1) * limit;
 
-            const scans = await Scan.aggregate([
+            const pipeline = [
                 // 1. Match query filters
                 { $match: query },
 
@@ -235,7 +243,6 @@ export class ScanService {
                     }
                 },
                 { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
-
                 // 3. Lookup transformed requests for each scan
                 {
                     $lookup: {
@@ -245,7 +252,6 @@ export class ScanService {
                         as: "transformedRequests"
                     }
                 },
-
                 // 4. Lookup raw requests based on requestIds
                 {
                     $lookup: {
@@ -274,7 +280,7 @@ export class ScanService {
                                 $filter: {
                                     input: "$transformedRequests",
                                     as: "req",
-                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
+                                    cond: { $in: ["$req.state", ["complete", "failed"]] }
                                 }
                             }
                         },
@@ -302,7 +308,13 @@ export class ScanService {
                 { $sort: sort },
                 { $skip: skip },
                 { $limit: limit }
-            ]);
+            ];
+
+            if (search) {
+                pipeline.splice(1, 0, { $addFields: { score: { $meta: 'textScore' } } });
+            }
+
+            const scans = await Scan.aggregate(pipeline);
 
             return {
                 data: scans,
@@ -365,39 +377,6 @@ export class ScanService {
 
             return {
                 data: paginatedFindings,
-                page,
-                limit,
-                total,
-                pages
-            };
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async searchScans(options) {
-        try {
-            const { search, page, limit, orgId } = options;
-
-            const query = {
-                orgId,
-                $text: { $search: search }
-            };
-
-            const total = await Scan.countDocuments(query);
-            const pages = Math.ceil(total / limit);
-            const skip = (page - 1) * limit;
-
-            const scans = await Scan.find(query, { score: { $meta: 'textScore' } })
-                .select('-findings')
-                .populate('environmentId', 'name')
-                .sort({ score: { $meta: 'textScore' } })
-                .skip(skip)
-                .limit(limit)
-                .lean();
-
-            return {
-                data: scans,
                 page,
                 limit,
                 total,
