@@ -1,13 +1,21 @@
+function escapeRegex(regex) {
+  return regex.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
+function regexMatch(target, regex) {
+  const regexObj = new RegExp(escapeRegex(regex), 'gi');
+  return regexObj.test(target);
+}
+
+
 function contains(target, match) {
 
     if (typeof match == 'string') {
-      const regex = new RegExp(match, 'gi');
-      return regex.test(target);
+      return regexMatch(target, match);
     }
     else if (Array.isArray(match)) {
       for (let m of match) {
-        const regex = new RegExp(m, 'gi');
-        if (regex.test(target)) return true;
+        if (regexMatch(target, m)) return true;
       }
       return false;
     }
@@ -18,8 +26,7 @@ function contains(target, match) {
       for (let m of matches) {
 
         if (options.regex) {
-          const regex = new RegExp(m);
-          return regex.test(target);
+          return regexMatch(target, m);
         }
         else {
           return target.includes(m);
