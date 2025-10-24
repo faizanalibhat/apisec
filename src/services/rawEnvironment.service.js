@@ -38,7 +38,7 @@ class RawEnvironmentService {
             }
 
             const [data, totalItems] = await Promise.all([
-                RawEnvironment.find(filters)
+                RawEnvironment.find(filters, searchQuery ? { score: { $meta: "textScore" } } : {})
                     .populate('integrationId', 'name')
                     .sort(sortOptions)
                     .skip(skip)
