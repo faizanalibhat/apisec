@@ -1,12 +1,15 @@
 function contains(target, match) {
 
     if (typeof match == 'string') {
-      return target.includes(match);
+      const regex = new RegExp(match, 'gi');
+      return regex.test(target);
     }
     else if (Array.isArray(match)) {
       for (let m of match) {
-        return target.includes(m);
+        const regex = new RegExp(m, 'gi');
+        if (regex.test(target)) return true;
       }
+      return false;
     }
     else if (typeof match == 'object') {
       let matches = match.value;
