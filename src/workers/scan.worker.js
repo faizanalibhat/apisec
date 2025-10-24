@@ -88,11 +88,11 @@ async function transformationHandler(payload, msg, channel) {
                     processedRequest = substituteNonUrlVariables(urlResolvedRequest, environmentVariables);
                 }
 
-                const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });
+                // const targetMatch = await EngineService.matchTarget({ rule, transformedRequest: { ...processedRequest, raw: processedRequest.rawHttp } });
 
-                if (!targetMatch) {
-                    continue;
-                }
+                // if (!targetMatch) {
+                //     continue;
+                // }
 
                 // console.log("[+] PROCESSED REQUEST : ", processedRequest);
 
