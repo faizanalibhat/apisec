@@ -54,12 +54,6 @@ function handleTransformation(headers, transformations) {
 function applyRules(headers, rules) {
   let allHeaders = [];
 
-  if (rules.transformations) {
-    allHeaders = handleTransformation(headers, rules.transformations);
-
-    return allHeaders;
-  }
-
   if (rules.add) {
     add(headers, rules.add);
   }
@@ -78,6 +72,23 @@ function applyRules(headers, rules) {
 
   if (rules.replace_all_values_one_by_one) {
     allHeaders = replace_all_values_one_by_one(headers, rules.replace_all_values_one_by_one);
+  }
+
+
+  if (rules.transformations) {
+    if (allHeaders.length) {
+      let transformedParams = []
+      for (let p of allHeaders) {
+        transformedParams.push(...(handleTransformation(p, rules.transformations) || []));
+      }
+
+      allHeaders.push(...transformedParams);
+    }
+    else {
+      allHeaders = handleTransformation(headers, rules.transformations);
+    }
+
+    return allHeaders;
   }
 
   return allHeaders.length > 0 ? allHeaders : [headers];
