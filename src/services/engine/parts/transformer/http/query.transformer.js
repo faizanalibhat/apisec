@@ -1,5 +1,93 @@
 import _ from 'lodash';
 
+
+
+// helper functions one for each operation
+function add(params, newParams) {
+  Object.assign(params, newParams);
+}
+
+function remove(params, removeParams) {
+  removeParams.forEach(param => delete params[param]);
+}
+
+function modify(params, modifyParams) {
+  Object.entries(modifyParams).forEach(([key, value]) => {
+    if (params[key]) params[key] = value;
+  });
+}
+
+function replace_all_values(params, value) {
+  Object.keys(params).forEach(key => {
+    params[key] = value;
+  });
+}
+
+
+function replace_all_values_one_by_one(params, value) {
+  const paramKeys = Object.keys(params);
+
+  const clonedList = [];
+
+  for (let key of paramKeys) {
+    const clonedParams = _.cloneDeep(params);
+    clonedParams[key] = value;
+
+    clonedList.push(clonedParams);
+  }
+
+  return clonedList;
+}
+
+
+function handleTransformation(params, transformations) {
+  const allParams = [];
+
+  for (let transformation of transformations) {
+    const cloneParam = _.cloneDeep(params);
+    allParams.push(...(applyRules(cloneParam, transformation) || []));
+  }
+
+  return allParams;
+}
+
+
+
+function applyRules(params, rules) {
+  let allParams = [];
+
+  if (rules.transformations) {
+    allParams = handleTransformation(params, rules.transformations);
+
+    return allParams;
+  }
+
+  if (rules.add) {
+    add(params, rules.add);
+  }
+
+  if (rules.remove) {
+    remove(params, rules.remove);
+  }
+
+  if (rules.modify) {
+    modify(params, rules.modify);
+  }
+
+  if (rules.replace_all_values) {
+    replace_all_values(params, rules.replace_all_values);
+  }
+
+  if (rules.replace_all_values_one_by_one) {
+    allParams = replace_all_values_one_by_one(params, rules.replace_all_values_one_by_one);
+  }
+
+  return allParams.length > 0 ? allParams : [params];
+}
+
+
+
+
 export default {
   transform(request, queryRules) {
 
@@ -7,82 +95,16 @@ export default {
 
     let requests = [_.cloneDeep(request)];
 
-    // Handle transformations array (creates separate requests for each transformation)
-    if (Array.isArray(queryRules.transformations)) {
-      const transformedReqs = [];
+    const targetParams = requests[0].params || {};
 
-      for (const transformation of queryRules.transformations) {
-        const req = _.cloneDeep(request);
-        const params = req.query || {};
+    const transformedParams = applyRules(targetParams, queryRules);
 
-        Object.entries(transformation).forEach(([operator, config]) => {
-          if (operator === 'add' && typeof config === 'object') {
-            Object.assign(params, config);
-          } else if (operator === 'remove' && Array.isArray(config)) {
-            config.forEach(param => delete params[param]);
-          }
-        });
+    requests = transformedParams.map(params => {
+      const newRequest = _.cloneDeep(request);
+      newRequest.params = params;
+      return newRequest;
+    });
 
-        req.query = params;
-        transformedReqs.push(req);
-      }
-
-      // Combine original + transformed
-      requests = [...requests, ...transformedReqs];
-
-      // Apply global rules if any
-      if (queryRules.add || queryRules.remove || queryRules.modify || queryRules.replace_all_values || queryRules.replace_all_values_one_by_one) {
-        const globalReqs = requests.flatMap(req => this._applyGlobalRules(req, queryRules));
-        if (globalReqs.length > 0) requests = globalReqs;
-      }
-    } else {
-      // Apply global rules directly
-      const globalReqs = requests.flatMap(req => this._applyGlobalRules(req, queryRules));
-      if (globalReqs.length > 0) requests = globalReqs;
-    }
-
-    // ✅ Always return at least the original request
-    return requests.length > 0 ? requests : [_.cloneDeep(request)];
-  },
-
-  _applyGlobalRules(request, queryRules) {
-    const requests = [_.cloneDeep(request)];
-    const params = requests[0].params || {};
-
-    // Add parameters
-    if (queryRules.add) Object.assign(params, queryRules.add);
-
-    // Remove parameters
-    if (Array.isArray(queryRules.remove))
-      queryRules.remove.forEach(param => delete params[param]);
-
-    // Modify parameters
-    if (queryRules.modify)
-      Object.entries(queryRules.modify).forEach(([param, newVal]) => {
-        params[param] = newVal;
-      });
-
-    // Replace all values
-    if (queryRules.replace_all_values)
-      Object.keys(params).forEach(key => {
-        params[key] = queryRules.replace_all_values;
-      });
-
-    // Replace all values one by one (create separate requests)
-    if (queryRules.replace_all_values_one_by_one) {
-      const paramKeys = Object.keys(params);
-      if (paramKeys.length === 0) return [_.cloneDeep(request)];
-
-      return paramKeys.map(key => {
-        const req = _.cloneDeep(request);
-        const newParams = _.cloneDeep(params);
-        newParams[key] = queryRules.replace_all_values_one_by_one;
-        req.params = newParams;
-        return req;
-      });
-    }
-
-    requests[0].params = params;
     return requests;
   }
 };

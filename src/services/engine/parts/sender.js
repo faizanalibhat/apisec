@@ -2,29 +2,36 @@ import axios from "axios";
 
 const REQUEST_TIMEOUT_MS = 10000;
 
-const formatHeaders = (headersArray) => {
-  const headers = {};
-  (headersArray || []).forEach(({ key, value }) => {
-    headers[key] = value;
-  });
-  return headers;
-};
+// const formatHeaders = (headersArray) => {
+//   const headers = {};
+//   (headersArray || []).forEach(({ key, value }) => {
+//     headers[key] = value;
+//   });
+//   return headers;
+// };
 
 export const sendRequest = async ({ request }) => {
-
   const url = new URL(request.url);
   const cleanUrl = `${url.origin}${url.pathname}`;
 
   const config = {
     method: request.method.toLowerCase(),
     url: cleanUrl,
+    headers: request.headers || {},        // ✅ only these will be sent
     params: request.params,
-    headers: request.headers,
-    data: request.body || undefined,
+    data: request.body ?? undefined,
     validateStatus: () => true,
     timeout: REQUEST_TIMEOUT_MS,
-  };
 
+    // ✅ prevent Axios from adding defaults
+    transformRequest: [(data, headers) => {
+      // Delete all auto-added headers
+      Object.keys(headers).forEach(key => delete headers[key]);
+      // Reapply only user-provided ones
+      Object.assign(headers, request.headers || {});
+      return data; // return unmodified data
+    }],
+  };
 
   try {
     const response = await axios(config);
@@ -34,7 +41,6 @@ export const sendRequest = async ({ request }) => {
       body: response.data,
     };
   } catch (error) {
-    // console.log("[+] error: ", error.message);
     return {
       error: true,
       message: error.message,

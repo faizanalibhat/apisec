@@ -16,6 +16,7 @@ const rawRequestSchema = new mongoose.Schema(
     workspaceId: { type: String },
     collectionUid: { type: String },
     projectIds: { type: [mongoose.Schema.Types.ObjectId], default: [] },
+
     name: {
       type: String,
       required: false,
@@ -45,6 +46,7 @@ const rawRequestSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
+    body_format: { type: String },
     rawHttp: {
       type: String,
       required: true,

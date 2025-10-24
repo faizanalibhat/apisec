@@ -226,7 +226,10 @@ class PostmanParser {
 
             // Convert headers array to Map format for MongoDB
             const headersMap = {};
-            headers.filter(h => !h.disabled).forEach(h => {
+            // headers.filter(h => !h.disabled).forEach(h => {
+            //     headersMap[h.key] = h.value;
+            // });
+            headers.forEach(h => {
                 headersMap[h.key] = h.value;
             });
 

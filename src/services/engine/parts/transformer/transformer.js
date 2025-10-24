@@ -28,14 +28,12 @@ export const transformer = {
 
 
     // Apply component transformers
-    if (transformRules.path) {
-      requests = requests.flatMap(req => pathTransformer.transform(req, transformRules.path));
-    }
-
+    // if (transformRules.path) {
+    //   requests = requests.flatMap(req => pathTransformer.transform(req, transformRules.path));
+    // }
 
     if (transformRules.query) {
       requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
-      console.log("[+] appliying rules: ", transformRules.query, requests);
     }
 
     if (transformRules.header) {
@@ -77,11 +75,13 @@ export const transformer = {
   },
 
   _applyMethod(requests, methods) {
+
     if (!Array.isArray(methods)) {
       methods = [methods];
     }
 
     const result = [];
+
     requests.forEach(req => {
       methods.forEach(method => {
         const newReq = _.cloneDeep(req);
