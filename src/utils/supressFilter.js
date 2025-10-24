@@ -1,30 +1,24 @@
-
 export function supressFilter(rules = [], supress) {
-    const requestIds = [];
-    const ruleIds = [];
-
-    for (let rule of rules) {
-        requestIds.push(rule.requestId);
-        ruleIds.push(rule.ruleId);
+    if (!rules.length) {
+        // If there are no suppression rules, return an empty object unless we are filtering *for* suppressed items.
+        return supress ? { _id: { $in: [] } } : {};
     }
 
-    if (supress) {
+    const suppressionPairs = rules.map(rule => ({
+        $and: [
+            { "requestSnapshot._id": rule.requestId },
+            { "ruleSnapshot._id": rule.ruleId }
+        ]
+    }));
 
-        return {
-            $and: [
-                { requestId: { $in: requestIds } },
-                { ruleId: { $in: ruleIds } }
-            ]
-        }
-    }
-    else {
-
-        return {
-            $nor: [
-                { requestId: { $in: requestIds } },
-                { ruleId: { $in: ruleIds } }
-            ]
-        }
+    if (supress === true || supress === 'true') {
+        // Filter FOR suppressed vulnerabilities
+        return { $or: suppressionPairs };
+    } else if (supress === false || supress === 'false') {
+        // Filter OUT suppressed vulnerabilities
+        return { $nor: suppressionPairs };
     }
 
+    // By default (supress is null or undefined), do not filter by suppression
+    return {};
 }
