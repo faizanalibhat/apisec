@@ -42,12 +42,24 @@ const ruleSchema = new mongoose.Schema({
             max: 10
         },
 
-        cweId: {
-            type: String
+        cwe: {
+            type: String,
+            required: true
         },
 
-        owaspCategory: {
-            type: String
+        impact: {
+            type: String,
+            required: true
+        },
+
+        mitigation: {
+            type: String,
+            required: true
+        },
+
+        stepsToReproduce: {
+            type: String,
+            required: true
         }
     },
 

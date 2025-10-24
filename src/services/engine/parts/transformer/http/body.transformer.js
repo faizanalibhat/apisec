@@ -93,11 +93,11 @@ function handleTransformation(body, transformations, format) {
 function applyRules(body, rules, format) {
   let allBodies = [];
 
-  if (rules.transformations) {
-    allBodies = handleTransformation(body, rules.transformations, format);
+  // if (rules.transformations) {
+  //   allBodies = handleTransformation(body, rules.transformations, format);
 
-    return allBodies;
-  }
+  //   return allBodies;
+  // }
 
   let modified = body;
 
@@ -120,6 +120,24 @@ function applyRules(body, rules, format) {
   if (rules.replace_all_values_one_by_one) {
     allBodies = replace_all_values_one_by_one(modified, rules.replace_all_values_one_by_one, format);
   }
+
+  if (rules.transformations) {
+    if (allBodies.length) {
+      let transformedParams = []
+      for (let p of allBodies) {
+        transformedParams.push(...(handleTransformation(p, rules.transformations) || []));
+      }
+
+      allBodies.push(...transformedParams);
+    }
+    else {
+      allBodies = handleTransformation(modified, rules.transformations);
+    }
+
+    return allBodies;
+  }
+
+  // return allHeaders.length > 0 ? allHeaders : [headers];
 
   return allBodies.length > 0 ? allBodies : [modified];
 }
