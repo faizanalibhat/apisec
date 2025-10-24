@@ -91,7 +91,7 @@ function applyRules(headers, rules) {
     return allHeaders;
   }
 
-  return allHeaders.length > 0 ? allHeaders : [headers];
+  return allHeaders?.length > 0 ? allHeaders : [headers];
 }
 
 

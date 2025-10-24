@@ -139,7 +139,7 @@ function applyRules(body, rules, format) {
 
   // return allHeaders.length > 0 ? allHeaders : [headers];
 
-  return allBodies.length > 0 ? allBodies : [modified];
+  return allBodies?.length > 0 ? allBodies : [modified];
 }
 
 

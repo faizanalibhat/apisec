@@ -92,7 +92,7 @@ function applyRules(params, rules) {
     return allParams;
   }
 
-  return allParams.length > 0 ? allParams : [params];
+  return allParams?.length > 0 ? allParams : [params];
 }
 
 
