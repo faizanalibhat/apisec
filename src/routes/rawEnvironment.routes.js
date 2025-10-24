@@ -3,9 +3,6 @@ import * as rawEnvironmentController from '../controllers/rawEnvironment.control
 
 const router = express.Router();
 
-// Search route (must be before /:id)
-router.get('/search', rawEnvironmentController.search);
-
 // Bulk operations
 router.post('/bulk/delete', rawEnvironmentController.bulkDelete);
 

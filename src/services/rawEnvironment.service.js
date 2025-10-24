@@ -28,10 +28,14 @@ class RawEnvironmentService {
         }
     }
 
-    async findAll(filters, sortOptions, pagination) {
+    async findAll(filters, sortOptions, pagination, searchQuery) {
         try {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
+
+            if (searchQuery) {
+                filters.$text = { $search: searchQuery };
+            }
 
             const [data, totalItems] = await Promise.all([
                 RawEnvironment.find(filters)
@@ -41,38 +45,6 @@ class RawEnvironmentService {
                     .limit(limit)
                     .lean(),
                 RawEnvironment.countDocuments(filters)
-            ]);
-
-            return {
-                data,
-                currentPage: page,
-                totalPages: Math.ceil(totalItems / limit),
-                totalItems,
-                itemsPerPage: limit,
-            };
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async search(searchQuery, orgId, pagination) {
-        try {
-            const { page, limit } = pagination;
-            const skip = (page - 1) * limit;
-
-            const searchConditions = {
-                orgId,
-                $text: { $search: searchQuery },
-            };
-
-            const [data, totalItems] = await Promise.all([
-                RawEnvironment.find(searchConditions)
-                    .populate('integrationId', 'name')
-                    .sort({ score: { $meta: 'textScore' } })
-                    .skip(skip)
-                    .limit(limit)
-                    .lean(),
-                RawEnvironment.countDocuments(searchConditions),
             ]);
 
             return {
