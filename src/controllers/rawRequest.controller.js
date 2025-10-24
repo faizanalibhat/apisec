@@ -44,7 +44,8 @@ class RawRequestController {
         collectionName,
         projectId,
         integrationId,
-        hasVulns
+        hasVulns,
+        severity
       } = req.query;
 
       // Build filters
@@ -62,7 +63,10 @@ class RawRequestController {
         filters.workspaceName = { $in: workspace.split(',') };
       }
       if (hasVulns) {
-        filters.hasVulns = { $in: hasVulns.split(',') };
+        filters.hasVulns = hasVulns;
+      }
+      if (severity) {
+        filters.severity = severity;
       }
 
       // Parse sort parameter
@@ -107,7 +111,8 @@ class RawRequestController {
 
       supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
       supported_filters.workspace = await RawRequest.distinct("workspaceName", { orgId });
-      supported_filters.hasVulns = ['true', 'false', 'critical', 'high', 'medium', 'low'];
+      supported_filters.hasVulns = ['true', 'false'];
+      supported_filters.severity = ['critical', 'high', 'medium', 'low', 'info'];
 
       // const response = ApiResponse.paginated(
       //   search ? 'Search results retrieved successfully' : 'Raw requests retrieved successfully',
