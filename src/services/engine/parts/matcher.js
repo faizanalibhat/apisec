@@ -41,6 +41,7 @@ class Matcher {
           return { matched: false };
         }
       }
+
       return { matched: target.includes(searchValue), highlight: target.includes(searchValue) ? searchValue : undefined };
     });
 
