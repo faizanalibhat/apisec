@@ -67,7 +67,7 @@ function headerMatch(header, match) {
 
   for (let [key,val] of Object.entries(match)) {
 
-    let target = header[key];
+    let target = header[key?.toLowerCase?.()];
 
     if (!target) return false;
 
