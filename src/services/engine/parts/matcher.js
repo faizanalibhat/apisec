@@ -310,19 +310,30 @@ class Matcher {
    */
   _matchBodyContains(containsRule, actualBody) {
     const bodyString = typeof actualBody === 'string' ? actualBody : JSON.stringify(actualBody);
-    const searchValue = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.value : containsRule;
+    const searchValue = containsRule;
     const isRegex = (typeof containsRule === 'object' && containsRule !== null) ? containsRule.regex : false;
 
     console.log("[+] MATCHING BODY : ", bodyString, searchValue);
 
-    if (isRegex) {
-      try {
-        const regex = new RegExp(searchValue);
-        const match = bodyString.match(regex);
-        return { matched: !!match, highlight: match ? match[0] : undefined };
-      } catch (e) {
-        console.log(e.message);
-        return { matched: false };
+    if (Array.isArray(searchValue)) {
+
+      for (let val of searchValue) {
+        if (typeof val == 'string') {
+          if (bodyString.includes(val)) return { matched: true, highlight: val };
+        }
+        else if (typeof val == 'object') {
+          if (val?.regex) {
+            try {
+              const regex = new RegExp(val?.value);
+              const match = bodyString.match(regex);
+            } catch (e) {
+              return { matched: false };
+            }
+          }
+          else {
+            if (bodyString.includes(val?.value)) return { matched: true, highlight: val?.value };
+          }
+        }
       }
     }
 
