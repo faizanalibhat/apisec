@@ -19,7 +19,35 @@ export class TransformedRequestsController {
 
         const pipeline = [
         { $match: filters },
-
+        {
+            $lookup: {
+                from: "vulnerabilities",
+                let: { request_id: "$_id" },
+                pipeline: [
+                    {
+                    $match: {
+                        $expr: {
+                        $and: [
+                            { $eq: ["$orgId", orgId] },
+                            {
+                            $and: [
+                                { $ne: ["$$request_id", null] },
+                                { $eq: ["$transformedRequestId._id", "$$request_id"] }
+                            ]
+                            }
+                        ]
+                        }
+                    }
+                    }
+                ],
+                as: "vulnerability"
+            }
+        },
+        {
+            $addFields: {
+                vulnerability: { $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, {}] }
+            }
+        },
         {
             $lookup: {
                 from: "raw_requests",
