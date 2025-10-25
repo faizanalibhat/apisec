@@ -557,7 +557,8 @@ async function runAndMatchRequests(payload, msg, channel) {
                         matched: matchResult.matched,
                         executedAt: new Date(),
                         responseStatus: response.status,
-                        responseTime: response.time
+                        responseTime: response.time,
+                        response
                     }
                 }
             }
