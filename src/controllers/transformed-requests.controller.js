@@ -18,9 +18,11 @@ export class TransformedRequestsController {
         if (scanId) filters.scanId = ObjectId.createFromHexString(scanId);
 
         const pipeline = [
-        { $match: filters },
-        {
-            $lookup: {
+            { $match: filters },
+
+            // --- Lookup Vulnerability ---
+            {
+                $lookup: {
                 from: "vulnerabilities",
                 let: { request_id: "$_id" },
                 pipeline: [
@@ -29,27 +31,27 @@ export class TransformedRequestsController {
                         $expr: {
                         $and: [
                             { $eq: ["$orgId", orgId] },
-                            {
-                            $and: [
-                                { $ne: ["$$request_id", null] },
-                                { $eq: ["$transformedRequestSnapshot._id", "$$request_id"] }
-                            ]
-                            }
+                            { $ne: ["$$request_id", null] },
+                            { $eq: ["$transformedRequestSnapshot._id", "$$request_id"] }
                         ]
                         }
                     }
                     }
                 ],
                 as: "vulnerability"
-            }
-        },
-        {
-            $addFields: {
-                vulnerability: { $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null] }
-            }
-        },
-        {
-            $lookup: {
+                }
+            },
+            {
+                $addFields: {
+                vulnerability: {
+                    $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null]
+                }
+                }
+            },
+
+            // --- Lookup Raw Request ---
+            {
+                $lookup: {
                 from: "raw_requests",
                 let: { request_id: "$requestId" },
                 pipeline: [
@@ -58,28 +60,27 @@ export class TransformedRequestsController {
                         $expr: {
                         $and: [
                             { $eq: ["$orgId", orgId] },
-                            {
-                            $and: [
-                                { $ne: ["$$request_id", null] },
-                                { $eq: ["$_id", "$$request_id"] }
-                            ]
-                            }
+                            { $ne: ["$$request_id", null] },
+                            { $eq: ["$_id", "$$request_id"] }
                         ]
                         }
                     }
                     }
                 ],
                 as: "rawRequest"
-            }
-        },
-        {
-            $addFields: {
-                rawRequest: { $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}] }
-            }
-        },
+                }
+            },
+            {
+                $addFields: {
+                rawRequest: {
+                    $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}]
+                }
+                }
+            },
 
-        {
-            $lookup: {
+            // --- Lookup Rule ---
+            {
+                $lookup: {
                 from: "rules",
                 let: { rule_id: "$ruleId" },
                 pipeline: [
@@ -88,30 +89,30 @@ export class TransformedRequestsController {
                         $expr: {
                         $and: [
                             { $eq: ["$orgId", orgId] },
-                            {
-                            $and: [
-                                { $ne: ["$$rule_id", null] },
-                                { $eq: ["$_id", "$$rule_id"] }
-                            ]
-                            }
+                            { $ne: ["$$rule_id", null] },
+                            { $eq: ["$_id", "$$rule_id"] }
                         ]
                         }
                     }
                     }
                 ],
                 as: "rule"
-            }
-        },
-        {
-            $addFields: {
-                rule: { $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}] }
-            }
-        },
+                }
+            },
+            {
+                $addFields: {
+                rule: {
+                    $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}]
+                }
+                }
+            },
 
-        { $sort: { createdAt: -1 } },
-        { $skip: Math.max((page - 1) * limit, 0) },
-        { $limit: limit }
+            // --- Pagination ---
+            { $sort: { createdAt: -1 } },
+            { $skip: Math.max((page - 1) * limit, 0) },
+            { $limit: limit }
         ];
+
 
 
         const requests = await TransformedRequest.aggregate(pipeline);
