@@ -45,7 +45,7 @@ export class TransformedRequestsController {
         },
         {
             $addFields: {
-                vulnerability: { $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, {}] }
+                vulnerability: { $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null] }
             }
         },
         {
