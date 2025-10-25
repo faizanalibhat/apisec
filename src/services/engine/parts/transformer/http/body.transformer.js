@@ -61,7 +61,7 @@ function replace_all_values_one_by_one(body, value, format) {
 
   if (format === 'json') {
     try {
-      const cleanBody = body.replace(/[\s\n\t]/g, '');
+      const cleanBody = body.replace(/[\s\n\t]+/g, '');
 
       let newBody = JSON.parse(cleanBody);
 
