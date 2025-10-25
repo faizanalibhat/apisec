@@ -32,7 +32,7 @@ export class TransformedRequestsController {
                             {
                             $and: [
                                 { $ne: ["$$request_id", null] },
-                                { $eq: ["$transformedRequestId._id", "$$request_id"] }
+                                { $eq: ["$transformedRequestSnapshot._id", "$$request_id"] }
                             ]
                             }
                         ]
