@@ -31,7 +31,7 @@ class RawRequestService {
                     $lookup: {
                         from: "vulnerabilities",
                         localField: "_id",
-                        foreignField: "requestId",
+                        foreignField: "requestId._id",
                         pipeline: [
                             {
                                 $group: {
