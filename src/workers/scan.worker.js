@@ -554,7 +554,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                 $set: {
                     state: "complete",
                     executionResult: {
-                        matched: matchResult.matched,
+                        matched: matchResult.match,
                         executedAt: new Date(),
                         responseStatus: response.status,
                         responseTime: response.time,
