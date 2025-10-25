@@ -194,8 +194,8 @@ class RawRequestService {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
 
-            // Extract hasVulns filter
-            const { hasVulns, ...mongoFilters } = additionalFilters;
+            // Extract vulnerability filters
+            const { hasVulns, severity, ...mongoFilters } = additionalFilters;
 
             // For search, we need to use aggregation pipeline instead of find()
             const pipeline = [
@@ -216,6 +216,7 @@ class RawRequestService {
                         localField: "_id",
                         foreignField: "requestId",
                         pipeline: [
+                            { $match: { status: 'active' } },
                             {
                                 $group: {
                                     _id: "$severity",
@@ -248,18 +249,26 @@ class RawRequestService {
             ];
 
             // Add vulnerability filtering
-            if (hasVulns) {
-                if (hasVulns === 'true') {
-                    pipeline.push({ $match: { hasVulnerabilities: true } });
-                } else if (hasVulns === 'false') {
-                    pipeline.push({ $match: { hasVulnerabilities: false } });
-                } else if (['critical', 'high', 'medium', 'low'].includes(hasVulns)) {
-                    pipeline.push({
-                        $match: {
-                            [`vulnCounts.${hasVulns}`]: { $gt: 0 }
-                        }
-                    });
+            const vulnConditions = [];
+            if (hasVulns === 'true') {
+                vulnConditions.push({ hasVulnerabilities: true });
+            } else if (hasVulns === 'false') {
+                vulnConditions.push({ hasVulnerabilities: false });
+            }
+
+            if (severity) {
+                const severities = Array.isArray(severity) ? severity : severity.split(',');
+                const severityConditions = severities
+                    .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
+                    .map(s => ({ [`vulnCounts.${s}`]: { $gt: 0 } }));
+
+                if (severityConditions.length > 0) {
+                    vulnConditions.push({ $or: severityConditions });
                 }
+            }
+
+            if (vulnConditions.length > 0) {
+                pipeline.push({ $match: { $and: vulnConditions } });
             }
 
             // Add integration lookup and postman URL

@@ -43,6 +43,11 @@ const scanSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  originalScanId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Scan',
+    required: false,
+  },
   name: {
     type: String,
     required: true,

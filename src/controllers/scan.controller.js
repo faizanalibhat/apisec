@@ -17,6 +17,7 @@ class ScanController {
     this.getScanFindings = this.getScanFindings.bind(this);
     this.deleteScan = this.deleteScan.bind(this);
     this.updateScanExecution = this.updateScanExecution.bind(this);
+    this.rescan = this.rescan.bind(this);
   }
 
   async createScan(req, res, next) {
@@ -49,7 +50,7 @@ class ScanController {
   async getScans(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { page = 1, limit = 10, status, sortBy = 'createdAt', order = 'desc' } = req.query;
+      const { page = 1, limit = 10, status, sortBy = 'createdAt', order = 'desc', search } = req.query;
       
       const options = {
         page: parseInt(page),
@@ -57,7 +58,8 @@ class ScanController {
         status,
         sortBy,
         order,
-        orgId 
+        orgId, 
+        search
       };
       
       const result = await this.scanService.getScans(options);
@@ -168,6 +170,21 @@ class ScanController {
 
     return res.json({ message: "Scan execution state updated", data: updated });
   }
+
+  async rescan(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { id } = req.params;
+
+      const scan = await this.scanService.rescan(id, orgId);
+
+      res.sendApiResponse(
+        ApiResponse.created('Rescan created successfully and processing started', scan)
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 const scanController = new ScanController();
@@ -178,5 +195,6 @@ export const {
   getScan,
   updateScanExecution,
   getScanFindings,
-  deleteScan
+  deleteScan,
+  rescan
 } = scanController;
