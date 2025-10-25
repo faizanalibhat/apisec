@@ -44,7 +44,7 @@ export class TransformedRequestsController {
             },
             {
                 $lookup: {
-                    from: "raw_requests",
+                    from: "rawrequests",
                     let: { request_id: "$requestId" },
                     pipeline: [
                         {
@@ -65,6 +65,30 @@ export class TransformedRequestsController {
                 $addFields: {
                     rawRequest: { $arrayElemAt: ["$rawRequest", 0] }
 
+                }
+            },
+            {
+                $lookup: {
+                    from: "rules",
+                    let: { rule_id: "$ruleId" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$_id", "$$rule_id"] },
+                                        { $eq: ["$orgId", orgId] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "rule"
+                }
+            },
+            {
+                $addFields: {
+                    rule: { $arrayElemAt: ["$rule", 0] }
                 }
             },
             { $sort: { createdAt: -1 } },
