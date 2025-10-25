@@ -11,7 +11,6 @@ export class TransformedRequestsController {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
-
         const filters = { orgId };
 
         if (scanId) filters.scanId = scanId;
@@ -96,7 +95,7 @@ export class TransformedRequestsController {
             { $limit: limit }
         ];
 
-        const requests = await TransformedRequest.find(filters).lean();
+        const requests = await TransformedRequest.aggregate(pipeline);
 
         const total = await TransformedRequest.countDocuments(filters);
 
