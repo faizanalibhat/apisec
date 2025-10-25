@@ -3,6 +3,7 @@ import bodyTransformer from './http/body.transformer.js';
 import headersTransformer from './http/header.transformer.js';
 import queryTransformer from './http/query.transformer.js';
 import pathTransformer from './http/path.transformer.js';
+import { query } from 'express-validator';
 
 
 export const transformer = {
@@ -32,22 +33,29 @@ export const transformer = {
     //   requests = requests.flatMap(req => pathTransformer.transform(req, transformRules.path));
     // }
 
+    let queryRequests = [];
+
     if (transformRules.query) {
-      requests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
+      queryRequests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
     }
+
+    let headerRequests = [];
 
     if (transformRules.header) {
-      requests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
+      headerRequests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
     }
+
+    let bodyRequests = [];
 
     if (transformRules.body) {
-      requests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
+      bodyRequests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
     }
 
-    requests = requests.map(req => this._rebuildUrl(req));
+    let allRequests = [...requests, ...queryRequests, ...headerRequests, ...bodyRequests];
 
+    allRequests = allRequests.map(req => this._rebuildUrl(req));
 
-    return requests;
+    return allRequests;
   },
 
   _rebuildUrl(request) {
