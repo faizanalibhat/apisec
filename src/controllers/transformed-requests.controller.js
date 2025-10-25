@@ -20,65 +20,65 @@ export class TransformedRequestsController {
         const pipeline = [
         { $match: filters },
 
-        // {
-        //     $lookup: {
-        //     from: "rawrequests",
-        //     let: { request_id: "$requestId" },
-        //     pipeline: [
-        //         {
-        //         $match: {
-        //             $expr: {
-        //             $and: [
-        //                 { $eq: ["$orgId", orgId] },
-        //                 {
-        //                 $and: [
-        //                     { $ne: ["$$request_id", null] },
-        //                     { $eq: ["$_id", "$$request_id"] }
-        //                 ]
-        //                 }
-        //             ]
-        //             }
-        //         }
-        //         }
-        //     ],
-        //     as: "rawRequest"
-        //     }
-        // },
-        // {
-        //     $addFields: {
-        //     rawRequest: { $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}] }
-        //     }
-        // },
+        {
+            $lookup: {
+            from: "rawrequests",
+            let: { request_id: "$requestId" },
+            pipeline: [
+                {
+                $match: {
+                    $expr: {
+                    $and: [
+                        { $eq: ["$orgId", orgId] },
+                        {
+                        $and: [
+                            { $ne: ["$$request_id", null] },
+                            { $eq: ["$_id", "$$request_id"] }
+                        ]
+                        }
+                    ]
+                    }
+                }
+                }
+            ],
+            as: "rawRequest"
+            }
+        },
+        {
+            $addFields: {
+            rawRequest: { $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}] }
+            }
+        },
 
-        // {
-        //     $lookup: {
-        //     from: "rules",
-        //     let: { rule_id: "$ruleId" },
-        //     pipeline: [
-        //         {
-        //         $match: {
-        //             $expr: {
-        //             $and: [
-        //                 { $eq: ["$orgId", orgId] },
-        //                 {
-        //                 $and: [
-        //                     { $ne: ["$$rule_id", null] },
-        //                     { $eq: ["$_id", "$$rule_id"] }
-        //                 ]
-        //                 }
-        //             ]
-        //             }
-        //         }
-        //         }
-        //     ],
-        //     as: "rule"
-        //     }
-        // },
-        // {
-        //     $addFields: {
-        //     rule: { $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}] }
-        //     }
-        // },
+        {
+            $lookup: {
+            from: "rules",
+            let: { rule_id: "$ruleId" },
+            pipeline: [
+                {
+                $match: {
+                    $expr: {
+                    $and: [
+                        { $eq: ["$orgId", orgId] },
+                        {
+                        $and: [
+                            { $ne: ["$$rule_id", null] },
+                            { $eq: ["$_id", "$$rule_id"] }
+                        ]
+                        }
+                    ]
+                    }
+                }
+                }
+            ],
+            as: "rule"
+            }
+        },
+        {
+            $addFields: {
+            rule: { $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}] }
+            }
+        },
 
         { $sort: { createdAt: -1 } },
         { $skip: Math.max((page - 1) * limit, 0) },
