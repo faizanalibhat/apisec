@@ -25,7 +25,6 @@ const transformedRequestSchema = new mongoose.Schema({
     ref: 'Rule',
     required: true
   },
-
   // Request data
   method: {
     type: String,

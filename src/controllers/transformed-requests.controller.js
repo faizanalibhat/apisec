@@ -42,6 +42,31 @@ export class TransformedRequestsController {
                     vulnerabilitiesCount: { $size: "$vulnerabilities" }
                 }
             },
+            {
+                $lookup: {
+                    from: "raw_requests",
+                    let: { request_id: "$requestId" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$_id", "$$request_id"] },
+                                        { $eq: ["$orgId", orgId] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "rawRequest"
+                }
+            },
+            {
+                $addFields: {
+                    rawRequest: { $arrayElemAt: ["$rawRequest", 0] }
+
+                }
+            },
             { $sort: { createdAt: -1 } },
             { $skip: (page - 1) * limit },
             { $limit: limit }
