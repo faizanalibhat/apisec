@@ -15,7 +15,7 @@ router.post('/', scanController.createScan);
 router.get('/', scanController.getScans);
 
 // flush scan & vulns
-router.post("/", scanController.flushScans);
+router.post("/flush", scanController.flushScans);
 
 // Get specific scan with findings
 router.get('/:id', scanController.getScan);
