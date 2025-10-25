@@ -1,4 +1,6 @@
 import TransformedRequest from "../models/transformedRequest.model.js"
+import mongoose from "mongoose";
+const { ObjectId } = mongoose.Types;
 
 
 
@@ -13,7 +15,7 @@ export class TransformedRequestsController {
 
         const filters = { orgId };
 
-        if (scanId) filters.scanId = scanId;
+        if (scanId) filters.scanId = ObjectId.createFromHexString(scanId);
 
         const pipeline = [
         { $match: filters },
