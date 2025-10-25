@@ -16,84 +16,73 @@ export class TransformedRequestsController {
         if (scanId) filters.scanId = scanId;
 
         const pipeline = [
-            { $match: filters },
-            {
-                $lookup: {
-                    from: "vulnerabilities",
-                    let: { request_id: "$_id" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$transformedRequestId._id", "$$request_id"] },
-                                        { $eq: ["$orgId", orgId] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: "vulnerabilities"
-                }
-            },
-            {
-                $addFields: {
-                    vulnerabilitiesCount: { $size: "$vulnerabilities" }
-                }
-            },
-            {
-                $lookup: {
-                    from: "rawrequests",
-                    let: { request_id: "$requestId" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$_id", "$$request_id"] },
-                                        { $eq: ["$orgId", orgId] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: "rawRequest"
-                }
-            },
-            {
-                $addFields: {
-                    rawRequest: { $arrayElemAt: ["$rawRequest", 0] }
+        { $match: filters },
 
-                }
-            },
-            {
-                $lookup: {
-                    from: "rules",
-                    let: { rule_id: "$ruleId" },
-                    pipeline: [
+        {
+            $lookup: {
+            from: "rawrequests",
+            let: { request_id: "$requestId" },
+            pipeline: [
+                {
+                $match: {
+                    $expr: {
+                    $and: [
+                        { $eq: ["$orgId", orgId] },
                         {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$_id", "$$rule_id"] },
-                                        { $eq: ["$orgId", orgId] }
-                                    ]
-                                }
-                            }
+                        $and: [
+                            { $ne: ["$$request_id", null] },
+                            { $eq: ["$_id", "$$request_id"] }
+                        ]
                         }
-                    ],
-                    as: "rule"
+                    ]
+                    }
                 }
-            },
-            {
-                $addFields: {
-                    rule: { $arrayElemAt: ["$rule", 0] }
                 }
-            },
-            { $sort: { createdAt: -1 } },
-            { $skip: (page - 1) * limit },
-            { $limit: limit }
+            ],
+            as: "rawRequest"
+            }
+        },
+        {
+            $addFields: {
+            rawRequest: { $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}] }
+            }
+        },
+
+        {
+            $lookup: {
+            from: "rules",
+            let: { rule_id: "$ruleId" },
+            pipeline: [
+                {
+                $match: {
+                    $expr: {
+                    $and: [
+                        { $eq: ["$orgId", orgId] },
+                        {
+                        $and: [
+                            { $ne: ["$$rule_id", null] },
+                            { $eq: ["$_id", "$$rule_id"] }
+                        ]
+                        }
+                    ]
+                    }
+                }
+                }
+            ],
+            as: "rule"
+            }
+        },
+        {
+            $addFields: {
+            rule: { $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}] }
+            }
+        },
+
+        { $sort: { createdAt: -1 } },
+        { $skip: Math.max((page - 1) * limit, 0) },
+        { $limit: limit }
         ];
+
 
         const requests = await TransformedRequest.aggregate(pipeline);
 
