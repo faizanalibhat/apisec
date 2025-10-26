@@ -30,7 +30,7 @@ export class TransformedRequestsController {
         }
 
         if (statusCode) {
-            filters["rawRequest.statusCode"] = { $in: statusCode.split(",") };
+            filters["rawRequest.status"] = { $in: statusCode.split(",") };
         }
 
         const pipeline = [
@@ -136,7 +136,7 @@ export class TransformedRequestsController {
         const supported_filters = {};
 
         supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-        supported_filters.statusCode = await TransformedRequest.distinct("rawRequest.statusCode", { orgId });
+        supported_filters.statusCode = await TransformedRequest.distinct("rawRequest.status", { orgId });
 
         return res.json({ requests, total, filters: supported_filters });
     }
