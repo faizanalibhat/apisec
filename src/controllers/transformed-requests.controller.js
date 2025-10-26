@@ -1,6 +1,7 @@
 import TransformedRequest from "../models/transformedRequest.model.js"
 import mongoose from "mongoose";
 const { ObjectId } = mongoose.Types;
+import { escapeRegex } from "../utils/utils.js";
 
 
 
@@ -19,8 +20,8 @@ export class TransformedRequestsController {
 
         if (search) {
             filters.$and = [
-                { url: { $regex: search, $options: "i"  } },
-                { 'rawRequest.name': { $regex: search, $options: "i" } }
+                { url: { $regex: escapeRegex(search), $options: "i"  } },
+                { 'rawRequest.name': { $regex: escapeRegex(search), $options: "i" } }
             ];
         }
 
@@ -128,12 +129,15 @@ export class TransformedRequestsController {
             { $limit: limit }
         ];
 
-
-
         const requests = await TransformedRequest.aggregate(pipeline);
 
         const total = await TransformedRequest.countDocuments(filters);
 
-        return res.json({ requests, total });
+        const supported_filters = {};
+
+        supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+        supported_filters.statusCode = await TransformedRequest.distinct("rawRequest.statusCode", { orgId });
+
+        return res.json({ requests, total, filters: supported_filters });
     }
 }
