@@ -12,8 +12,8 @@ export class EngineService {
         return transformed_requests;
     }
 
-    static async sendRequest({ request }) {
-        const sent = await sendRequest({ request });
+    static async sendRequest({ request, rule }) {
+        const sent = await sendRequest({ request, rule });
         return sent;
     }
 

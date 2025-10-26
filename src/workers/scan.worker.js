@@ -380,7 +380,7 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Send the request
         // console.log(`[+] Sending request to: ${transformedRequest.url}`);
         
-        const response = await EngineService.sendRequest({ request: transformedRequest });
+        const response = await EngineService.sendRequest({ request: transformedRequest, rule: rule.parsed_yaml });
 
         if (response.error) {
             console.log("[+] request errored out ", response.message);
