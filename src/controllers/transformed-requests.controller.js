@@ -19,7 +19,7 @@ export class TransformedRequestsController {
         if (scanId) filters.scanId = ObjectId.createFromHexString(scanId);
 
         if (search) {
-            filters.$and = [
+            filters.$or = [
                 { url: { $regex: escapeRegex(search), $options: "i"  } },
                 { 'rawRequest.name': { $regex: escapeRegex(search), $options: "i" } }
             ];
@@ -30,7 +30,7 @@ export class TransformedRequestsController {
         }
 
         if (statusCode) {
-            filters["rawRequest.status"] = { $in: statusCode.split(",") };
+            filters["executionResult.responseStatus"] = { $in: statusCode.split(",") };
         }
 
         console.log("JSON FILTERS: ", JSON.stringify(filters));
@@ -138,7 +138,7 @@ export class TransformedRequestsController {
         const supported_filters = {};
 
         supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
-        supported_filters.statusCode = await TransformedRequest.distinct("rawRequest.status", { orgId });
+        supported_filters.statusCode = await TransformedRequest.distinct("executionResult.responseStatus", { orgId });
 
         return res.json({ requests, total, filters: supported_filters });
     }
