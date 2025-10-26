@@ -33,6 +33,8 @@ export class TransformedRequestsController {
             filters["rawRequest.status"] = { $in: statusCode.split(",") };
         }
 
+        console.log("JSON FILTERS: ", JSON.stringify(filters));
+
         const pipeline = [
             { $match: filters },
 
