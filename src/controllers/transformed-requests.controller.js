@@ -8,7 +8,7 @@ export class TransformedRequestsController {
 
     static getRequests = async (req, res, next) => {
         const { orgId } = req.authenticatedService;
-        const { scanId } = req.query;
+        const { scanId, search, method, statusCode } = req.query;
 
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -16,6 +16,21 @@ export class TransformedRequestsController {
         const filters = { orgId };
 
         if (scanId) filters.scanId = ObjectId.createFromHexString(scanId);
+
+        if (search) {
+            filters.$and = [
+                { url: { $regex: search, $options: "i"  } },
+                { 'rawRequest.name': { $regex: search, $options: "i" } }
+            ];
+        }
+
+        if (method) {
+            filters.method = { $in: method.split(",") };
+        }
+
+        if (statusCode) {
+            filters["rawRequest.statusCode"] = { $in: statusCode.split(",") };
+        }
 
         const pipeline = [
             { $match: filters },
