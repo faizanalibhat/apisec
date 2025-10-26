@@ -117,7 +117,7 @@ const match = ({ rule, response }) => {
   if (matchRule.header) {
     const headerMatchResult = headerMatch(response.headers, matchRule.header);
 
-    console.log(JSON.stringify(response.headers), JSON.stringify(matchRule.header), headerMatchResult);
+    if (response.headers?.location) console.log(JSON.stringify(response.headers), JSON.stringify(matchRule.header), headerMatchResult);
 
     allMatches.push(headerMatchResult);
   }
