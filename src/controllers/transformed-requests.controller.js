@@ -30,7 +30,7 @@ export class TransformedRequestsController {
         }
 
         if (statusCode) {
-            filters["executionResult.responseStatus"] = { $in: statusCode.split(",") };
+            filters["executionResult.responseStatus"] = { $in: String(statusCode)?.split(",")?.map(s => parseInt(s)) };
         }
 
         console.log("JSON FILTERS: ", JSON.stringify(filters));
