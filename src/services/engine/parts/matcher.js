@@ -116,10 +116,13 @@ const match = ({ rule, response }) => {
 
   if (matchRule.header) {
     const headerMatchResult = headerMatch(response.headers, matchRule.header);
+
+    console.log(JSON.stringify(response.headers), JSON.stringify(matchRule.header), headerMatchResult);
+
     allMatches.push(headerMatchResult);
   }
 
-  console.log(allMatches)
+  // console.log(allMatches)
 
   const match = allMatches.every(m => m);
 
