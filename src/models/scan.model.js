@@ -89,6 +89,11 @@ const scanSchema = new mongoose.Schema({
     ref: 'RawEnvironment',
     required: false
   },
+  authProfileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'auth_profiles',
+    required: false
+  },
   // Statistics
   stats: {
     totalRequests: { type: Number, default: 0 },

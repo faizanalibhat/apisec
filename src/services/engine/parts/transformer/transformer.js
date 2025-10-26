@@ -7,7 +7,7 @@ import { query } from 'express-validator';
 
 
 export const transformer = {
-  transform({ request, rule }) {
+  transform({ request, rule, authProfile }) {
     const transformRules = rule.transform;
 
     if (!transformRules) return [request];
@@ -36,19 +36,19 @@ export const transformer = {
     let queryRequests = [];
 
     if (transformRules.query) {
-      queryRequests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query));
+      queryRequests = requests.flatMap(req => queryTransformer.transform(req, transformRules.query, authProfile));
     }
 
     let headerRequests = [];
 
     if (transformRules.header) {
-      headerRequests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header));
+      headerRequests = requests.flatMap(req => headersTransformer.transform(req, transformRules.header, authProfile));
     }
 
     let bodyRequests = [];
 
     if (transformRules.body) {
-      bodyRequests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body));
+      bodyRequests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body, authProfile));
     }
 
     let allRequests = [...requests, ...queryRequests, ...headerRequests, ...bodyRequests];

@@ -99,7 +99,7 @@ function applyRules(params, rules) {
 
 
 export default {
-  transform(request, queryRules) {
+  transform(request, queryRules, authProfile) {
 
     if (!queryRules) return [request];
 
@@ -112,6 +112,20 @@ export default {
     requests = transformedParams.map(params => {
       const newRequest = _.cloneDeep(request);
       newRequest.params = params;
+      
+      // add auth profile
+      if (authProfile) {
+        let newHeaders = { ...(newRequest.headers || {}) };
+
+        newHeaders.authorization = authProfile.authValue;
+
+        authProfile?.customHeaders?.map?.(([key, value]) => {
+          newHeaders[key] = value;
+        });
+
+        newRequest.headers = newHeaders;
+      }
+
       return newRequest;
     });
 

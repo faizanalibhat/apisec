@@ -166,6 +166,20 @@ export default {
     requests = transformedBodies.map(body => {
       const newRequest = _.cloneDeep(request);
       newRequest.body = body;
+
+      // add auth profile
+      if (authProfile) {
+        let newHeaders = { ...(newRequest.headers || {}) };
+
+        newHeaders.authorization = authProfile.authValue;
+
+        authProfile?.customHeaders?.map?.(([key, value]) => {
+          newHeaders[key] = value;
+        });
+
+        newRequest.headers = newHeaders;
+      }
+
       return newRequest;
     });
 

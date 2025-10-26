@@ -10,6 +10,7 @@ import { substituteVariables, substituteUrlVariables, substituteNonUrlVariables 
 import { PostmanParser } from "../utils/postman/postmanParser.js";
 import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js";
+import { AuthProfile } from "../models/auth-profile.model.js";
 import "../db/mongoose.js";
 
 import { syncRulesFromGithub } from "./sync-rules.worker.js";
@@ -20,7 +21,7 @@ const integrationService = new IntegrationService();
 
 
 async function transformationHandler(payload, msg, channel) {
-    const { _id, requestIds, ruleIds, environmentId, orgId, projectId, scope } = payload;
+    const { _id, requestIds, ruleIds, environmentId, orgId, projectId, scope, authProfileId } = payload;
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -65,6 +66,13 @@ async function transformationHandler(payload, msg, channel) {
             ? scope.map(pattern => new RegExp(pattern))
             : null;
 
+        let authProfile;
+
+        if (authProfileId) {
+            authProfile = await AuthProfile.findOne({ _id: authProfileId });
+            authProfile = authProfile.toJSON();
+        }
+
         // Generate transformed requests (cartesian product)
         for (let rule of rules) {
             for (let request of requests) {
@@ -104,7 +112,7 @@ async function transformationHandler(payload, msg, channel) {
                 let transformed;
 
                 try {
-                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
+                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml, authProfile });
                 }
                 catch (err) {
                     console.log(err);
