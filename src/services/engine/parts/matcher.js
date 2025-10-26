@@ -40,9 +40,7 @@ function statusMatch(status, match) {
     return status == match;
   }
   else if (Array.isArray(match)) {
-    for (let m of match) {
-      return status == m;
-    }
+    return match.includes(status);
   }
   else if (typeof match == 'object') {
     if (match.in && Array.isArray(match.in)) {
