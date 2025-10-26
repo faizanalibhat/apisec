@@ -74,6 +74,10 @@ async function transformationHandler(payload, msg, channel) {
                 // Apply environment variable substitution if environment is provided
                 let processedRequest = reqObject;
 
+                if (!reqObject.url) {
+                    continue;
+                }
+
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
                     const urlResolvedRequest = substituteUrlVariables(reqObject, environmentVariables);
 
