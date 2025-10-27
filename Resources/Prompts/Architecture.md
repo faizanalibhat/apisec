@@ -15,12 +15,14 @@ Please read this context carefully before providing any assistance.
 ## System Architecture
 
 ### Technology Stack
+
 - **Runtime**: Node.js with ES6 modules (import/export)
 - **Framework**: Express.js for RESTful API
-- **Database**: MongoDB with Mongoose ODM
+- **Database**: MongoDB with Mongoose ODM (single instance, no transactions)
 - **Message Queue**: RabbitMQ for asynchronous processing
 - **Architecture Pattern**: Class-based services and controllers
 - **API Version**: /api/v1
+- **Validation**: Joi for request validation
 
 ### Project Structure
 
@@ -34,14 +36,19 @@ src/
 ├── routes/             # Express route definitions
 ├── models/             # Mongoose schemas
 ├── middleware/         # Express middleware (validation, auth)
+│   └── validation/     # Joi validation schemas
 ├── utils/              # Utility classes and helpers
-│   └── postman/        # Postman integration utilities
+│   ├── postman/        # Postman integration utilities
+│   └── browserRequest.utils.js  # Browser request helpers
 ├── workers/            # RabbitMQ workers for async processing
 ├── app.js              # Application entry point
 └── env.js              # Environment configuration
+
 ```
 
 ## Core Workflow
+
+### Traditional Postman Workflow
 
 ```
 1. Setup Phase:
@@ -55,6 +62,24 @@ src/
 
 4. Analysis Phase:
    Generate Vulnerability Reports → Update Scan Results → Export Results
+
+```
+
+### Browser Extension Workflow
+
+```
+1. Collection Phase:
+   Browser Extension → Capture Network Requests → Format as JSON
+
+2. Import Phase:
+   Create Project → POST to /projects/:id/browser-requests → Store as Raw Requests (source: browser-extension)
+
+3. Rule Configuration:
+   Configure Project Rules → Include/Exclude Rules → Save Settings
+
+4. Project-Based Scan:
+   Create Scan with projectId → Auto-fetch Project Rules → Auto-fetch Browser Requests → Execute Scan
+
 ```
 
 ## Key Architectural Decisions
@@ -182,6 +207,23 @@ Scan Creation → RabbitMQ Queue → Transformation Worker
 - **Tracking**: Execution state, applied transformations, match results
 - **Lifecycle**: Created → Queued → Executed → Matched/Not Matched
 
+### 8. Projects Module ✅
+
+- **Model**: Project containers for organizing browser-sourced requests and scan configurations
+- **Features**:
+    - CRUD operations with pagination and search
+    - Browser request management (create, bulk create, read, update, delete)
+    - Rule configuration (included/excluded rules with whitelist/blacklist approach)
+    - Collection association for hybrid workflows
+- **Browser Integration**:
+    - Accepts requests from browser extensions
+    - Stores with source='browser-extension'
+    - Automatic project association via projectIds
+- **Rule Management**:
+    - includedRuleIds: Whitelist approach (if set, only these rules apply)
+    - excludedRuleIds: Blacklist approach (remove these from available rules)
+    - Default: All organization rules available
+
 ## Engine Architecture
 
 ### Components
@@ -235,28 +277,52 @@ Scan Creation → RabbitMQ Queue → Transformation Worker
 - Security misconfigurations
 - Rate limiting issues
 
-## Postman Integration
+## Data Sources Integration
 
-### Data Collection
+### Postman Integration
+
 - **User Information**: Fetched via `/me` endpoint (user ID, team domain)
 - **Workspaces**: Complete workspace metadata and associations
 - **Collections**: Full collection details with Postman URLs
 - **Environments**: Environment variables and configurations per workspace
+- **URL Generation Pattern**:
+    - Collections: `https://{teamDomain}.postman.co/workspace/{workspaceName}~{workspaceId}/collection/{userId}-{collectionUid}`
+    - Environments: `https://{teamDomain}.postman.co/workspace/{workspaceName}~{workspaceId}/environment/{userId}-{environmentUid}`
 
-### URL Generation Pattern
-- **Collections**: `https://{teamDomain}.postman.co/workspace/{workspaceName}~{workspaceId}/collection/{userId}-{collectionUid}`
-- **Environments**: `https://{teamDomain}.postman.co/workspace/{workspaceName}~{workspaceId}/environment/{userId}-{environmentUid}`
+### Browser Extension Integration
+
+- **Data Format**: JSON structure with nested request/response data
+- **Request Structure**:
+    
+    ```
+    {
+      source: "ReqMapper",
+      timestamp: ISO date,
+      request: {
+        name: string,
+        request: { method, headers[], url{}, body },
+        response: { status, headers[], body },
+        tabId: number
+      }
+    }
+    
+    ```
+    
+- **Import Endpoints**:
+    - Single: `POST /projects/:projectId/browser-requests`
+    - Bulk: `POST /projects/:projectId/browser-requests/bulk`
 
 ## API Patterns
 
 ### Route Structure
 ```javascript
-router.get('/search', controller.search)      // Search must be before :id
-router.get('/', controller.getAll)           // List with pagination
-router.post('/', controller.create)          // Create new resource
-router.get('/:id', controller.get)           // Get single resource
-router.put('/:id', controller.update)        // Update resource
-router.delete('/:id', controller.delete)     // Delete resource
+router
+    .get('/search', controller.search)      // Search must be before :id
+    .get('/', controller.getAll)           // List with pagination
+    .post('/', controller.create)          // Create new resource
+    .get('/:id', controller.get)           // Get single resource
+    .put('/:id', controller.update)        // Update resource
+    .delete('/:id', controller.delete)     // Delete resource
 ```
 
 ### Response Format
@@ -296,16 +362,27 @@ router.delete('/:id', controller.delete)     // Delete resource
 ## Database Schema Overview
 
 ### Collections
+
 1. **rules**: Security testing rule definitions with transform, match, and report sections
 2. **integrations**: Postman API connections with user metadata
-3. **raw_requests**: Original API requests from Postman
+3. **raw_requests**: Original API requests from Postman or browser extensions
+    - Now includes `source` field ('postman' | 'browser-extension')
+    - Optional `integrationId` for browser requests
+    - `browserMetadata` for extension-specific data
 4. **raw_environments**: Postman environment configurations
 5. **scans**: Security scan sessions
+    - Supports project-based scans via `projectIds`
+    - Auto-detection of scan type
 6. **transformedrequests**: Modified requests for testing (persistent storage)
 7. **vulnerabilities**: Detected security issues
+8. **projects**: Project containers with rule configurations
+    - `includedRuleIds` and `excludedRuleIds` arrays
+    - `scanSettings` for configuration metadata
 
 ### Relationships
-- Integration → Raw Requests (1:N)
+
+- Integration → Raw Requests (1:N) [for Postman sources]
+- Project → Raw Requests (1:N) [for browser sources]
 - Integration → Raw Environments (1:N)
 - Workspace → Raw Environments (1:N)
 - Scan → Transformed Requests (1:N)
@@ -313,6 +390,7 @@ router.delete('/:id', controller.delete)     // Delete resource
 - Rule + Request → Transformed Request
 - Transformed Request → Vulnerability (0:1)
 - Rule → Vulnerability (for report template)
+- Project → Rules (N:N via included/excluded arrays)
 
 ## Future Enhancements
 
