@@ -112,115 +112,91 @@ class ProjectsService {
   }
 
   async delete(projectId, orgId) {
-    const session = await mongoose.startSession();
-    
     try {
-      await session.withTransaction(async () => {
-        const project = await Projects.findOneAndDelete(
-          { _id: projectId, orgId },
-          { session }
-        );
-
-        if (!project) {
-          throw ApiError.notFound('Project not found');
-        }
-
-        // Remove project ID from collections and raw requests
-        if (project.collectionUids?.length > 0) {
-          await this.updateCollectionsAndRequests(
-            project.collectionUids, 
-            project._id, 
-            'remove',
-            session
-          );
-        }
-
-        // Remove project ID from all browser extension requests
-        await RawRequest.updateMany(
-          { 
-            projectIds: project._id,
-            source: 'browser-extension'
-          },
-          { $pull: { projectIds: project._id } },
-          { session }
-        );
+      const project = await Projects.findOneAndDelete({
+        _id: projectId,
+        orgId
       });
+
+      if (!project) {
+        throw ApiError.notFound('Project not found');
+      }
+
+      // Remove project ID from collections and raw requests
+      if (project.collectionUids?.length > 0) {
+        await this.updateCollectionsAndRequests(
+          project.collectionUids, 
+          project._id, 
+          'remove'
+        );
+      }
+
+      // Remove project ID from all browser extension requests
+      await RawRequest.updateMany(
+        { 
+          projectIds: project._id,
+          source: 'browser-extension'
+        },
+        { $pull: { projectIds: project._id } }
+      );
 
       return { message: 'Project deleted successfully' };
     } catch (error) {
       this.handleError(error);
-    } finally {
-      await session.endSession();
     }
   }
 
   async addCollection(projectId, orgId, collectionUid) {
-    const session = await mongoose.startSession();
-    
     try {
-      let project;
-      
-      await session.withTransaction(async () => {
-        // Check if collection already exists in project
-        const existingProject = await Projects.findOne({
-          _id: projectId,
-          orgId,
-          collectionUids: collectionUid
-        });
-
-        if (existingProject) {
-          throw ApiError.conflict('Collection already exists in this project');
-        }
-
-        // Add collection to project
-        project = await Projects.findOneAndUpdate(
-          { _id: projectId, orgId },
-          { $push: { collectionUids: collectionUid } },
-          { new: true, session }
-        );
-
-        if (!project) {
-          throw ApiError.notFound('Project not found');
-        }
-
-        // Update collections and raw requests
-        await this.updateCollectionsAndRequests([collectionUid], project._id, 'add', session);
+      // Check if collection already exists in project
+      const existingProject = await Projects.findOne({
+        _id: projectId,
+        orgId,
+        collectionUids: collectionUid
       });
+
+      if (existingProject) {
+        throw ApiError.conflict('Collection already exists in this project');
+      }
+
+      // Add collection to project
+      const project = await Projects.findOneAndUpdate(
+        { _id: projectId, orgId },
+        { $push: { collectionUids: collectionUid } },
+        { new: true }
+      );
+
+      if (!project) {
+        throw ApiError.notFound('Project not found');
+      }
+
+      // Update collections and raw requests
+      await this.updateCollectionsAndRequests([collectionUid], project._id, 'add');
 
       return project;
     } catch (error) {
       this.handleError(error);
-    } finally {
-      await session.endSession();
     }
   }
 
   async removeCollection(projectId, orgId, collectionUid) {
-    const session = await mongoose.startSession();
-    
     try {
-      let project;
-      
-      await session.withTransaction(async () => {
-        project = await Projects.findOneAndUpdate(
-          { _id: projectId, orgId },
-          { $pull: { collectionUids: collectionUid } },
-          { new: true, session }
-        );
+      const project = await Projects.findOneAndUpdate(
+        { _id: projectId, orgId },
+        { $pull: { collectionUids: collectionUid } },
+        { new: true }
+      );
 
-        if (!project) {
-          throw ApiError.notFound('Project not found');
-        }
+      if (!project) {
+        throw ApiError.notFound('Project not found');
+      }
 
-        // Update collections and raw requests
-        await this.updateCollectionsAndRequests([collectionUid], project._id, 'remove', session);
-      });
+      // Update collections and raw requests
+      await this.updateCollectionsAndRequests([collectionUid], project._id, 'remove');
 
       return project;
     } catch (error) {
       this.handleError(error);
-    } finally {
-      await session.endSession();
     }
   }
 
@@ -324,25 +300,21 @@ class ProjectsService {
   }
 
   // Helper method to update collections and raw requests
-  async updateCollectionsAndRequests(collectionUids, projectId, action, session = null) {
+  async updateCollectionsAndRequests(collectionUids, projectId, action) {
     const updateOperation = action === 'add' 
       ? { $push: { projectIds: projectId } }
       : { $pull: { projectIds: projectId } };
 
-    const options = session ? { session } : {};
-
     // Update PostmanCollections
     await PostmanCollections.updateMany(
       { collectionUid: { $in: collectionUids } },
-      updateOperation,
-      options
+      updateOperation
     );
 
     // Update RawRequests
     await RawRequest.updateMany(
       { collectionUid: { $in: collectionUids } },
-      updateOperation,
-      options
+      updateOperation
     );
   }
 
