@@ -357,26 +357,28 @@ class ProjectsController {
   }
 
   async getBrowserRequest(req, res, next) {
-    try {
-      const { orgId } = req.authenticatedService;
-      const { projectId, requestId } = req.params;
+  try {
+    const { orgId } = req.authenticatedService;
+    const { projectId, requestId } = req.params;
 
-      // Verify project exists
-      await this.projectsService.findById(projectId, orgId);
+    // Verify project exists
+    await this.projectsService.findById(projectId, orgId);
 
-      // Get the raw request
-      const rawRequest = await this.rawRequestService.findOne(requestId, orgId);
+    // Get the raw request
+    const rawRequest = await this.rawRequestService.findOne(requestId, orgId);
 
-      // Verify it belongs to this project and is from browser extension
-      if (!rawRequest.projectIds.includes(projectId) || rawRequest.source !== 'browser-extension') {
-        throw ApiError.notFound('Browser request not found in this project');
-      }
-
-      res.sendApiResponse(ApiResponse.success('Browser request retrieved successfully', rawRequest));
-    } catch (error) {
-      next(error);
+    // Verify it belongs to this project and is from browser extension
+    const projectIdStrings = rawRequest.projectIds.map(id => id.toString());
+    
+    if (!projectIdStrings.includes(projectId) || rawRequest.source !== 'browser-extension') {
+      throw ApiError.notFound('Browser request not found in this project');
     }
+
+    res.sendApiResponse(ApiResponse.success('Browser request retrieved successfully', rawRequest));
+  } catch (error) {
+    next(error);
   }
+}
 
   async updateBrowserRequest(req, res, next) {
     try {
@@ -389,7 +391,9 @@ class ProjectsController {
       // Get existing request to verify it's a browser request
       const existingRequest = await this.rawRequestService.findOne(requestId, orgId);
       
-      if (!existingRequest.projectIds.includes(projectId) || existingRequest.source !== 'browser-extension') {
+      const projectIdStrings = existingRequest.projectIds.map(id => id.toString());
+      
+      if (!projectIdStrings.includes(projectId) || existingRequest.source !== 'browser-extension') {
         throw ApiError.notFound('Browser request not found in this project');
       }
 
@@ -411,8 +415,10 @@ class ProjectsController {
 
       // Get existing request to verify it's a browser request
       const existingRequest = await this.rawRequestService.findOne(requestId, orgId);
+
+      const projectIdStrings = existingRequest.projectIds.map(id => id.toString());
       
-      if (!existingRequest.projectIds.includes(projectId) || existingRequest.source !== 'browser-extension') {
+      if (!projectIdStrings.includes(projectId) || existingRequest.source !== 'browser-extension') {
         throw ApiError.notFound('Browser request not found in this project');
       }
 
