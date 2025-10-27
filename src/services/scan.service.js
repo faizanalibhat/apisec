@@ -3,6 +3,8 @@ import Rule from '../models/rule.model.js';
 import RawRequest from '../models/rawRequest.model.js';
 import RawEnvironment from '../models/rawEnvironment.model.js';
 import TransformedRequest from '../models/transformedRequest.model.js';
+import { Projects } from '../models/projects.model.js';
+import ProjectsService from './projects.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { TransformerService } from './transformer.service.js';
 import { mqbroker } from './rabbitmq.service.js';
@@ -10,60 +12,98 @@ import { mqbroker } from './rabbitmq.service.js';
 export class ScanService {
     constructor() {
         this.transformerService = new TransformerService();
+        this.projectsService = new ProjectsService();
     }
 
     async createScan(scanData) {
         try {
             const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
 
-            // Validate environment if provided
-            if (environmentId && environmentId?.length) {
-                const environment = await RawEnvironment.findOne({
-                    _id: { $in: environmentId },
-                    orgId
-                });
+            // Check if this is a project-based scan (only projectId provided)
+            const isProjectBasedScan = projectIds && projectIds.length === 1 && 
+                                     !requestIds && !collectionIds && !ruleIds;
 
-                if (!environment) {
-                    throw ApiError.badRequest('Invalid environment ID provided');
-                }
-            }
-
-            // Validate rules exist
             let rules;
-
-            if (ruleIds && ruleIds?.length) {
-                rules = await Rule.find({
-                    _id: { $in: ruleIds },
-                    orgId
-                }).lean();
-            }
-            else {
-                rules = await Rule.find({ orgId }).lean();
-            }
-
             let requests;
+            let actualProjectIds = projectIds;
 
-            const filter = { orgId };
+            if (isProjectBasedScan) {
+                // Project-based scan flow
+                const projectId = projectIds[0];
+                
+                // Get project and verify it exists
+                const project = await this.projectsService.findById(projectId, orgId);
+                
+                // Get effective rules for the project
+                rules = await this.projectsService.getEffectiveRules(projectId, orgId, 'system');
+                
+                if (rules.length === 0) {
+                    throw ApiError.badRequest('No rules are configured for this project. Please configure rules before scanning.');
+                }
 
-            if (requestIds && requestIds.length > 0) {
-                filter._id = { $in: requestIds };
-            }
+                // Get browser extension requests for this project
+                requests = await RawRequest.find({
+                    orgId,
+                    projectIds: projectId,
+                    source: 'browser-extension'
+                }).lean();
 
-            if (collectionIds && collectionIds.length > 0) {
-                filter.collectionUid = { $in: collectionIds };
-            }
+                if (requests.length === 0) {
+                    throw ApiError.badRequest('No browser requests found for this project. Please import requests first.');
+                }
 
-            if (projectIds && projectIds.length > 0) {
-                filter.projectIds = { $in: projectIds };
-            }
+                // Update scan name if not provided
+                if (!scanData.name) {
+                    scanData.name = `${project.name} - Security Scan`;
+                }
+            } else {
+                // Traditional scan flow (existing logic)
+                
+                // Validate environment if provided
+                if (environmentId && environmentId?.length) {
+                    const environment = await RawEnvironment.findOne({
+                        _id: { $in: environmentId },
+                        orgId
+                    });
 
-            console.log("[+] APPLIED FILTER: ", filter);
+                    if (!environment) {
+                        throw ApiError.badRequest('Invalid environment ID provided');
+                    }
+                }
 
-            // Get all requests for the organization
-            requests = await RawRequest.find(filter).lean();
+                // Validate rules exist
+                if (ruleIds && ruleIds?.length) {
+                    rules = await Rule.find({
+                        _id: { $in: ruleIds },
+                        orgId
+                    }).lean();
+                } else {
+                    rules = await Rule.find({ orgId }).lean();
+                }
 
-            if (requests.length === 0) {
-                throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
+                // Build request filter
+                const filter = { orgId };
+
+                if (requestIds && requestIds.length > 0) {
+                    filter._id = { $in: requestIds };
+                }
+
+                if (collectionIds && collectionIds.length > 0) {
+                    filter.collectionUid = { $in: collectionIds };
+                }
+
+                if (projectIds && projectIds.length > 0) {
+                    filter.projectIds = { $in: projectIds };
+                }
+
+                console.log("[+] APPLIED FILTER: ", filter);
+
+                // Get all requests for the organization
+                requests = await RawRequest.find(filter).lean();
+
+                if (requests.length === 0) {
+                    throw ApiError.badRequest('No requests found for scanning. Please import requests first.');
+                }
             }
 
             // Create scan document
@@ -77,6 +117,8 @@ export class ScanService {
                 collectionIds,
                 environmentId,
                 authProfileId,
+                projectIds: actualProjectIds,
+                isProjectBasedScan,
                 status: 'pending',
                 stats: {
                     totalRequests: requests.length,
@@ -98,7 +140,8 @@ export class ScanService {
                         resourceMeta: {
                             product: "aim",
                             action: "scan_start",
-                            resource: "scan"
+                            resource: "scan",
+                            scanType: isProjectBasedScan ? "project-based" : "traditional"
                         }
                     },
                     authContext: scanData.authContext || 'system'
@@ -113,29 +156,19 @@ export class ScanService {
             // Publish scan to queue
             await mqbroker.publish("apisec", "apisec.scan.create", scan);
 
-            // Trigger async transformation process
-            // this.startScanProcess(scan._id, rules, requests).catch(error => {
-            //   console.error(`Scan ${scan._id} failed:`, error);
-            //   // Update scan status to failed
-            //   Scan.findByIdAndUpdate(scan._id, {
-            //     status: 'failed',
-            //     error: {
-            //       message: error.message,
-            //       stack: error.stack,
-            //       occurredAt: new Date()
-            //     }
-            //   }).exec();
-            // });
-
             // Send to VM notification
             try {
+                const scanTypeDescription = isProjectBasedScan ? 
+                    "project-based security testing" : 
+                    "security testing";
+                    
                 const sendToVMNotification = {
                     store: true,
                     orgId: orgId,
                     channels: ["email"],
                     notification: {
                         title: "Scan Queued for Processing",
-                        description: `Scan "${scan.name}" has been queued for security testing.`,
+                        description: `Scan "${scan.name}" has been queued for ${scanTypeDescription}.`,
                         resourceUrl: `/scans/${scan._id}`,
                         origin: "aim",
                         resourceMeta: {
@@ -179,27 +212,6 @@ export class ScanService {
         });
 
         try {
-            // Generate and execute transformed requests
-            // const findings = await this.transformerService.processTransformations(
-            //   scanId,
-            //   rules,
-            //   requests
-            // );
-
-            // // Calculate vulnerability summary
-            // const vulnerabilitySummary = findings.reduce((summary, finding) => {
-            //   summary[finding.vulnerability.severity]++;
-            //   return summary;
-            // }, { critical: 0, high: 0, medium: 0, low: 0 });
-
-            // // Update scan with results
-            // await Scan.findByIdAndUpdate(scanId, {
-            //   status: 'completed',
-            //   completedAt: new Date(),
-            //   findings,
-            //   'stats.vulnerabilitiesFound': findings.length,
-            //   vulnerabilitySummary
-            // });
             await mqbroker.publish("apisec", "apisec.scan.run", scan);
         } catch (error) {
             throw error; // Will be caught by parent catch
@@ -244,7 +256,18 @@ export class ScanService {
                     }
                 },
                 { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
-                // 3. Lookup transformed requests for each scan
+                
+                // 3. Lookup project details for project-based scans
+                {
+                    $lookup: {
+                        from: "projects",
+                        localField: "projectIds",
+                        foreignField: "_id",
+                        as: "projects"
+                    }
+                },
+                
+                // 4. Lookup transformed requests for each scan
                 {
                     $lookup: {
                         from: "transformedrequests",
@@ -253,7 +276,8 @@ export class ScanService {
                         as: "transformedRequests"
                     }
                 },
-                // 4. Lookup raw requests based on requestIds
+                
+                // 5. Lookup raw requests based on requestIds
                 {
                     $lookup: {
                         from: "raw_requests",
@@ -263,7 +287,7 @@ export class ScanService {
                     }
                 },
 
-                // 5. Lookup rules based on ruleIds
+                // 6. Lookup rules based on ruleIds
                 {
                     $lookup: {
                         from: "rules",
@@ -273,7 +297,7 @@ export class ScanService {
                     }
                 },
 
-                // 6. Compute counts and override stats
+                // 7. Compute counts and override stats
                 {
                     $addFields: {
                         completedRequests: {
@@ -288,6 +312,13 @@ export class ScanService {
                         totalRequests: { $size: "$transformedRequests" },
                         environmentId: "$environment._id",
                         environmentName: "$environment.name",
+                        projectNames: {
+                            $map: {
+                                input: "$projects",
+                                as: "project",
+                                in: "$$project.name"
+                            }
+                        },
                         // Override stats values with actual counts
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
@@ -295,17 +326,18 @@ export class ScanService {
                     }
                 },
 
-                // 7. Remove the lookup arrays to avoid large payloads
+                // 8. Remove the lookup arrays to avoid large payloads
                 {
                     $project: {
                         transformedRequests: 0,
                         rawRequests: 0,
                         rules: 0,
-                        findings: 0
+                        findings: 0,
+                        projects: 0
                     }
                 },
 
-                // 8. Sort, skip, limit
+                // 9. Sort, skip, limit
                 { $sort: sort },
                 { $skip: skip },
                 { $limit: limit }
@@ -335,13 +367,24 @@ export class ScanService {
                 _id: scanId,
                 orgId
             })
-                .populate('ruleIds', 'ruleName description')
-                .populate('requestIds', 'name method url')
+                .populate('ruleIds', 'rule_name description report.severity')
+                .populate('requestIds', 'name method url source')
                 .populate('environmentId', 'name workspaceName')
+                .populate('projectIds', 'name description')
                 .lean();
 
             if (!scan) {
                 throw ApiError.notFound('Scan not found');
+            }
+
+            // Add additional metadata for project-based scans
+            if (scan.isProjectBasedScan && scan.projectIds && scan.projectIds.length > 0) {
+                const project = scan.projectIds[0];
+                scan.projectInfo = {
+                    name: project.name,
+                    description: project.description,
+                    scanType: 'project-based'
+                };
             }
 
             return scan;
@@ -430,18 +473,26 @@ export class ScanService {
                 throw ApiError.notFound('Original scan not found');
             }
 
+            // Preserve scan data based on scan type
             const scanData = {
                 name: `[Rescan] ${originalScan.name}`,
                 description: `Rescan of "${originalScan.name}" initiated on ${new Date().toISOString()}`,
-                ruleIds: originalScan.ruleIds,
-                requestIds: originalScan.requestIds,
-                environmentId: originalScan.environmentId,
-                collectionIds: originalScan.collectionIds,
                 orgId: originalScan.orgId,
-                projectIds: originalScan.projectIds,
                 scope: originalScan.scope,
                 originalScanId: originalScan._id
             };
+
+            // For project-based scans, only include projectId
+            if (originalScan.isProjectBasedScan && originalScan.projectIds && originalScan.projectIds.length > 0) {
+                scanData.projectIds = originalScan.projectIds;
+            } else {
+                // For traditional scans, include all original parameters
+                scanData.ruleIds = originalScan.ruleIds;
+                scanData.requestIds = originalScan.requestIds;
+                scanData.environmentId = originalScan.environmentId;
+                scanData.collectionIds = originalScan.collectionIds;
+                scanData.projectIds = originalScan.projectIds;
+            }
 
             return await this.createScan(scanData);
         } catch (error) {

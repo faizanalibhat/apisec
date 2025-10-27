@@ -56,6 +56,10 @@ class RawRequestController {
         ...(projectId && { projectIds: ObjectId.createFromHexString(projectId) })
       };
 
+      if (req.query.source) {
+        filters.source = req.query.source;
+      }
+
       if (method) {
         filters.method = { $in: method.split(',').map(m => m.toUpperCase()) };
       }
@@ -113,6 +117,7 @@ class RawRequestController {
       supported_filters.workspace = await RawRequest.distinct("workspaceName", { orgId });
       supported_filters.hasVulns = ['true', 'false'];
       supported_filters.severity = ['critical', 'high', 'medium', 'low', 'info'];
+      supported_filters.source = ['postman', 'browser-extension'];
 
       // const response = ApiResponse.paginated(
       //   search ? 'Search results retrieved successfully' : 'Raw requests retrieved successfully',
