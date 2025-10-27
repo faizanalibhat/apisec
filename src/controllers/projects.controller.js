@@ -1,5 +1,6 @@
 import ProjectsService from '../services/projects.service.js';
 import RawRequestService from '../services/rawRequest.service.js';
+import { RuleService } from '../services/rule.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
@@ -9,6 +10,7 @@ class ProjectsController {
   constructor() {
     this.projectsService = new ProjectsService();
     this.rawRequestService = new RawRequestService();
+    this.ruleService = new RuleService();
 
     // Bind all methods
     this.getProjects = this.getProjects.bind(this);
@@ -18,6 +20,9 @@ class ProjectsController {
     this.deleteProject = this.deleteProject.bind(this);
     this.addCollection = this.addCollection.bind(this);
     this.removeCollection = this.removeCollection.bind(this);
+    this.getProjectRules = this.getProjectRules.bind(this);
+    this.getEffectiveRules = this.getEffectiveRules.bind(this);
+    this.updateProjectRules = this.updateProjectRules.bind(this);
     this.getBrowserRequests = this.getBrowserRequests.bind(this);
     this.createBrowserRequest = this.createBrowserRequest.bind(this);
     this.bulkCreateBrowserRequests = this.bulkCreateBrowserRequests.bind(this);
@@ -133,6 +138,83 @@ class ProjectsController {
 
       const project = await this.projectsService.removeCollection(projectId, orgId, collectionUid);
       res.sendApiResponse(ApiResponse.success('Collection removed successfully', project));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Rule management methods
+  async getProjectRules(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+
+      // Get project to see current rule configuration
+      const project = await this.projectsService.findById(projectId, orgId);
+
+      // Get all organization rules
+      const allRules = await this.ruleService.getRules({
+        orgId,
+        filters: {},
+        page: 1,
+        limit: 1000, // Get all rules
+        isActive: 'true'
+      });
+
+      const response = {
+        project: {
+          id: project._id,
+          name: project.name,
+          includedRuleIds: project.includedRuleIds || [],
+          excludedRuleIds: project.excludedRuleIds || []
+        },
+        availableRules: allRules.data,
+        stats: {
+          totalRules: allRules.data.length,
+          includedCount: project.includedRuleIds?.length || 0,
+          excludedCount: project.excludedRuleIds?.length || 0
+        }
+      };
+
+      res.sendApiResponse(ApiResponse.success('Project rules retrieved successfully', response));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getEffectiveRules(req, res, next) {
+    try {
+      const { orgId, email: userEmail } = req.authenticatedService;
+      const { projectId } = req.params;
+
+      const effectiveRules = await this.projectsService.getEffectiveRules(projectId, orgId, userEmail);
+      
+      res.sendApiResponse(ApiResponse.success('Effective rules calculated successfully', {
+        rules: effectiveRules,
+        count: effectiveRules.length
+      }));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateProjectRules(req, res, next) {
+    try {
+      const { orgId, email: userEmail } = req.authenticatedService;
+      const { projectId } = req.params;
+      const { includedRuleIds, excludedRuleIds } = req.body;
+
+      const updatedProject = await this.projectsService.updateRuleSettings(
+        projectId,
+        orgId,
+        {
+          includedRuleIds,
+          excludedRuleIds,
+          modifiedBy: userEmail
+        }
+      );
+
+      res.sendApiResponse(ApiResponse.success('Project rules updated successfully', updatedProject));
     } catch (error) {
       next(error);
     }
@@ -400,6 +482,9 @@ export const {
   deleteProject,
   addCollection,
   removeCollection,
+  getProjectRules,
+  getEffectiveRules,
+  updateProjectRules,
   getBrowserRequests,
   createBrowserRequest,
   bulkCreateBrowserRequests,

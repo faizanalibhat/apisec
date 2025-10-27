@@ -121,6 +121,23 @@ export const validateRemoveCollection = (req, res, next) => {
   next();
 };
 
+export const validateUpdateRules = (req, res, next) => {
+  const schema = Joi.object({
+    includedRuleIds: Joi.array()
+      .items(objectIdSchema)
+      .optional(),
+    excludedRuleIds: Joi.array()
+      .items(objectIdSchema)
+      .optional()
+  }).or('includedRuleIds', 'excludedRuleIds'); // At least one must be provided
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return next(ApiError.validationError('Invalid rule configuration', error.details));
+  }
+  next();
+};
+
 export const validateCreateBrowserRequest = (req, res, next) => {
   const { error } = browserRequestSchema.validate(req.body);
   if (error) {

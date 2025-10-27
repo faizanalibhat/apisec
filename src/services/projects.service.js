@@ -1,6 +1,7 @@
 import { Projects } from '../models/projects.model.js';
 import { PostmanCollections } from '../models/postman-collections.model.js';
 import RawRequest from '../models/rawRequest.model.js';
+import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
 
@@ -83,7 +84,16 @@ class ProjectsService {
   async update(projectId, orgId, updateData) {
     try {
       // Remove fields that shouldn't be updated
-      const { _id, orgId: _, createdAt, updatedAt, collectionUids, ...validUpdateData } = updateData;
+      const { 
+        _id, 
+        orgId: _, 
+        createdAt, 
+        updatedAt, 
+        collectionUids, 
+        includedRuleIds,
+        excludedRuleIds,
+        ...validUpdateData 
+      } = updateData;
 
       const project = await Projects.findOneAndUpdate(
         { _id: projectId, orgId },
@@ -211,6 +221,105 @@ class ProjectsService {
       this.handleError(error);
     } finally {
       await session.endSession();
+    }
+  }
+
+  // Rule management methods
+  async getEffectiveRules(projectId, orgId, userEmail) {
+    try {
+      const project = await this.findById(projectId, orgId);
+
+      // Get all active organization rules
+      const allRules = await Rule.find({
+        orgId,
+        isActive: true
+      }).lean();
+
+      // Apply rule filtering logic
+      let effectiveRules;
+
+      if (project.includedRuleIds && project.includedRuleIds.length > 0) {
+        // Whitelist approach - only use included rules
+        effectiveRules = allRules.filter(rule => 
+          project.includedRuleIds.some(id => id.toString() === rule._id.toString())
+        );
+      } else {
+        // Use all rules minus excluded ones
+        effectiveRules = allRules.filter(rule => 
+          !project.excludedRuleIds?.some(id => id.toString() === rule._id.toString())
+        );
+      }
+
+      return effectiveRules;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  async updateRuleSettings(projectId, orgId, ruleData) {
+    try {
+      const { includedRuleIds, excludedRuleIds, modifiedBy } = ruleData;
+
+      // Validate that rule IDs exist and belong to organization
+      if (includedRuleIds && includedRuleIds.length > 0) {
+        const validIncludedRules = await Rule.countDocuments({
+          _id: { $in: includedRuleIds },
+          orgId
+        });
+
+        if (validIncludedRules !== includedRuleIds.length) {
+          throw ApiError.badRequest('Some included rule IDs are invalid or do not belong to your organization');
+        }
+      }
+
+      if (excludedRuleIds && excludedRuleIds.length > 0) {
+        const validExcludedRules = await Rule.countDocuments({
+          _id: { $in: excludedRuleIds },
+          orgId
+        });
+
+        if (validExcludedRules !== excludedRuleIds.length) {
+          throw ApiError.badRequest('Some excluded rule IDs are invalid or do not belong to your organization');
+        }
+      }
+
+      // Update project with new rule settings
+      const updateData = {
+        'scanSettings.lastModifiedBy': modifiedBy,
+        'scanSettings.lastModifiedAt': new Date()
+      };
+
+      if (includedRuleIds !== undefined) {
+        updateData.includedRuleIds = includedRuleIds;
+      }
+
+      if (excludedRuleIds !== undefined) {
+        updateData.excludedRuleIds = excludedRuleIds;
+      }
+
+      const project = await Projects.findOneAndUpdate(
+        { _id: projectId, orgId },
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).lean();
+
+      if (!project) {
+        throw ApiError.notFound('Project not found');
+      }
+
+      // Return project with rule count statistics
+      const effectiveRules = await this.getEffectiveRules(projectId, orgId, modifiedBy);
+
+      return {
+        ...project,
+        ruleStats: {
+          effectiveRuleCount: effectiveRules.length,
+          includedCount: project.includedRuleIds?.length || 0,
+          excludedCount: project.excludedRuleIds?.length || 0
+        }
+      };
+    } catch (error) {
+      this.handleError(error);
     }
   }
 

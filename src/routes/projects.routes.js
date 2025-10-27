@@ -15,6 +15,11 @@ router.delete('/:projectId', validation.validateObjectId, projectsController.del
 router.post('/:projectId/collections/add', validation.validateObjectId, validation.validateAddCollection, projectsController.addCollection);
 router.post('/:projectId/collections/remove', validation.validateObjectId, validation.validateRemoveCollection, projectsController.removeCollection);
 
+// Rule management routes
+router.get('/:projectId/rules', validation.validateObjectId, projectsController.getProjectRules);
+router.get('/:projectId/rules/effective', validation.validateObjectId, projectsController.getEffectiveRules);
+router.put('/:projectId/rules', validation.validateObjectId, validation.validateUpdateRules, projectsController.updateProjectRules);
+
 // Browser request routes
 router.get('/:projectId/browser-requests', validation.validateObjectId, projectsController.getBrowserRequests);
 router.post('/:projectId/browser-requests', validation.validateObjectId, validation.validateCreateBrowserRequest, projectsController.createBrowserRequest);
