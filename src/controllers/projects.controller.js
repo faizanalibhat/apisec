@@ -1,119 +1,409 @@
-import { Projects } from "../models/projects.model.js";
-import { PostmanCollections } from "../models/postman-collections.model.js";
-import RawRequest from '../models/rawRequest.model.js';
+import ProjectsService from '../services/projects.service.js';
+import RawRequestService from '../services/rawRequest.service.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import { ApiError } from '../utils/ApiError.js';
+import mongoose from 'mongoose';
+const { ObjectId } = mongoose.Types;
 
+class ProjectsController {
+  constructor() {
+    this.projectsService = new ProjectsService();
+    this.rawRequestService = new RawRequestService();
 
+    // Bind all methods
+    this.getProjects = this.getProjects.bind(this);
+    this.getProject = this.getProject.bind(this);
+    this.createProject = this.createProject.bind(this);
+    this.updateProject = this.updateProject.bind(this);
+    this.deleteProject = this.deleteProject.bind(this);
+    this.addCollection = this.addCollection.bind(this);
+    this.removeCollection = this.removeCollection.bind(this);
+    this.getBrowserRequests = this.getBrowserRequests.bind(this);
+    this.createBrowserRequest = this.createBrowserRequest.bind(this);
+    this.bulkCreateBrowserRequests = this.bulkCreateBrowserRequests.bind(this);
+    this.getBrowserRequest = this.getBrowserRequest.bind(this);
+    this.updateBrowserRequest = this.updateBrowserRequest.bind(this);
+    this.deleteBrowserRequest = this.deleteBrowserRequest.bind(this);
+  }
 
-export class ProjectController {
+  async getProjects(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { page = 1, limit = 10, search } = req.query;
 
-    static getProjects = async (req, res, next) => {
-        const { orgId } = req.authenticatedService;
-        
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+      const paginationOptions = {
+        page: parseInt(page),
+        limit: parseInt(limit)
+      };
 
-        const [projects, total] = await Promise.all([
-        Projects.find({ orgId })
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .lean(),
-        Projects.countDocuments({ orgId })
-        ]);
-        
-        return res.json({ data: projects, total });
+      const result = await this.projectsService.findAll(orgId, search, paginationOptions);
+      
+      const response = ApiResponse.paginated(
+        'Projects retrieved successfully',
+        result.data,
+        {
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalItems: result.totalItems,
+          itemsPerPage: result.itemsPerPage
+        }
+      );
+
+      res.sendApiResponse(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getProject(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+
+      const project = await this.projectsService.findById(projectId, orgId);
+      res.sendApiResponse(ApiResponse.success('Project retrieved successfully', project));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createProject(req, res, next) {
+    try {
+      const { orgId, _id, firstName, lastName, email } = req.authenticatedService;
+
+      const projectData = {
+        ...req.body,
+        collaborators: [{
+          name: `${firstName} ${lastName}`,
+          email,
+          userId: _id,
+          role: 'owner'
+        }]
+      };
+
+      const project = await this.projectsService.create(orgId, projectData);
+      res.sendApiResponse(ApiResponse.created('Project created successfully', project));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateProject(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+
+      const project = await this.projectsService.update(projectId, orgId, req.body);
+      res.sendApiResponse(ApiResponse.success('Project updated successfully', project));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteProject(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+
+      await this.projectsService.delete(projectId, orgId);
+      res.sendApiResponse(ApiResponse.success('Project deleted successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async addCollection(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+      const { collectionUid } = req.body;
+
+      const project = await this.projectsService.addCollection(projectId, orgId, collectionUid);
+      res.sendApiResponse(ApiResponse.success('Collection added successfully', project));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async removeCollection(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+      const { collectionUid } = req.body;
+
+      const project = await this.projectsService.removeCollection(projectId, orgId, collectionUid);
+      res.sendApiResponse(ApiResponse.success('Collection removed successfully', project));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Browser request methods
+  async getBrowserRequests(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        sort,
+        method
+      } = req.query;
+
+      // Verify project exists
+      await this.projectsService.findById(projectId, orgId);
+
+      // Build filters for raw requests
+      const filters = {
+        orgId,
+        projectIds: ObjectId.createFromHexString(projectId),
+        source: 'browser-extension'
+      };
+
+      if (method) {
+        filters.method = { $in: method.split(',').map(m => m.toUpperCase()) };
+      }
+
+      // Parse sort parameter
+      let sortOptions = { createdAt: -1 };
+      if (sort) {
+        const [field, order] = sort.split(':');
+        const allowedSortFields = ['createdAt', 'method', 'name', 'url'];
+        if (allowedSortFields.includes(field)) {
+          sortOptions = { [field]: order === 'asc' ? 1 : -1 };
+        }
+      }
+
+      const paginationOptions = {
+        page: parseInt(page),
+        limit: parseInt(limit)
+      };
+
+      let result;
+      if (search && search.trim().length > 0) {
+        result = await this.rawRequestService.searchWithFiltersAndSort(
+          search,
+          filters,
+          sortOptions,
+          paginationOptions
+        );
+      } else {
+        result = await this.rawRequestService.findAllWithSort(
+          filters,
+          sortOptions,
+          paginationOptions
+        );
+      }
+
+      const response = ApiResponse.paginated(
+        'Browser requests retrieved successfully',
+        result.data,
+        {
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalItems: result.totalItems,
+          itemsPerPage: result.itemsPerPage
+        }
+      );
+
+      res.sendApiResponse(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async createBrowserRequest(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+      const browserData = req.body;
+
+      // Verify project exists and get its name
+      const project = await this.projectsService.findById(projectId, orgId);
+
+      // Transform browser extension data to raw request format
+      const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
+
+      const rawRequest = await this.rawRequestService.create(rawRequestData);
+      res.sendApiResponse(ApiResponse.created('Browser request created successfully', rawRequest));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async bulkCreateBrowserRequests(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId } = req.params;
+      const { requests } = req.body;
+
+      if (!Array.isArray(requests) || requests.length === 0) {
+        throw ApiError.badRequest('Requests must be a non-empty array');
+      }
+
+      // Verify project exists
+      const project = await this.projectsService.findById(projectId, orgId);
+
+      // Transform and create requests
+      const results = {
+        success: [],
+        failed: []
+      };
+
+      for (const [index, browserData] of requests.entries()) {
+        try {
+          const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
+          const created = await this.rawRequestService.create(rawRequestData);
+          results.success.push({ index, id: created._id });
+        } catch (error) {
+          results.failed.push({
+            index,
+            error: error.message,
+            data: browserData
+          });
+        }
+      }
+
+      res.sendApiResponse(ApiResponse.success(
+        `Created ${results.success.length} requests, ${results.failed.length} failed`,
+        results
+      ));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getBrowserRequest(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId, requestId } = req.params;
+
+      // Verify project exists
+      await this.projectsService.findById(projectId, orgId);
+
+      // Get the raw request
+      const rawRequest = await this.rawRequestService.findOne(requestId, orgId);
+
+      // Verify it belongs to this project and is from browser extension
+      if (!rawRequest.projectIds.includes(projectId) || rawRequest.source !== 'browser-extension') {
+        throw ApiError.notFound('Browser request not found in this project');
+      }
+
+      res.sendApiResponse(ApiResponse.success('Browser request retrieved successfully', rawRequest));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateBrowserRequest(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId, requestId } = req.params;
+
+      // Verify project exists
+      await this.projectsService.findById(projectId, orgId);
+
+      // Get existing request to verify it's a browser request
+      const existingRequest = await this.rawRequestService.findOne(requestId, orgId);
+      
+      if (!existingRequest.projectIds.includes(projectId) || existingRequest.source !== 'browser-extension') {
+        throw ApiError.notFound('Browser request not found in this project');
+      }
+
+      // Update the request
+      const updated = await this.rawRequestService.update(requestId, req.body, orgId);
+      res.sendApiResponse(ApiResponse.success('Browser request updated successfully', updated));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteBrowserRequest(req, res, next) {
+    try {
+      const { orgId } = req.authenticatedService;
+      const { projectId, requestId } = req.params;
+
+      // Verify project exists
+      await this.projectsService.findById(projectId, orgId);
+
+      // Get existing request to verify it's a browser request
+      const existingRequest = await this.rawRequestService.findOne(requestId, orgId);
+      
+      if (!existingRequest.projectIds.includes(projectId) || existingRequest.source !== 'browser-extension') {
+        throw ApiError.notFound('Browser request not found in this project');
+      }
+
+      await this.rawRequestService.delete(requestId, orgId);
+      res.sendApiResponse(ApiResponse.success('Browser request deleted successfully'));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Helper method to transform browser extension data to raw request format
+  transformBrowserRequest(browserData, project, orgId, projectId) {
+    const { request, timestamp, tabId } = browserData;
+    const { name, request: requestDetails, response } = request;
+
+    // Convert headers array to object
+    const headers = {};
+    if (Array.isArray(requestDetails.header)) {
+      requestDetails.header.forEach(h => {
+        headers[h.key] = h.value;
+      });
     }
 
-    static createProject = async (req, res, next) => {
-        const { orgId, _id, firstName, lastName, email } = req.authenticatedService;
-
-        let project = req.body;
-
-        const owner = {
-            name: firstName + " " + lastName,
-            email,
-            userId: _id,
-            role: "owner"
-        };
-
-        project.collaborators = [owner];
-
-        const created = await Projects.create({ orgId, ...project });
-
-        const collectionUids = project.collectionUids;
-
-        // add the id to collections & raw requests
-        await PostmanCollections.updateMany({ collectionUid: { $in: collectionUids }}, { $push: { projectIds: created._id } });
-
-        // add the id to collections & raw requests
-        await RawRequest.updateMany({ collectionUid: { $in: collectionUids }}, { $push: { projectIds: created._id } });
-
-        return res.json(created);
+    // Convert query params array to object
+    const params = {};
+    if (requestDetails.url?.query && Array.isArray(requestDetails.url.query)) {
+      requestDetails.url.query.forEach(q => {
+        params[q.key] = q.value;
+      });
     }
 
-    static updateProject = async (req, res, next) => {
-        const { orgId } = req.authenticatedService;
-        const { projectId } = req.params;
+    // Build the full URL
+    const url = requestDetails.url?.raw || '';
 
-        const updates = req.body;
-
-        const updated = await Projects.updateMany({ orgId, _id: projectId }, { $set: updates }, { new: true });
-
-        return res.json(updated);
-    }
-
-    static addCollection = async (req, res, next) => {
-
-        const { orgId } = req.authenticatedService;
-        const { projectId } = req.params;
-
-        const { collectionUid } = req.body;
-
-        const updated = await Projects.updateMany({ orgId, _id: projectId }, { $push: { collectionUids: collectionUid } }, { new: true });
-
-        // add the id to collections & raw requests
-        await PostmanCollections.updateMany({ collectionUid: collectionUid }, { $push: { projectIds: created._id } });
-
-        // add the id to collections & raw requests
-        await RawRequest.updateMany({ collectionUid: collectionUid }, { $push: { projectIds: created._id } });
-
-        return res.json(updated);
-    }
-
-    static removeCollection = async (req, res, next) => {
-
-        const { orgId } = req.authenticatedService;
-        const { projectId } = req.params;
-
-        const { collectionUid } = req.body;
-
-        const updated = await Projects.updateMany({ orgId, _id: projectId }, { $pull: { collectionUids: collectionUid } }, { new: true });
-
-        // add the id to collections & raw requests
-        await PostmanCollections.updateMany({ collectionUid: collectionUid }, { $pull: { projectIds: created._id } });
-
-        // add the id to collections & raw requests
-        await RawRequest.updateMany({ collectionUid: collectionUid }, { $pull: { projectIds: created._id } });
-
-        return res.json(updated);
-    }
-
-
-    static deleteCollection = async (req, res, next) => {
-
-        const { orgId } = req.authenticatedService;
-        const { projectId } = req.params;
-
-        const updated = await Projects.findOneAndDelete({ orgId, _id: projectId });
-
-        const collectionUids = updated.collectionUids;
-
-        // add the id to collections & raw requests
-        await PostmanCollections.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: updated._id } });
-
-        // add the id to collections & raw requests
-        await RawRequest.updateMany({ collectionUid: { $in: collectionUids } }, { $pull: { projectIds: updated._id } });
-
-        return res.json(updated);
-    }
+    return {
+      orgId,
+      projectIds: [ObjectId.createFromHexString(projectId)],
+      source: 'browser-extension',
+      name: name || requestDetails.method + ' ' + url,
+      method: requestDetails.method || 'GET',
+      url,
+      headers,
+      params,
+      body: requestDetails.body,
+      body_format: requestDetails.body ? 'json' : null,
+      collectionName: project.name,
+      workspaceName: project.name,
+      description: `Imported from browser extension on ${new Date(timestamp).toISOString()}`,
+      browserMetadata: {
+        tabId,
+        responseStatus: response?.status || response?.code,
+        responseHeaders: response?.header || [],
+        responseBody: response?.body || '',
+        extensionTimestamp: new Date(timestamp).getTime()
+      }
+    };
+  }
 }
+
+const controller = new ProjectsController();
+
+export const {
+  getProjects,
+  getProject,
+  createProject,
+  updateProject,
+  deleteProject,
+  addCollection,
+  removeCollection,
+  getBrowserRequests,
+  createBrowserRequest,
+  bulkCreateBrowserRequests,
+  getBrowserRequest,
+  updateBrowserRequest,
+  deleteBrowserRequest
+} = controller;
