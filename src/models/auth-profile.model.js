@@ -12,8 +12,8 @@ const customHeadersSchema = new mongoose.Schema({
 const schema = new mongoose.Schema({
     orgId: { type: String, required: true },
     name: { type: String, required: true },
-    authType: { type: String, enum: AUTH_TYPES, required: true },
-    authValue: { type: String, required: true },
+    authType: { type: String, enum: AUTH_TYPES, required: false },
+    authValue: { type: String, required: false },
     customHeaders: { type: [customHeadersSchema], default: [] },
 }, { timestamps: true });
 
