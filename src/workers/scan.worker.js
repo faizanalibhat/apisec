@@ -10,6 +10,7 @@ import { substituteVariables, substituteUrlVariables, substituteNonUrlVariables 
 import { PostmanParser } from "../utils/postman/postmanParser.js";
 import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js";
+import { AuthProfile } from "../models/auth-profile.model.js";
 import "../db/mongoose.js";
 
 import { syncRulesFromGithub } from "./sync-rules.worker.js";
@@ -20,7 +21,7 @@ const integrationService = new IntegrationService();
 
 
 async function transformationHandler(payload, msg, channel) {
-    const { _id, requestIds, ruleIds, environmentId, orgId, projectId, scope } = payload;
+    const { _id, requestIds, ruleIds, environmentId, orgId, projectId, scope, authProfileId } = payload;
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -65,6 +66,13 @@ async function transformationHandler(payload, msg, channel) {
             ? scope.map(pattern => new RegExp(pattern))
             : null;
 
+        let authProfile;
+
+        if (authProfileId) {
+            authProfile = await AuthProfile.findOne({ _id: authProfileId });
+            authProfile = authProfile.toJSON();
+        }
+
         // Generate transformed requests (cartesian product)
         for (let rule of rules) {
             for (let request of requests) {
@@ -73,6 +81,10 @@ async function transformationHandler(payload, msg, channel) {
 
                 // Apply environment variable substitution if environment is provided
                 let processedRequest = reqObject;
+
+                if (!reqObject.url) {
+                    continue;
+                }
 
                 if (environmentId && Object.keys(environmentVariables).length > 0) {
                     const urlResolvedRequest = substituteUrlVariables(reqObject, environmentVariables);
@@ -100,7 +112,7 @@ async function transformationHandler(payload, msg, channel) {
                 let transformed;
 
                 try {
-                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml });
+                    transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml, authProfile });
                 }
                 catch (err) {
                     console.log(err);
@@ -380,7 +392,7 @@ async function runAndMatchRequests(payload, msg, channel) {
         // Send the request
         // console.log(`[+] Sending request to: ${transformedRequest.url}`);
         
-        const response = await EngineService.sendRequest({ request: transformedRequest });
+        const response = await EngineService.sendRequest({ request: transformedRequest, rule: rule.parsed_yaml });
 
         if (response.error) {
             console.log("[+] request errored out ", response.message);
@@ -554,10 +566,11 @@ async function runAndMatchRequests(payload, msg, channel) {
                 $set: {
                     state: "complete",
                     executionResult: {
-                        matched: matchResult.matched,
+                        matched: matchResult.match,
                         executedAt: new Date(),
                         responseStatus: response.status,
-                        responseTime: response.time
+                        responseTime: response.time,
+                        response
                     }
                 }
             }

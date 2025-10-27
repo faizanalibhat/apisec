@@ -10,7 +10,7 @@ const REQUEST_TIMEOUT_MS = 10000;
 //   return headers;
 // };
 
-export const sendRequest = async ({ request }) => {
+export const sendRequest = async ({ request, rule }) => {
   const url = new URL(request.url);
   const cleanUrl = `${url.origin}${url.pathname}`;
 
@@ -22,6 +22,8 @@ export const sendRequest = async ({ request }) => {
     data: request.body ?? undefined,
     validateStatus: () => true,
     timeout: REQUEST_TIMEOUT_MS,
+
+    maxRedirects: rule.allow_redirect ? 10 : 0,
 
     // ✅ prevent Axios from adding defaults
     transformRequest: [(data, headers) => {

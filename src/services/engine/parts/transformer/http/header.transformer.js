@@ -98,7 +98,7 @@ function applyRules(headers, rules) {
 
 
 export default {
-  transform(request, headerRules) {
+  transform(request, headerRules, authProfile) {
 
     if (!headerRules) return [request];
 
@@ -111,6 +111,20 @@ export default {
     requests = transformedHeaders.map(headers => {
       const newRequest = _.cloneDeep(request);
       newRequest.headers = headers;
+
+            // add auth profile
+      if (authProfile) {
+        let newHeaders = { ...(newRequest.headers || {}) };
+
+        newHeaders.authorization = authProfile.authValue;
+
+        authProfile?.customHeaders?.map?.(([key, value]) => {
+          newHeaders[key] = value;
+        });
+
+        newRequest.headers = newHeaders;
+      }
+
       return newRequest;
     });
 

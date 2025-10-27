@@ -40,9 +40,7 @@ function statusMatch(status, match) {
     return status == match;
   }
   else if (Array.isArray(match)) {
-    for (let m of match) {
-      return status == m;
-    }
+    return match.includes(status);
   }
   else if (typeof match == 'object') {
     if (match.in && Array.isArray(match.in)) {
@@ -116,10 +114,13 @@ const match = ({ rule, response }) => {
 
   if (matchRule.header) {
     const headerMatchResult = headerMatch(response.headers, matchRule.header);
+
+    if (response.headers?.location) console.log(JSON.stringify(response.headers), JSON.stringify(matchRule.header), headerMatchResult);
+
     allMatches.push(headerMatchResult);
   }
 
-  console.log(allMatches)
+  // console.log(allMatches)
 
   const match = allMatches.every(m => m);
 

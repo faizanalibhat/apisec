@@ -61,7 +61,9 @@ function replace_all_values_one_by_one(body, value, format) {
 
   if (format === 'json') {
     try {
-      let newBody = JSON.parse(body);
+      const cleanBody = body.replace(/[\s\n\t]+/g, '');
+
+      let newBody = JSON.parse(cleanBody);
 
       const paramKeys = Object.keys(newBody);
 
@@ -77,6 +79,7 @@ function replace_all_values_one_by_one(body, value, format) {
       return clonedList;
     }
     catch(err) {
+      console.log(err.message);
       return [];
     }
   }
@@ -163,6 +166,20 @@ export default {
     requests = transformedBodies.map(body => {
       const newRequest = _.cloneDeep(request);
       newRequest.body = body;
+
+      // add auth profile
+      if (authProfile) {
+        let newHeaders = { ...(newRequest.headers || {}) };
+
+        newHeaders.authorization = authProfile.authValue;
+
+        authProfile?.customHeaders?.map?.(([key, value]) => {
+          newHeaders[key] = value;
+        });
+
+        newRequest.headers = newHeaders;
+      }
+
       return newRequest;
     });
 

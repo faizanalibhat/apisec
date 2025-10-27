@@ -1,5 +1,6 @@
 import { ScanService } from '../services/scan.service.js';
 import Scan from '../models/scan.model.js';
+import Vulnerabilities from '../models/vulnerability.model.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { mqbroker } from '../services/rabbitmq.service.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -18,12 +19,26 @@ class ScanController {
     this.deleteScan = this.deleteScan.bind(this);
     this.updateScanExecution = this.updateScanExecution.bind(this);
     this.rescan = this.rescan.bind(this);
+    this.flushScans = this.flushScans.bind(this);
+  }
+
+
+  async flushScans(req, res, next) {
+    try {
+      await Scan.deleteMany({ orgId: req.authenticatedService.orgId });
+      await Vulnerabilities.deleteMany({ orgId: req.authenticatedService.orgId });
+
+      return res.json({ message: "flushed" });
+    }
+    catch(err) {
+      return res.status(500).json({ message: "error flushing" });
+    }
   }
 
   async createScan(req, res, next) {
     try {
       const { orgId } = req.authenticatedService;
-      const { name, description, ruleIds, requestIds, environmentId, collectionIds = [], projectIds = [], scope } = req.body;
+      const { name, description, ruleIds, requestIds, environmentId, collectionIds = [], projectIds = [], scope, authProfileId } = req.body;
       
       const scanData = {
         name,
@@ -34,7 +49,8 @@ class ScanController {
         collectionIds,
         projectIds,
         orgId,
-        scope
+        scope,
+        authProfileId
       };
       
       const scan = await this.scanService.createScan(scanData);
@@ -196,5 +212,6 @@ export const {
   updateScanExecution,
   getScanFindings,
   deleteScan,
-  rescan
+  rescan,
+  flushScans
 } = scanController;

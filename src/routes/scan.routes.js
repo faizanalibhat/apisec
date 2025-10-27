@@ -14,6 +14,9 @@ router.post('/', scanController.createScan);
 // Get all scans with pagination
 router.get('/', scanController.getScans);
 
+// flush scan & vulns
+router.post("/flush", scanController.flushScans);
+
 // Get specific scan with findings
 router.get('/:id', scanController.getScan);
 

@@ -25,7 +25,6 @@ const transformedRequestSchema = new mongoose.Schema({
     ref: 'Rule',
     required: true
   },
-
   // Request data
   method: {
     type: String,
@@ -93,7 +92,8 @@ const transformedRequestSchema = new mongoose.Schema({
     matched: Boolean,
     executedAt: Date,
     responseStatus: Number,
-    responseTime: Number
+    responseTime: Number,
+    response: mongoose.Schema.Types.Mixed
   },
 
   // Vulnerability detection
