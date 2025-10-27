@@ -5,6 +5,19 @@ import { ApiError } from '../utils/ApiError.js';
 class RawRequestService {
     async create(data) {
         try {
+            // ADD validation for browser-extension source
+            if (data.source === 'browser-extension') {
+                // Set defaults for browser extension requests
+                data.integrationId = data.integrationId || null;
+                data.collectionName = data.collectionName || 'Browser Import';
+                data.workspaceName = data.workspaceName || 'Browser Extension';
+            } else {
+                // For postman source, integrationId is still required
+                if (!data.integrationId) {
+                    throw ApiError.badRequest('Integration ID is required for Postman requests');
+                }
+            }
+
             // Generate raw HTTP format if not provided
             if (!data.rawHttp) {
                 data.rawHttp = this.generateRawHttp(data);
@@ -105,46 +118,52 @@ class RawRequestService {
                 {
                     $addFields: {
                         postmanUrl: {
-                            $let: {
-                                vars: {
-                                    collectionData: {
-                                        $arrayElemAt: [
-                                            {
-                                                $filter: {
-                                                    input: {
-                                                        $reduce: {
-                                                            input: "$integration.workspaces",
-                                                            initialValue: [],
-                                                            in: {
-                                                                $concatArrays: [
-                                                                    "$$value",
-                                                                    {
-                                                                        $map: {
-                                                                            input: "$$this.collections",
-                                                                            as: "collection",
-                                                                            in: {
-                                                                                $mergeObjects: [
-                                                                                    "$$collection",
-                                                                                    {
-                                                                                        workspaceName: "$$this.name",
-                                                                                        workspaceId: "$$this.id"
+                            $cond: {
+                                if: { $and: [{ $ne: ["$integration", null] }, { $ne: ["$source", "browser-extension"] }] },
+                                then: {
+                                    $let: {
+                                        vars: {
+                                            collectionData: {
+                                                $arrayElemAt: [
+                                                    {
+                                                        $filter: {
+                                                            input: {
+                                                                $reduce: {
+                                                                    input: "$integration.workspaces",
+                                                                    initialValue: [],
+                                                                    in: {
+                                                                        $concatArrays: [
+                                                                            "$$value",
+                                                                            {
+                                                                                $map: {
+                                                                                    input: "$$this.collections",
+                                                                                    as: "collection",
+                                                                                    in: {
+                                                                                        $mergeObjects: [
+                                                                                            "$$collection",
+                                                                                            {
+                                                                                                workspaceName: "$$this.name",
+                                                                                                workspaceId: "$$this.id"
+                                                                                            }
+                                                                                        ]
                                                                                     }
-                                                                                ]
+                                                                                }
                                                                             }
-                                                                        }
+                                                                        ]
                                                                     }
-                                                                ]
-                                                            }
+                                                                }
+                                                            },
+                                                            cond: { $eq: ["$$this.name", "$collectionName"] }
                                                         }
                                                     },
-                                                    cond: { $eq: ["$$this.name", "$collectionName"] }
-                                                }
-                                            },
-                                            0
-                                        ]
+                                                    0
+                                                ]
+                                            }
+                                        },
+                                        in: "$$collectionData.postmanUrl"
                                     }
                                 },
-                                in: "$$collectionData.postmanUrl"
+                                else: null
                             }
                         }
                     }
@@ -449,7 +468,11 @@ class RawRequestService {
                 _id: id,
                 orgId,
             })
-                .populate('integrationId', 'name postmanUserId postmanTeamDomain workspaces')
+                .populate({
+                    path: 'integrationId',
+                    select: 'name postmanUserId postmanTeamDomain workspaces',
+                    match: { _id: { $exists: true } }  // ADD to handle null
+                })
                 .lean();
 
             if (!rawRequest) {
@@ -457,7 +480,7 @@ class RawRequestService {
             }
 
             // Add postman URL if integration exists
-            if (rawRequest.integrationId) {
+            if (rawRequest.integrationId && rawRequest.source !== 'browser-extension') {
                 const integration = rawRequest.integrationId;
                 const collectionData = this.findCollectionInIntegration(
                     integration,
@@ -587,10 +610,16 @@ class RawRequestService {
 
         let rawHttp = `${method} ${url} HTTP/1.1\n`;
 
-        // Add headers
-        Object.entries(headers).forEach(([key, value]) => {
-            rawHttp += `${key}: ${value}\n`;
-        });
+        // Handle headers as either object or array
+        if (Array.isArray(headers)) {
+            headers.forEach(header => {
+                rawHttp += `${header.key}: ${header.value}\n`;
+            });
+        } else if (headers && typeof headers === 'object') {
+            Object.entries(headers).forEach(([key, value]) => {
+                rawHttp += `${key}: ${value}\n`;
+            });
+        }
 
         // Add body if present
         if (body && ['POST', 'PUT', 'PATCH'].includes(method)) {

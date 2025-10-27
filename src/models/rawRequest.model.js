@@ -10,7 +10,7 @@ const rawRequestSchema = new mongoose.Schema(
     integrationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Integration',
-      required: true,
+      required: false,
       index: true,
     },
     workspaceId: { type: String },
@@ -53,7 +53,8 @@ const rawRequestSchema = new mongoose.Schema(
     },
     collectionName: {
       type: String,
-      required: true,
+      required: false,
+      default: 'Browser Import',
     },
     folderName: {
       type: String,
@@ -61,7 +62,24 @@ const rawRequestSchema = new mongoose.Schema(
     },
     workspaceName: {
       type: String,
-      required: true,
+      required: false,
+      default: 'Browser Extension',
+    },
+    source: {
+      type: String,
+      enum: ['postman', 'browser-extension'],
+      default: 'postman',
+      index: true,
+    },
+    browserMetadata: {
+      type: {
+        tabId: Number,
+        responseStatus: Number,
+        responseHeaders: mongoose.Schema.Types.Mixed,
+        responseBody: String,
+        extensionTimestamp: Number,
+      },
+      default: null,
     },
     postmanId: {
       type: String,
