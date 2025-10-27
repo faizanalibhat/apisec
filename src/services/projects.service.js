@@ -347,6 +347,7 @@ class ProjectsService {
   }
 
   handleError(error) {
+    console.error('Original error:', error);
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => ({
         field: err.path,
