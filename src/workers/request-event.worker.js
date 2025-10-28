@@ -1,6 +1,5 @@
 import { mqbroker } from "../services/rabbitmq.service.js";
 import { ScanService } from "../services/scan.service.js";
-import { EngineService } from "../services/engine/engine.service.js";
 import Scan from "../models/scan.model.js";
 import Requests from "../models/rawRequest.model.js";
 import Rules from "../models/rule.model.js";
