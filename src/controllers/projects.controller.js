@@ -193,7 +193,8 @@ class ProjectsController {
                 filters: {},
                 page: 1,
                 limit: 1000, // Get all rules
-                isActive: 'true'
+                isActive: 'true',
+                projectId
             });
 
             const response = {
