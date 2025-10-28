@@ -71,6 +71,8 @@ async function transformationHandler(payload, msg, channel) {
         if (authProfileId) {
             authProfile = await AuthProfile.findOne({ _id: authProfileId });
             authProfile = authProfile.toJSON();
+
+            console.log("got the auth profile: ", authProfile);
         }
 
         // Generate transformed requests (cartesian product)

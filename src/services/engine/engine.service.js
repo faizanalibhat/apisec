@@ -6,8 +6,8 @@ import { sendReport, sendRequest } from "./parts/sender.js";
 
 export class EngineService {
 
-    static async transform({ request, rule }) {
-        const transformed_requests = transformer.transform({ request, rule });
+    static async transform({ request, rule, authProfile }) {
+        const transformed_requests = transformer.transform({ request, rule, authProfile });
 
         return transformed_requests;
     }
