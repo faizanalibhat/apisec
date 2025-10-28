@@ -171,7 +171,7 @@ export default {
       if (authProfile) {
         let newHeaders = { ...(newRequest.headers || {}) };
 
-        newHeaders.authorization = authProfile.authValue;
+        // newHeaders.authorization = authProfile.authValue;
 
         authProfile?.customHeaders?.map?.(([key, value]) => {
           newHeaders[key] = value;
