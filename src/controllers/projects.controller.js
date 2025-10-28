@@ -120,37 +120,37 @@ class ProjectsController {
     }
 
     async getProjectDashboard(req, res, next) {
-    try {
-        const { orgId } = req.authenticatedService;
-        const { projectId } = req.params;
-        const { period = '7d' } = req.query;
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
+            const { period = '7d' } = req.query;
 
-        // Validate period format
-        const validPeriodPattern = /^\d+[dhm]$/;
-        if (!validPeriodPattern.test(period)) {
-            throw ApiError.badRequest('Invalid period format. Use format like 7d, 30d, 24h, 3m');
+            // Validate period format
+            const validPeriodPattern = /^\d+[dhm]$/;
+            if (!validPeriodPattern.test(period)) {
+                throw ApiError.badRequest('Invalid period format. Use format like 7d, 30d, 24h, 3m');
+            }
+
+            // Get project details first
+            const project = await this.projectsService.findById(projectId, orgId);
+
+            // Get dashboard data
+            const dashboardData = await this.projectsService.getProjectDashboard(
+                projectId,
+                orgId,
+                period
+            );
+
+            res.sendApiResponse(
+                ApiResponse.success('Project dashboard statistics fetched successfully', {
+                    name: project.name,
+                    ...dashboardData
+                })
+            );
+        } catch (error) {
+            next(error);
         }
-
-        // Get project details first
-        const project = await this.projectsService.findById(projectId, orgId);
-        
-        // Get dashboard data
-        const dashboardData = await this.projectsService.getProjectDashboard(
-            projectId,
-            orgId,
-            period
-        );
-
-        res.sendApiResponse(
-            ApiResponse.success('Project dashboard statistics fetched successfully', {
-                name: project.name,
-                ...dashboardData
-            })
-        );
-    } catch (error) {
-        next(error);
     }
-}
 
     async addCollection(req, res, next) {
         try {
@@ -239,6 +239,14 @@ class ProjectsController {
             const { orgId, email: userEmail } = req.authenticatedService;
             const { projectId } = req.params;
             const { ruleId, action } = req.body;
+
+            if (typeof action !== 'boolean') {
+                throw ApiError.badRequest('Action must be a boolean value');
+            }
+
+            if (!ruleId) {
+                throw ApiError.badRequest('Rule ID is required');
+            }
 
             const updatedProject = await this.projectsService.updateRuleSettings(
                 projectId,
