@@ -34,7 +34,7 @@ router.use("/transformed_requests", authenticateService(), transformedRequestsRo
 router.use("/raw-environments", authenticateService(), rawEnvironmentRoutes);
 router.use("/collections", authenticateService(), collectionsRoutes);
 router.use("/config", authenticateService(), configRoutes);
-router.use("/projects", authenticateService(), projectRoutes);
+router.use("/projects", projectRoutes);
 router.use("/auth-profiles", authenticateService(), authProfileRoute);
 
 

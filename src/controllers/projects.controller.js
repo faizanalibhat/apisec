@@ -302,6 +302,8 @@ class ProjectsController {
             const { projectId } = req.params;
             const browserData = req.body;
 
+            console.log("[+] BROWSER REQUEST RECIEVED: ", browserData);
+
             // Verify project exists and get its name
             const project = await this.projectsService.findById(projectId, orgId);
 
