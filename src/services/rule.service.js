@@ -2,6 +2,7 @@ import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import fs from "fs";
 import yaml from "js-yaml";
+import ProjectsService from './projects.service.js';
 
 
 // const default_yaml_content = fs.readFileSync("src/data/data.yaml");
@@ -30,24 +31,8 @@ class RuleService {
         }
     }
 
-    async getRules({ orgId, filters, page, limit, isActive }) {
+    async getRules({ orgId, filters, page, limit, isActive, projectId }) {
         try {
-
-            const orgWideCount = await Rule.countDocuments({ orgId });
-
-            // if (orgWideCount == 0) {
-            //     try {
-            //         const parsed = yaml.load(default_yaml_content);
-
-            //         const rules = parsed.rules || [];
-
-            //         await Rule.create(rules.map(r => ({ orgId, ...r, raw_yaml: yaml.dump(r), parsed_yaml: r })));
-            //     }
-            //     catch(e) {
-            //         console.log(e)
-            //     }
-            // }
-
             const query = { orgId, ...filters };
 
             // Filter by active status if provided
@@ -56,6 +41,12 @@ class RuleService {
             }
 
             const skip = (page - 1) * limit;
+
+            let project = null;
+            if (projectId) {
+                const projectService = new ProjectsService();
+                project = await projectService.findById(projectId, orgId);
+            }
 
             const [rules, total] = await Promise.all([
                 Rule.find(query)
@@ -66,8 +57,13 @@ class RuleService {
                 Rule.countDocuments(query)
             ]);
 
+            const data = rules.map(rule => {
+                const isInProject = project ? project.includedRuleIds.some(id => id.toString() === rule._id.toString()) : false;
+                return { ...rule, isInProject };
+            });
+
             return {
-                data: rules,
+                data,
                 pagination: {
                     total,
                     page,
