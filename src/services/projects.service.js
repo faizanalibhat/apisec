@@ -406,48 +406,38 @@ class ProjectsService {
 
     async updateRuleSettings(projectId, orgId, ruleData) {
         try {
-            const { includedRuleIds, excludedRuleIds, modifiedBy } = ruleData;
+            const { ruleId, isIncluded, modifiedBy } = ruleData;
 
-            // Validate that rule IDs exist and belong to organization
-            if (includedRuleIds && includedRuleIds.length > 0) {
-                const validIncludedRules = await Rule.countDocuments({
-                    _id: { $in: includedRuleIds },
+            // Validate that rule ID exists and belongs to organization
+            if (ruleId) {
+                const validRule = await Rule.countDocuments({
+                    _id: ruleId,
                     orgId
                 });
 
-                if (validIncludedRules !== includedRuleIds.length) {
-                    throw ApiError.badRequest('Some included rule IDs are invalid or do not belong to your organization');
+                if (validRule !== 1) {
+                    throw ApiError.badRequest('Rule ID is invalid or does not belong to your organization');
                 }
             }
 
-            if (excludedRuleIds && excludedRuleIds.length > 0) {
-                const validExcludedRules = await Rule.countDocuments({
-                    _id: { $in: excludedRuleIds },
-                    orgId
-                });
-
-                if (validExcludedRules !== excludedRuleIds.length) {
-                    throw ApiError.badRequest('Some excluded rule IDs are invalid or do not belong to your organization');
-                }
-            }
+            const updateOperation = isIncluded
+            ? { $addToSet: { includedRuleIds: ruleId } }
+            : { $pull: { includedRuleIds: ruleId } };
 
             // Update project with new rule settings
             const updateData = {
+                ...updateOperation,
+            };
+            
+            updateData['$set'] = {
                 'scanSettings.lastModifiedBy': modifiedBy,
                 'scanSettings.lastModifiedAt': new Date()
-            };
-
-            if (includedRuleIds !== undefined) {
-                updateData.includedRuleIds = includedRuleIds;
             }
 
-            if (excludedRuleIds !== undefined) {
-                updateData.excludedRuleIds = excludedRuleIds;
-            }
 
             const project = await Projects.findOneAndUpdate(
                 { _id: projectId, orgId },
-                { $set: updateData },
+                updateData,
                 { new: true, runValidators: true }
             ).lean();
 
