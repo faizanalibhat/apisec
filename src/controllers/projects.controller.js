@@ -4,6 +4,7 @@ import { RuleService } from '../services/rule.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
+import { mqbroker } from '../services/rabbitmq.service.js';
 const { ObjectId } = mongoose.Types;
 
 class ProjectsController {
@@ -308,6 +309,17 @@ class ProjectsController {
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
             const rawRequest = await this.rawRequestService.create(rawRequestData);
+
+            // Publish event to trigger scan
+            const eventPayload = {
+                projectId,
+                orgId,
+                rawRequestId: rawRequest._id,
+                source: 'request.created'
+            };
+            await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
+            console.log(`[+] Published request.created event for project ${projectId}`);
+
             res.sendApiResponse(ApiResponse.created('Browser request created successfully', rawRequest));
         } catch (error) {
             next(error);
@@ -338,6 +350,17 @@ class ProjectsController {
                     const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
                     const created = await this.rawRequestService.create(rawRequestData);
                     results.success.push({ index, id: created._id });
+
+                    // Publish event to trigger scan
+                    const eventPayload = {
+                        projectId,
+                        orgId,
+                        rawRequestId: created._id,
+                        source: 'request.created'
+                    };
+                    await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
+                    console.log(`[+] Published request.created event for project ${projectId}`);
+
                 } catch (error) {
                     results.failed.push({
                         index,
