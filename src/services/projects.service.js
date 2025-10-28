@@ -4,7 +4,7 @@ import RawRequest from '../models/rawRequest.model.js';
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
-import { Vulnerability } from '../models/vulnerability.model.js';
+import Vulnerability from '../models/vulnerability.model.js';
 import Scan from '../models/scan.model.js';
 const { ObjectId } = mongoose.Types;
 
