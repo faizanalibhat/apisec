@@ -53,12 +53,12 @@ async function requestEventWorker() {
     console.log('[+] REQUEST EVENT WORKER IS UP...');
 
     // Consume events where a new request is created in a project
-    await mqbroker.consume(
-        "apisec",
-        "apisec.request.created",
-        requestCreatedHandler,
-        'requestCreatedEventsQueue'
-    );
+    // await mqbroker.consume(
+    //     "apisec",
+    //     "apisec.request.created",
+    //     requestCreatedHandler,
+    //     'requestCreatedEventsQueue'
+    // );
 }
 
 // Start the worker
