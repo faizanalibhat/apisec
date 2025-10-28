@@ -350,6 +350,11 @@ class ProjectsController {
             // Verify project exists and get its name
             const project = await this.projectsService.findById(projectId, orgId);
 
+            if (!project) {
+                console.log("[+] PROJECT DOES NOT EXIST ", projectId);
+                throw ApiError.notFound('Project not found');
+            }
+
             // Transform browser extension data to raw request format
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
