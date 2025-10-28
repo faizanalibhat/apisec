@@ -318,9 +318,11 @@ class ProjectsController {
 
     async createBrowserRequest(req, res, next) {
         try {
-            const { orgId } = req.authenticatedService;
-            const { projectId } = req.params;
+            // const { orgId } = req.authenticatedService;
+            const { projectId, orgId } = req.params;
             const browserData = req.body;
+
+            console.log("[+] BROWSER REQUEST RECIEVED: ", browserData);
 
             // Verify project exists and get its name
             const project = await this.projectsService.findById(projectId, orgId);
@@ -348,8 +350,8 @@ class ProjectsController {
 
     async bulkCreateBrowserRequests(req, res, next) {
         try {
-            const { orgId } = req.authenticatedService;
-            const { projectId } = req.params;
+            // const { orgId } = req.authenticatedService;
+            const { projectId, orgId } = req.params;
             const { requests } = req.body;
 
             if (!Array.isArray(requests) || requests.length === 0) {

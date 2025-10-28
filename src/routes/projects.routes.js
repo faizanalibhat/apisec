@@ -1,33 +1,35 @@
 import express from 'express';
 import * as projectsController from '../controllers/projects.controller.js';
 import * as validation from '../middleware/validation/projects.validation.js';
+import { authenticateService } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Project routes
-router.get('/', projectsController.getProjects);
-router.post('/', projectsController.createProject);
-router.get('/:projectId', projectsController.getProject);
-router.patch('/:projectId', projectsController.updateProject);
-router.delete('/:projectId', projectsController.deleteProject);
-router.get('/:projectId/dashboard', projectsController.getProjectDashboard);
+router.get('/', authenticateService(), projectsController.getProjects);
+router.post('/', authenticateService(), projectsController.createProject);
+router.get('/:projectId', authenticateService(), projectsController.getProject);
+router.patch('/:projectId', authenticateService(), projectsController.updateProject);
+router.delete('/:projectId', authenticateService(), projectsController.deleteProject);
+router.get('/:projectId/dashboard', authenticateService(), projectsController.getProjectDashboard);
 
 // Collection management routes
-router.post('/:projectId/collections/add', projectsController.addCollection);
-router.post('/:projectId/collections/remove', projectsController.removeCollection);
+router.post('/:projectId/collections/add', authenticateService(), projectsController.addCollection);
+router.post('/:projectId/collections/remove', authenticateService(), projectsController.removeCollection);
 
 // Rule management routes
-router.get('/:projectId/rules', projectsController.getProjectRules);
-router.get('/:projectId/rules/effective', projectsController.getEffectiveRules);
-router.put('/:projectId/rules', projectsController.updateProjectRules);
+router.get('/:projectId/rules', authenticateService(), projectsController.getProjectRules);
+router.get('/:projectId/rules/effective', authenticateService(), projectsController.getEffectiveRules);
+router.put('/:projectId/rules', authenticateService(), projectsController.updateProjectRules);
+
 
 // Browser request routes
-router.get('/:projectId/browser-requests', projectsController.getBrowserRequests);
-router.post('/:projectId/browser-requests', projectsController.createBrowserRequest);
-router.post('/:projectId/browser-requests/bulk', projectsController.bulkCreateBrowserRequests);
-router.get('/:projectId/browser-requests/:requestId', projectsController.getBrowserRequest);
-router.put('/:projectId/browser-requests/:requestId', projectsController.updateBrowserRequest);
-router.delete('/:projectId/browser-requests/:requestId', projectsController.deleteBrowserRequest);
+router.get('/:projectId/browser-requests', authenticateService(), projectsController.getBrowserRequests);
+router.post('/:projectId/browser-requests/:orgId', projectsController.createBrowserRequest);
+router.post('/:projectId/browser-requests/bulk/:orgId', projectsController.bulkCreateBrowserRequests);
+router.get('/:projectId/browser-requests/:requestId', authenticateService(), projectsController.getBrowserRequest);
+router.put('/:projectId/browser-requests/:requestId', authenticateService(), projectsController.updateBrowserRequest);
+router.delete('/:projectId/browser-requests/:requestId', authenticateService(), projectsController.deleteBrowserRequest);
 
 export default router;
 
