@@ -44,7 +44,7 @@ class RuleController {
     async getRules(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
-            const { page = 1, limit = 20, isActive, search } = req.query;
+            const { page = 1, limit = 20, isActive, search, projectId } = req.query;
 
             const filters = {};
             filters.$and = [];
@@ -63,7 +63,8 @@ class RuleController {
                 filters,
                 page: parseInt(page),
                 limit: parseInt(limit),
-                isActive
+                isActive,
+                projectId
             });
 
             res.sendApiResponse(
