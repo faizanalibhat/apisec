@@ -4,12 +4,13 @@ import * as validation from '../middleware/validation/projects.validation.js';
 
 const router = express.Router();
 
-// Existing project routes
+// Project routes
 router.get('/', projectsController.getProjects);
 router.post('/', projectsController.createProject);
 router.get('/:projectId', projectsController.getProject);
 router.patch('/:projectId', projectsController.updateProject);
 router.delete('/:projectId', projectsController.deleteProject);
+router.get('/:projectId/dashboard', projectsController.getProjectDashboard);
 
 // Collection management routes
 router.post('/:projectId/collections/add', projectsController.addCollection);

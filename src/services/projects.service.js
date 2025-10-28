@@ -4,6 +4,9 @@ import RawRequest from '../models/rawRequest.model.js';
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
+import { Vulnerability } from '../models/vulnerability.model.js';
+import { Scan } from '../models/scan.model.js';
+const { ObjectId } = mongoose.Types;
 
 class ProjectsService {
     async findAll(orgId, search, pagination) {
@@ -342,6 +345,84 @@ class ProjectsService {
         }
 
         throw ApiError.internal('An error occurred while processing the project operation');
+    }
+
+    async getProjectDashboard(projectId, orgId) {
+        try {
+            // First verify the project exists and belongs to the organization
+            const project = await this.findById(projectId, orgId);
+    
+            // Get all vulnerabilities associated with this project's scans
+            const vulnerabilities = await Vulnerability.aggregate([
+                {
+                    $lookup: {
+                        from: 'scans',
+                        localField: 'scanId',
+                        foreignField: '_id',
+                        as: 'scan'
+                    }
+                },
+                {
+                    $unwind: '$scan'
+                },
+                {
+                    $match: {
+                        'scan.projectIds': ObjectId.createFromHexString(projectId),
+                        'scan.orgId': orgId
+                    }
+                }
+            ]);
+    
+            // Calculate state distribution
+            const stateDistribution = {
+                pending: 0,
+                resolved: 0,
+                false_positive: 0,
+                in_progress: 0,
+                accepted: 0
+            };
+    
+            // Calculate severity distribution
+            const severityDistribution = {
+                critical: 0,
+                high: 0,
+                medium: 0,
+                low: 0
+            };
+    
+            // Process vulnerabilities
+            vulnerabilities.forEach(vuln => {
+                // Count by state
+                const state = vuln.status || 'pending';
+                if (stateDistribution.hasOwnProperty(state)) {
+                    stateDistribution[state]++;
+                }
+    
+                // Count by severity
+                const severity = vuln.severity ? vuln.severity.toLowerCase() : 'low';
+                if (severityDistribution.hasOwnProperty(severity)) {
+                    severityDistribution[severity]++;
+                }
+            });
+    
+            // Calculate totals and remediation percentage
+            const totalVulns = vulnerabilities.length;
+            const totalResolved = stateDistribution.resolved + stateDistribution.false_positive;
+            const remediationPercentage = totalVulns > 0 
+                ? Math.round((totalResolved / totalVulns) * 100) 
+                : 0;
+    
+            return {
+                name: project.name,
+                state_distribution: stateDistribution,
+                severity_distribution: severityDistribution,
+                remediation: remediationPercentage,
+                totalVulns: totalVulns,
+                totalResolved: totalResolved
+            };
+        } catch (error) {
+            this.handleError(error);
+        }
     }
 }
 
