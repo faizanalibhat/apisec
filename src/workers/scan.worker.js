@@ -451,7 +451,7 @@ async function runAndMatchRequests(payload, msg, channel) {
             ruleSnapshot: rule,
             requestSnapshot: originalRequest,
             transformedRequestSnapshot: transformedRequest,
-            projectId: originalRequest.projectId, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
+            projectId: originalRequest.projectIds, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
                 // ruleId: templateContext.ruleId,
                 // requestId: templateContext.requestId,
                 // transformedRequestId: templateContext.transformedRequestId,
