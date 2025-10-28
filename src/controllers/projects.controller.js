@@ -30,7 +30,7 @@ class ProjectsController {
         this.getBrowserRequest = this.getBrowserRequest.bind(this);
         this.updateBrowserRequest = this.updateBrowserRequest.bind(this);
         this.deleteBrowserRequest = this.deleteBrowserRequest.bind(this);
-        this.getProjectDashboard = this.getProjectDashboard.bind(this);
+        // this.getProjectDashboard = this.getProjectDashboard.bind(this);
     }
 
 
