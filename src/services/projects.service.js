@@ -4,7 +4,8 @@ import RawRequest from '../models/rawRequest.model.js';
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
-import Vulnerability from '../models/vulnerability.model.js';
+import { getPeriodStartDate, getStateDistribution, getSeverityDistribution, getTotalVulnerabilities, getTotalResolvedVulnerabilities } from '../helpers/project.js';
+
 const { ObjectId } = mongoose.Types;
 
 class ProjectsService {
@@ -148,10 +149,9 @@ class ProjectsService {
         }
     }
 
-    // --------------------- Dashboard Starts ----------------------
     async getProjectDashboard(projectId, orgId, period) {
         try {
-            const startDate = this.getPeriodStartDate(period);
+            const startDate = getPeriodStartDate(period);
 
             // Execute all queries in parallel for performance
             const [
@@ -160,10 +160,10 @@ class ProjectsService {
                 totalVulns,
                 totalResolved
             ] = await Promise.all([
-                this.getStateDistribution(projectId, orgId, startDate),
-                this.getSeverityDistribution(projectId, orgId, startDate),
-                this.getTotalVulnerabilities(projectId, orgId, startDate),
-                this.getTotalResolvedVulnerabilities(projectId, orgId, startDate)
+                getStateDistribution(projectId, orgId, startDate),
+                getSeverityDistribution(projectId, orgId, startDate),
+                getTotalVulnerabilities(projectId, orgId, startDate),
+                getTotalResolvedVulnerabilities(projectId, orgId, startDate)
             ]);
 
             // Calculate remediation percentage
@@ -182,140 +182,6 @@ class ProjectsService {
             this.handleError(error);
         }
     }
-
-    getPeriodStartDate(period) {
-        const now = new Date();
-        const value = parseInt(period.slice(0, -1));
-        const unit = period.slice(-1);
-
-        switch (unit) {
-            case 'd': // days
-                now.setDate(now.getDate() - value);
-                break;
-            case 'h': // hours
-                now.setHours(now.getHours() - value);
-                break;
-            case 'm': // months
-                now.setMonth(now.getMonth() - value);
-                break;
-            default:
-                throw ApiError.badRequest('Invalid period unit. Use d for days, h for hours, or m for months');
-        }
-
-        return now;
-    }
-
-    async getStateDistribution(projectId, orgId, startDate) {
-        try {
-            const results = await Vulnerability.aggregate([
-                {
-                    $match: {
-                        projectId: ObjectId.createFromHexString(projectId),
-                        orgId,
-                        createdAt: { $gte: startDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: '$status',
-                        count: { $sum: 1 }
-                    }
-                }
-            ]);
-
-            // Initialize all possible states with 0
-            const distribution = {
-                active: 0,
-                resolved: 0
-            };
-
-            // Update with actual counts
-            results.forEach(result => {
-                if (result._id && distribution.hasOwnProperty(result._id)) {
-                    distribution[result._id] = result.count;
-                }
-            });
-
-            // Map 'active' to 'pending' for the UI
-            return {
-                pending: distribution.active,
-                resolved: distribution.resolved
-            };
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async getSeverityDistribution(projectId, orgId, startDate) {
-        try {
-            const results = await Vulnerability.aggregate([
-                {
-                    $match: {
-                        projectId: ObjectId.createFromHexString(projectId),
-                        orgId,
-                        createdAt: { $gte: startDate }
-                    }
-                },
-                {
-                    $group: {
-                        _id: '$severity',
-                        count: { $sum: 1 }
-                    }
-                }
-            ]);
-
-            // Initialize all severity levels with 0
-            const distribution = {
-                critical: 0,
-                high: 0,
-                medium: 0,
-                low: 0,
-                info: 0
-            };
-
-            // Update with actual counts
-            results.forEach(result => {
-                if (result._id && distribution.hasOwnProperty(result._id)) {
-                    distribution[result._id] = result.count;
-                }
-            });
-
-            // Remove 'info' if not needed in UI
-            delete distribution.info;
-
-            return distribution;
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async getTotalVulnerabilities(projectId, orgId, startDate) {
-        try {
-            const count = await Vulnerability.countDocuments({
-                projectId: ObjectId.createFromHexString(projectId),
-                orgId,
-                createdAt: { $gte: startDate }
-            });
-            return count;
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
-    async getTotalResolvedVulnerabilities(projectId, orgId, startDate) {
-        try {
-            const count = await Vulnerability.countDocuments({
-                projectId: ObjectId.createFromHexString(projectId),
-                orgId,
-                status: 'resolved',
-                createdAt: { $gte: startDate }
-            });
-            return count;
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-    // --------------------- Dashboard Ends ----------------------
 
 
     async addCollection(projectId, orgId, collectionUid) {
