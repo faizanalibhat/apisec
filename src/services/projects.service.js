@@ -5,8 +5,8 @@ import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
 import { Vulnerability } from '../models/vulnerability.model.js';
-// import { Scan } from '../models/scan.model.js';
-// const { ObjectId } = mongoose.Types;
+import Scan from '../models/scan.model.js';
+const { ObjectId } = mongoose.Types;
 
 class ProjectsService {
     async findAll(orgId, search, pagination) {

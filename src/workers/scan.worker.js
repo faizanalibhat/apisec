@@ -128,7 +128,7 @@ async function transformationHandler(payload, msg, channel) {
                                 orgId,
                                 requestId: request._id,
                                 ruleId: rule._id,
-                                projectId: projectId,
+                                // projectId: projectId,
                                 ...t,
                                 // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, []),
                             }
