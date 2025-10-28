@@ -33,24 +33,6 @@ class ProjectsController {
         this.getProjectDashboard = this.getProjectDashboard.bind(this);
     }
 
-    async getProjectDashboard(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { projectId } = req.params;
-
-            const dashboardData = await this.projectsService.getProjectDashboard(
-                projectId, 
-                orgId
-            );
-
-            res.sendApiResponse(ApiResponse.success(
-                'Project dashboard data retrieved successfully', 
-                dashboardData
-            ));
-        } catch (error) {
-            next(error);
-        }
-    }
 
     async getProjects(req, res, next) {
         try {
