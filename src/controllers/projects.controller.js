@@ -238,14 +238,14 @@ class ProjectsController {
         try {
             const { orgId, email: userEmail } = req.authenticatedService;
             const { projectId } = req.params;
-            const { ruleId, isIncluded } = req.body;
+            const { ruleId, action } = req.body;
 
             const updatedProject = await this.projectsService.updateRuleSettings(
                 projectId,
                 orgId,
                 {
                     ruleId,
-                    isIncluded,
+                    action,
                     modifiedBy: userEmail
                 }
             );

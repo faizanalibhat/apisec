@@ -406,7 +406,7 @@ class ProjectsService {
 
     async updateRuleSettings(projectId, orgId, ruleData) {
         try {
-            const { ruleId, isIncluded, modifiedBy } = ruleData;
+            const { ruleId, action, modifiedBy } = ruleData;
 
             // Validate that rule ID exists and belongs to organization
             if (ruleId) {
@@ -420,7 +420,7 @@ class ProjectsService {
                 }
             }
 
-            const updateOperation = isIncluded
+            const updateOperation = action
             ? { $addToSet: { includedRuleIds: ruleId } }
             : { $pull: { includedRuleIds: ruleId } };
 
