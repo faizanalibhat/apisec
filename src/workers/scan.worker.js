@@ -121,6 +121,8 @@ async function transformationHandler(payload, msg, channel) {
 
                 for (let t of transformed) {
 
+                    console.log("[+] CREATING REQUESTS WITH FOLLOWING PROJECT IDS: ", t.projectIds);
+
                     bulkOps.push({
                         insertOne: {
                             document: {
@@ -414,6 +416,8 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         if (matchResult.match) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
+
+            console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectIds);
             const templateContext = TemplateEngine.createVulnerabilityContext({
                 transformedRequest,
                 originalRequest,
@@ -447,7 +451,7 @@ async function runAndMatchRequests(payload, msg, channel) {
             ruleSnapshot: rule,
             requestSnapshot: originalRequest,
             transformedRequestSnapshot: transformedRequest,
-            projectId: originalRequest.projectId, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
+            projectId: originalRequest.projectIds, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
                 // ruleId: templateContext.ruleId,
                 // requestId: templateContext.requestId,
                 // transformedRequestId: templateContext.transformedRequestId,

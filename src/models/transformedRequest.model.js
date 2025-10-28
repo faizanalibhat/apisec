@@ -17,7 +17,7 @@ const transformedRequestSchema = new mongoose.Schema({
     required: true
   },
   projectId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: [mongoose.Schema.Types.ObjectId],
     ref: 'projects',
   },
   ruleId: {
