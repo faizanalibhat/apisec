@@ -21,6 +21,7 @@ router.get('/:projectId/rules', authenticateService(), projectsController.getPro
 router.get('/:projectId/rules/effective', authenticateService(), projectsController.getEffectiveRules);
 router.put('/:projectId/rules', authenticateService(), projectsController.updateProjectRules);
 
+
 // Browser request routes
 router.get('/:projectId/browser-requests', authenticateService(), projectsController.getBrowserRequests);
 router.post('/:projectId/browser-requests/:orgId', projectsController.createBrowserRequest);
