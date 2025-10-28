@@ -43,6 +43,7 @@ async function transformationHandler(payload, msg, channel) {
 
         // Fetch environment variables if environmentId is provided
         let environmentVariables = {};
+        
         if (environmentId) {
             const environment = await RawEnvironment.findById(environmentId).lean();
             if (environment) {

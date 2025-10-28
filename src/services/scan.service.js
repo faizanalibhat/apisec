@@ -10,6 +10,7 @@ import { TransformerService } from './transformer.service.js';
 import { mqbroker } from './rabbitmq.service.js';
 
 export class ScanService {
+
     constructor() {
         this.transformerService = new TransformerService();
         this.projectsService = new ProjectsService();
@@ -197,6 +198,72 @@ export class ScanService {
                 console.error('Failed to send VM queue notification:', notificationError);
                 // Don't throw - continue with scan creation
             }
+
+            return scan;
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+    async createProjectScanInstance(scanData) {
+        try {
+            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
+
+            // Check if this is a project-based scan (only projectId provided)
+            const isProjectBasedScan = true;
+
+            let rules;
+            let requests;
+            let actualProjectIds = projectIds;
+
+            // Project-based scan flow
+            const projectId = projectIds[0];
+            
+            // Get project and verify it exists
+            const project = await this.projectsService.findById(projectId, orgId);
+            
+            // Get effective rules for the project
+            rules = await this.projectsService.getEffectiveRules(projectId, orgId, 'system');
+            
+            if (rules.length === 0) {
+                throw ApiError.badRequest('No rules are configured for this project. Please configure rules before scanning.');
+            }
+
+            // Get browser extension requests for this project
+            requests = await RawRequest.find({
+                orgId,
+                _id: { $in: requestIds },
+                source: 'browser-extension'
+            }).lean();
+
+            if (requests.length === 0) {
+                throw ApiError.badRequest('No browser requests found for this project. Please import requests first.');
+            }
+
+            // Update scan name if not provided
+            // if (!scanData.name) {
+            //     scanData.name = `${project.name} - Security Scan`;
+            // }
+
+            // Create scan document
+            const scan = await Scan.findOneAndUpdate({ orgId, name: `Project-wide scan on ${name}` }, {
+                name: `Project-wide scan on ${name}`,
+                description,
+                orgId,
+                scope,
+                ruleIds: rules.map(r => r._id),
+                $push: { requestIds: requests.map(r => r._id) },
+                collectionIds,
+                environmentId,
+                authProfileId,
+                projectIds: actualProjectIds,
+                isProjectBasedScan,
+                status: 'pending',
+                'stats.totalRequests': { $inc: 1 },
+                'stats.totalRules': rules.length,
+                'stats.totalTransformedRequests': { $inc: requests.length * rules.length }
+            }, { upsert: true, new: true });
+
 
             return scan;
         } catch (error) {

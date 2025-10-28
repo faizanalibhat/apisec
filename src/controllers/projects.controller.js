@@ -343,7 +343,10 @@ class ProjectsController {
         try {
             // const { orgId } = req.authenticatedService;
             const { projectId, orgId } = req.params;
-            const browserData = req.body;
+            const browserData = req.body;k
+
+            // filter out reuqests to accept
+
 
             console.log("[+] BROWSER REQUEST RECIEVED: ", browserData);
 
@@ -358,16 +361,21 @@ class ProjectsController {
             // Transform browser extension data to raw request format
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
-            const rawRequest = await this.rawRequestService.create(rawRequestData);
+            const rawRequest = await this.rawRequestService.findOneAndUpdate({ orgId, method: rawRequestData.method, url: rawRequestData.url }, { $set: rawRequestData }, { new: true, upsert: true });
 
             // Publish event to trigger scan
             const eventPayload = {
                 projectId,
                 orgId,
-                rawRequestId: rawRequest._id,
+                request: rawRequest?.toJSON(),
+                project: project,
                 source: 'request.created'
             };
+
+
             await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
+
+
             console.log(`[+] Published request.created event for project ${projectId}`);
 
             res.sendApiResponse(ApiResponse.created('Browser request created successfully', rawRequest));
