@@ -11,7 +11,7 @@ router.post('/', authenticateService(), projectsController.createProject);
 router.get('/:projectId', authenticateService(), projectsController.getProject);
 router.patch('/:projectId', authenticateService(), projectsController.updateProject);
 router.delete('/:projectId', authenticateService(), projectsController.deleteProject);
-// router.get('/:projectId/dashboard', authenticateService(), projectsController.getProjectDashboard);
+router.get('/:projectId/dashboard', authenticateService(), projectsController.getProjectDashboard);
 
 // Collection management routes
 router.post('/:projectId/collections/add', authenticateService(), projectsController.addCollection);

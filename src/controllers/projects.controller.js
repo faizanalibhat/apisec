@@ -30,9 +30,8 @@ class ProjectsController {
         this.getBrowserRequest = this.getBrowserRequest.bind(this);
         this.updateBrowserRequest = this.updateBrowserRequest.bind(this);
         this.deleteBrowserRequest = this.deleteBrowserRequest.bind(this);
-        // this.getProjectDashboard = this.getProjectDashboard.bind(this);
+        this.getProjectDashboard = this.getProjectDashboard.bind(this);
     }
-
 
     async getProjects(req, res, next) {
         try {
@@ -119,6 +118,39 @@ class ProjectsController {
             next(error);
         }
     }
+
+    async getProjectDashboard(req, res, next) {
+    try {
+        const { orgId } = req.authenticatedService;
+        const { projectId } = req.params;
+        const { period = '7d' } = req.query;
+
+        // Validate period format
+        const validPeriodPattern = /^\d+[dhm]$/;
+        if (!validPeriodPattern.test(period)) {
+            throw ApiError.badRequest('Invalid period format. Use format like 7d, 30d, 24h, 3m');
+        }
+
+        // Get project details first
+        const project = await this.projectsService.findById(projectId, orgId);
+        
+        // Get dashboard data
+        const dashboardData = await this.projectsService.getProjectDashboard(
+            projectId,
+            orgId,
+            period
+        );
+
+        res.sendApiResponse(
+            ApiResponse.success('Project dashboard statistics fetched successfully', {
+                name: project.name,
+                ...dashboardData
+            })
+        );
+    } catch (error) {
+        next(error);
+    }
+}
 
     async addCollection(req, res, next) {
         try {
