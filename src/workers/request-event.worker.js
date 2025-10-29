@@ -44,7 +44,7 @@ async function requestCreatedHandler(payload, msg, channel) {
 
         const bulkOps = [];
 
-        const { _id: sId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
+        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
 
         for (let rule of rules) {
 
@@ -67,7 +67,7 @@ async function requestCreatedHandler(payload, msg, channel) {
                         document: {
                             scanId: scan._id,
                             orgId,
-                            requestId: request._id,
+                            requestId: requestId,
                             ruleId: rule._id,
                             // projectId: projectId,
                             ...t,
@@ -84,7 +84,7 @@ async function requestCreatedHandler(payload, msg, channel) {
             console.log(`[+] CREATED ${created_requests.length} TRANSFORMED REQUESTS`);
         }
     } catch (error) {
-        console.log(`[!] Error processing request.created event for project ${projectId}:`, error);
+        console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
     } finally {
         channel.ack(msg);
     }
