@@ -90,7 +90,9 @@ async function requestCreatedHandler(payload, msg, channel) {
 
             const created_requests = await TransformedRequest.bulkWrite(bulkOps);
 
-            await mqbroker.publish("apisec", "apisec.request.scan", { transformed_request_ids: created_requests.insertedIds, orgId, projectId, request, project });
+            const transformed_request_ids = Object.values(created_requests.insertedIds);
+
+            await mqbroker.publish("apisec", "apisec.request.scan", { transformed_request_ids, orgId, projectId, request, project });
 
             console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
         }
@@ -225,7 +227,7 @@ async function runScan(payload, msg, channel) {
 
 
     } catch (error) {
-        console.error(`[!] Error processing request.created event for project ${projectId}:`, error);
+        console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
     } finally {
         channel.ack(msg);
     }
