@@ -49,7 +49,7 @@ class RawRequestService {
                             {
                                 $match: {
                                     $expr: {
-                                        $eq: ["$requestSnapshot._id", "$raw_request_id"]
+                                        $eq: ["$requestSnapshot._id", "$$raw_request_id"]
                                     }
                                 }
                             },
@@ -72,8 +72,8 @@ class RawRequestService {
                 }
             ];
 
-            // Add hasVulns filtering (depends only on vulnStats)
-            if (hasVulns) {
+            // Add hasVulns filtering
+            if (hasVulns !== undefined) {
                 if (hasVulns === 'true') {
                     pipeline.push({ $match: { "vulnStats.0": { $exists: true } } });
                 } else if (hasVulns === 'false') {
@@ -94,13 +94,13 @@ class RawRequestService {
                 }
             });
 
-            // Add severity filtering (depends on vulnCounts)
+            // Add severity filtering
             if (severity) {
                 const severities = Array.isArray(severity) ? severity : severity.split(',');
                 const severityConditions = severities
                     .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
                     .map(s => ({ [`vulnCounts.${s}`]: { $gt: 0 } }));
-                
+
                 if (severityConditions.length > 0) {
                     pipeline.push({ $match: { $or: severityConditions } });
                 }
@@ -244,9 +244,8 @@ class RawRequestService {
                         pipeline: [
                             {
                                 $match: {
-                                    status: 'active',
                                     $expr: {
-                                        $eq: ["$requestSnapshot._id", "$raw_request_id"]
+                                        $eq: ["$requestSnapshot._id", "$$raw_request_id"]
                                     }
                                 }
                             },
@@ -269,8 +268,8 @@ class RawRequestService {
                 }
             ];
 
-            // Add hasVulns filtering (depends only on vulnStats)
-            if (hasVulns) {
+            // Add hasVulns filtering
+            if (hasVulns !== undefined) {
                 if (hasVulns === 'true') {
                     pipeline.push({ $match: { "vulnStats.0": { $exists: true } } });
                 } else if (hasVulns === 'false') {
@@ -291,13 +290,13 @@ class RawRequestService {
                 }
             });
 
-            // Add severity filtering (depends on vulnCounts)
+            // Add severity filtering
             if (severity) {
                 const severities = Array.isArray(severity) ? severity : severity.split(',');
                 const severityConditions = severities
                     .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
                     .map(s => ({ [`vulnCounts.${s}`]: { $gt: 0 } }));
-                
+
                 if (severityConditions.length > 0) {
                     pipeline.push({ $match: { $or: severityConditions } });
                 }
@@ -322,46 +321,52 @@ class RawRequestService {
                 {
                     $addFields: {
                         postmanUrl: {
-                            $let: {
-                                vars: {
-                                    collectionData: {
-                                        $arrayElemAt: [
-                                            {
-                                                $filter: {
-                                                    input: {
-                                                        $reduce: {
-                                                            input: "$integration.workspaces",
-                                                            initialValue: [],
-                                                            in: {
-                                                                $concatArrays: [
-                                                                    "$$value",
-                                                                    {
-                                                                        $map: {
-                                                                            input: "$$this.collections",
-                                                                            as: "collection",
-                                                                            in: {
-                                                                                $mergeObjects: [
-                                                                                    "$$collection",
-                                                                                    {
-                                                                                        workspaceName: "$$this.name",
-                                                                                        workspaceId: "$$this.id"
+                            $cond: {
+                                if: { $and: [{ $ne: ["$integration", null] }, { $ne: ["$source", "browser-extension"] }] },
+                                then: {
+                                    $let: {
+                                        vars: {
+                                            collectionData: {
+                                                $arrayElemAt: [
+                                                    {
+                                                        $filter: {
+                                                            input: {
+                                                                $reduce: {
+                                                                    input: "$integration.workspaces",
+                                                                    initialValue: [],
+                                                                    in: {
+                                                                        $concatArrays: [
+                                                                            "$$value",
+                                                                            {
+                                                                                $map: {
+                                                                                    input: "$$this.collections",
+                                                                                    as: "collection",
+                                                                                    in: {
+                                                                                        $mergeObjects: [
+                                                                                            "$$collection",
+                                                                                            {
+                                                                                                workspaceName: "$$this.name",
+                                                                                                workspaceId: "$$this.id"
+                                                                                            }
+                                                                                        ]
                                                                                     }
-                                                                                ]
+                                                                                }
                                                                             }
-                                                                        }
+                                                                        ]
                                                                     }
-                                                                ]
-                                                            }
+                                                                }
+                                                            },
+                                                            cond: { $eq: ["$$this.name", "$collectionName"] }
                                                         }
                                                     },
-                                                    cond: { $eq: ["$$this.name", "$collectionName"] }
-                                                }
-                                            },
-                                            0
-                                        ]
+                                                    0
+                                                ]
+                                            }
+                                        },
+                                        in: "$$collectionData.postmanUrl"
                                     }
                                 },
-                                in: "$$collectionData.postmanUrl"
+                                else: null
                             }
                         }
                     }
@@ -409,109 +414,6 @@ class RawRequestService {
         }
     }
 
-    async searchWithFiltersAndSort(searchQuery, additionalFilters, sortOptions, pagination) {
-        try {
-            const { page, limit } = pagination;
-            const skip = (page - 1) * limit;
-
-            const searchConditions = {
-                ...additionalFilters,
-                $text: { $search: searchQuery },
-            };
-
-            // Build sort with text score for search relevance
-            const searchSort = {
-                score: { $meta: 'textScore' },
-                ...sortOptions
-            };
-
-            // First get the raw requests with search
-            const [rawRequests, totalItems] = await Promise.all([
-                RawRequest.find(searchConditions)
-                    .populate('integrationId', 'name postmanUserId postmanTeamDomain workspaces')
-                    .sort(searchSort)
-                    .skip(skip)
-                    .limit(limit)
-                    .lean(),
-                RawRequest.countDocuments(searchConditions),
-            ]);
-
-            // Get vulnerability counts
-            const requestIds = rawRequests.map(r => r._id); // Keep as ObjectId
-            const vulnCounts = await Vulnerability.aggregate([
-                {
-                    $match: { "requestSnapshot._id": { $in: requestIds } }
-                },
-                {
-                    $group: {
-                        _id: {
-                            requestId: "$requestSnapshot._id",
-                            severity: "$severity"
-                        },
-                        count: { $sum: 1 }
-                    }
-                },
-                {
-                    $group: {
-                        _id: "$_id.requestId",
-                        vulnCounts: {
-                            $push: {
-                                k: "$_id.severity",
-                                v: "$count"
-                            }
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 1,
-                        vulnCounts: { $arrayToObject: "$vulnCounts" }
-                    }
-                }
-            ]);
-
-            const vulnCountsMap = new Map(vulnCounts.map(item => [item._id.toString(), item.vulnCounts]));
-
-            // Process each request to add postman URL and vuln counts
-            const data = rawRequests.map(request => {
-                const result = { ...request };
-                result.vulnCounts = vulnCountsMap.get(request._id.toString()) || {};
-
-                if (request.integrationId) {
-                    // Find the matching collection in integration
-                    const integration = request.integrationId;
-                    const collectionData = this.findCollectionInIntegration(
-                        integration,
-                        request.collectionName,
-                        request.workspaceName
-                    );
-
-                    if (collectionData) {
-                        result.postmanUrl = collectionData.postmanUrl;
-                    }
-
-                    // Clean up integration data
-                    result.integrationId = {
-                        _id: integration._id,
-                        name: integration.name
-                    };
-                }
-
-                return result;
-            });
-
-            return {
-                data,
-                currentPage: page,
-                totalPages: Math.ceil(totalItems / limit),
-                totalItems,
-                itemsPerPage: limit,
-            };
-        } catch (error) {
-            this.handleError(error);
-        }
-    }
-
     async findOne(id, orgId) {
         try {
             const rawRequest = await RawRequest.findOne({
@@ -528,6 +430,34 @@ class RawRequestService {
             if (!rawRequest) {
                 throw ApiError.notFound('Raw request not found');
             }
+
+            // Get vulnerability counts for this single request
+            const vulnCounts = await Vulnerability.aggregate([
+                {
+                    $match: { "requestSnapshot._id": rawRequest._id }
+                },
+                {
+                    $group: {
+                        _id: "$severity",
+                        count: { $sum: 1 }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        k: "$_id",
+                        v: "$count"
+                    }
+                }
+            ]);
+
+            // Convert to object
+            rawRequest.vulnCounts = vulnCounts.length > 0
+                ? vulnCounts.reduce((acc, curr) => {
+                    acc[curr.k] = curr.v;
+                    return acc;
+                }, {})
+                : {};
 
             // Add postman URL if integration exists
             if (rawRequest.integrationId && rawRequest.source !== 'browser-extension') {
