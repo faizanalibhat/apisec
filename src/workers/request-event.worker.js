@@ -125,7 +125,7 @@ async function runScan(payload, msg, channel) {
                     originalRequest: request,
                     response,
                     rule,
-                    matchResult,
+                    matchResult: match,
                     scanId: _id
                 });
 
@@ -202,7 +202,7 @@ async function runScan(payload, msg, channel) {
                             size: response.size || 0,
                             responseTime: response.time || 0
                         },
-                        highlight: matchResult?.highlight || "",
+                        highlight: match?.highlight || "",
                         // matchedCriteria: matchResult.matchedCriteria
                     }
                 };
