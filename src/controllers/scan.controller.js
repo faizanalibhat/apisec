@@ -174,7 +174,6 @@ class ScanController {
       updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
     }
     else if (status == "paused") {
-
       updated = await Scan.findOneAndUpdate({ _id: scanId, orgId }, { $set: { status }});
     }
     else if (status == "resume") {

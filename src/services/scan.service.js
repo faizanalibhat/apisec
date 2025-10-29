@@ -207,7 +207,7 @@ export class ScanService {
 
     async createProjectScanInstance(scanData) {
         try {
-            const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
+            const { name, status = "running", description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
 
             // Check if this is a project-based scan (only projectId provided)
             const isProjectBasedScan = true;
@@ -258,7 +258,7 @@ export class ScanService {
                 authProfileId,
                 projectIds: actualProjectIds,
                 isProjectBasedScan,
-                status: 'pending',
+                status,
                 'stats.totalRules': rules.length,
                 $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
             }, { upsert: true, new: true });

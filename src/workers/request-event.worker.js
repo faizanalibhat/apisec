@@ -34,6 +34,7 @@ async function requestCreatedHandler(payload, msg, channel) {
       orgId: orgId,
       requestIds: [request._id],
       projectIds: [projectId],
+      status: "running"
     };
 
     const scan = await scanService.createProjectScanInstance(scanData);
