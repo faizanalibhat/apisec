@@ -343,7 +343,7 @@ class ProjectsController {
         try {
             // const { orgId } = req.authenticatedService;
             const { projectId, orgId } = req.params;
-            const browserData = req.body;k
+            const browserData = req.body;
 
             // filter out reuqests to accept
 
