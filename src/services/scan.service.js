@@ -389,7 +389,15 @@ export class ScanService {
                         // Override stats values with actual counts
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
-                        "stats.totalTransformedRequests": { $size: "$transformedRequests" }
+                        "stats.totalTransformedRequests": { $size: "$transformedRequests" },
+                        "vulnerabilitySummary.total": {
+                            $add: [
+                                { $ifNull: ["$vulnerabilitySummary.critical", 0] },
+                                { $ifNull: ["$vulnerabilitySummary.high", 0] },
+                                { $ifNull: ["$vulnerabilitySummary.medium", 0] },
+                                { $ifNull: ["$vulnerabilitySummary.low", 0] }
+                            ]
+                        }
                     }
                 },
 
@@ -442,6 +450,12 @@ export class ScanService {
 
             if (!scan) {
                 throw ApiError.notFound('Scan not found');
+            }
+
+            // Add total to vulnerabilitySummary
+            if (scan.vulnerabilitySummary) {
+                const { critical = 0, high = 0, medium = 0, low = 0 } = scan.vulnerabilitySummary;
+                scan.vulnerabilitySummary.total = critical + high + medium + low;
             }
 
             // Add additional metadata for project-based scans
