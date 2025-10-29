@@ -18,11 +18,11 @@ export function supressFilter(rules = [], suppress) {
         };
     } else if (suppress === false || suppress === 'false') {
         return {
-            $nor: [
-                { "ruleSnapshot._id": { $in: ruleIds } },
-                { "requestSnapshot._id": { $in: requestIds } }
+            $and: [
+                { "ruleSnapshot._id": { $nin: ruleIds } },
+                { "requestSnapshot._id": { $nin: requestIds } }
             ]
-        };
+        }
     }
 
     return {};
