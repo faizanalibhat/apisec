@@ -44,7 +44,7 @@ class RawRequestService {
                 {
                     $lookup: {
                         from: "vulnerabilities",
-                        let: { raw_request_id: { $toString: "$_id" } },
+                        let: { raw_request_id: "$_id" },
                         pipeline: [
                             {
                                 $match: {
@@ -437,7 +437,7 @@ class RawRequestService {
             ]);
 
             // Get vulnerability counts
-            const requestIds = rawRequests.map(r => r._id.toString());
+            const requestIds = rawRequests.map(r => r._id); // Keep as ObjectId
             const vulnCounts = await Vulnerability.aggregate([
                 {
                     $match: { "requestSnapshot._id": { $in: requestIds } }
@@ -470,7 +470,7 @@ class RawRequestService {
                 }
             ]);
 
-            const vulnCountsMap = new Map(vulnCounts.map(item => [item._id, item.vulnCounts]));
+            const vulnCountsMap = new Map(vulnCounts.map(item => [item._id.toString(), item.vulnCounts]));
 
             // Process each request to add postman URL and vuln counts
             const data = rawRequests.map(request => {
