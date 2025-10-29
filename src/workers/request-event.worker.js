@@ -84,6 +84,8 @@ async function requestCreatedHandler(payload, msg, channel) {
         projectId,
         request,
         project,
+        scanId: scan._id,
+        scan,
       });
 
       console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
@@ -98,7 +100,7 @@ async function requestCreatedHandler(payload, msg, channel) {
 
 
 async function runScan(payload, msg, channel) {
-    const { orgId, projectId, request, project, transformed_request_ids } = payload;
+    const { orgId, projectId, request, project, transformed_request_ids, scanId, scan } = payload;
 
     try {
         if (transformed_request_ids.length === 0) {
@@ -126,7 +128,7 @@ async function runScan(payload, msg, channel) {
                     response,
                     rule,
                     matchResult: match,
-                    scanId: _id
+                    scanId: scanId
                 });
 
                 // PROCESS TEMPLATE FIELDS FROM THE RULE
@@ -142,8 +144,8 @@ async function runScan(payload, msg, channel) {
                 // Create vulnerability data with processed templates
                 const vulnerabilityData = {
                     orgId,
-                    scanName: name,
-                    scanId: _id,
+                    scanName: scan.name,
+                    scanId: scanId,
                 // Deprecated
                 // ruleId: rule._id,
                 // requestId: originalRequest._id,
