@@ -1,5 +1,6 @@
 import ProjectsService from '../services/projects.service.js';
 import RawRequestService from '../services/rawRequest.service.js';
+import RawRequest from '../models/rawRequest.model.js';
 import { RuleService } from '../services/rule.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -343,7 +344,7 @@ class ProjectsController {
         try {
             // const { orgId } = req.authenticatedService;
             const { projectId, orgId } = req.params;
-            const browserData = req.body;k
+            const browserData = req.body;
 
             // filter out reuqests to accept
 
@@ -361,7 +362,7 @@ class ProjectsController {
             // Transform browser extension data to raw request format
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
-            const rawRequest = await this.rawRequestService.findOneAndUpdate({ orgId, method: rawRequestData.method, url: rawRequestData.url }, { $set: rawRequestData }, { new: true, upsert: true });
+            const rawRequest = await RawRequest.findOneAndUpdate({ orgId, method: rawRequestData.method, url: rawRequestData.url }, { $set: rawRequestData }, { new: true, upsert: true });
 
             // Publish event to trigger scan
             const eventPayload = {
