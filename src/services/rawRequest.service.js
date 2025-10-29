@@ -69,22 +69,8 @@ class RawRequestService {
                         ],
                         as: "vulnStats"
                     }
-                },
-                {
-                    // Convert array of {k,v} into an object like {high: 2, critical: 5, ...}
-                    $addFields: {
-                        vulnCounts: {
-                            $cond: [
-                                { $gt: [{ $size: "$vulnStats" }, 0] },
-                                { $arrayToObject: "$vulnStats" },
-                                {}
-                            ]
-                        },
-                        hasVulnerabilities: { $gt: [{ $size: "$vulnStats" }, 0] }
-                    }
-                },
+                }
             ];
-
             // Add vulnerability filtering
             if (hasVulns) {
                 const conditions = [];
@@ -92,9 +78,9 @@ class RawRequestService {
 
                 severities.forEach(severity => {
                     if (severity === 'true') {
-                        conditions.push({ hasVulnerabilities: true });
+                        conditions.push({ "vulnStats.0": { $exists: true } });
                     } else if (severity === 'false') {
-                        conditions.push({ hasVulnerabilities: false });
+                        conditions.push({ "vulnStats": { $size: 0 } });
                     } else if (['critical', 'high', 'medium', 'low'].includes(severity)) {
                         conditions.push({ [`vulnCounts.${severity}`]: { $gt: 0 } });
                     }
@@ -107,6 +93,17 @@ class RawRequestService {
 
             // Continue with the rest of the pipeline
             pipeline.push(
+                {
+                    $addFields: {
+                        vulnCounts: {
+                            $cond: [
+                                { $gt: [{ $size: "$vulnStats" }, 0] },
+                                { $arrayToObject: "$vulnStats" },
+                                {}
+                            ]
+                        }
+                    }
+                },
                 {
                     $lookup: {
                         from: "integrations",
@@ -265,34 +262,21 @@ class RawRequestService {
                         ],
                         as: "vulnStats"
                     }
-                },
-                {
-                    $addFields: {
-                        vulnCounts: {
-                            $cond: [
-                                { $gt: [{ $size: "$vulnStats" }, 0] },
-                                { $arrayToObject: "$vulnStats" },
-                                {}
-                            ]
-                        },
-                        hasVulnerabilities: { $gt: [{ $size: "$vulnStats" }, 0] }
-                    }
                 }
             ];
-
             // Add vulnerability filtering
             const vulnConditions = [];
             if (hasVulns === 'true') {
-                vulnConditions.push({ hasVulnerabilities: true });
+                vulnConditions.push({ "vulnStats.0": { $exists: true } });
             } else if (hasVulns === 'false') {
-                vulnConditions.push({ hasVulnerabilities: false });
+                vulnConditions.push({ "vulnStats": { $size: 0 } });
             }
 
             if (severity) {
                 const severities = Array.isArray(severity) ? severity : severity.split(',');
                 const severityConditions = severities
                     .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
-                    .map(s => ({ [`vulnCounts.${s}`]: { $gt: 0 } }));
+                    .map(s => ({ [`vulnCounts.${severity}`]: { $gt: 0 } }));
 
                 if (severityConditions.length > 0) {
                     vulnConditions.push({ $or: severityConditions });
@@ -302,6 +286,18 @@ class RawRequestService {
             if (vulnConditions.length > 0) {
                 pipeline.push({ $match: { $and: vulnConditions } });
             }
+
+            pipeline.push({
+                $addFields: {
+                    vulnCounts: {
+                        $cond: [
+                            { $gt: [{ $size: "$vulnStats" }, 0] },
+                            { $arrayToObject: "$vulnStats" },
+                            {}
+                        ]
+                    }
+                }
+            });
 
             // Add integration lookup and postman URL
             pipeline.push(
