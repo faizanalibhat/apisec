@@ -34,6 +34,7 @@ async function requestCreatedHandler(payload, msg, channel) {
       orgId: orgId,
       requestIds: [request._id],
       projectIds: [projectId],
+      status: "running"
     };
 
     const scan = await scanService.createProjectScanInstance(scanData);
@@ -116,7 +117,7 @@ async function runScan(payload, msg, channel) {
 
             const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
-            if (match.match) {
+            if (match?.match) {
                 console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
                 const templateContext = TemplateEngine.createVulnerabilityContext({
