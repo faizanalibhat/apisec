@@ -63,7 +63,7 @@ async function requestCreatedHandler(payload, msg, channel) {
                 bulkOps.push({
                     insertOne: {
                         document: {
-                            scanId: _id,
+                            scanId: scan._id,
                             orgId,
                             requestId: request._id,
                             ruleId: rule._id,
