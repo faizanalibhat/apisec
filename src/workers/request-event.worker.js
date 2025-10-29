@@ -46,9 +46,16 @@ async function requestCreatedHandler(payload, msg, channel) {
 
         const bulkOps = [];
 
-        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
+        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u } = request;
 
-        console.log("[+] GIVEN REQUEST: ", cleanRequest);
+        let cleanRequest = { ...request };
+
+        // remove fieldws not needed
+        delete cleanRequest._id;
+        delete cleanRequest.id;
+        delete cleanRequest.__v;
+        delete cleanRequest.createdAt;
+        delete cleanRequest.updatedAt;
 
         for (let rule of rules) {
 
@@ -64,7 +71,7 @@ async function requestCreatedHandler(payload, msg, channel) {
 
             for (let t of transformed) {
 
-                console.log("[+] CREATING REQUESTS WITH FOLLOWING PROJECT IDS: ", t.projectIds);
+                console.log("new request: ", JSON.stringify(t));
 
                 bulkOps.push({
                     insertOne: {
@@ -80,10 +87,6 @@ async function requestCreatedHandler(payload, msg, channel) {
                     }
                 });
             }
-
-
-            console.log("[+] OPERATIONS: ", JSON.stringify(bulkOps));
-
 
             const created_requests = await TransformedRequest.bulkWrite(bulkOps);
 
