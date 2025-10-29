@@ -118,10 +118,9 @@ async function runScan(payload, msg, channel) {
 
             const transformedRequest = request;
             const originalRequest = await Requests.findOne({ _id: request.requestId }).lean();
+            const rule = await Rules.findOne({ _id: request.ruleId }).lean();
 
             const response = await EngineService.sendRequest({ request, rule: rule.parsed_yaml });
-
-            const rule = await Rules.findOne({ _id: request.ruleId }).lean();
 
             const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
