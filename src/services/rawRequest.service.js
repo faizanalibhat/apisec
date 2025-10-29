@@ -1,6 +1,7 @@
 import RawRequest from '../models/rawRequest.model.js';
 import Integration from '../models/integration.model.js';
 import { ApiError } from '../utils/ApiError.js';
+import Vulnerability from '../models/vulnerability.model.js';
 
 class RawRequestService {
     async create(data) {
@@ -435,9 +436,46 @@ class RawRequestService {
                 RawRequest.countDocuments(searchConditions),
             ]);
 
-            // Process each request to add postman URL
+            // Get vulnerability counts
+            const requestIds = rawRequests.map(r => r._id.toString());
+            const vulnCounts = await Vulnerability.aggregate([
+                {
+                    $match: { "requestSnapshot._id": { $in: requestIds } }
+                },
+                {
+                    $group: {
+                        _id: {
+                            requestId: "$requestSnapshot._id",
+                            severity: "$severity"
+                        },
+                        count: { $sum: 1 }
+                    }
+                },
+                {
+                    $group: {
+                        _id: "$_id.requestId",
+                        vulnCounts: {
+                            $push: {
+                                k: "$_id.severity",
+                                v: "$count"
+                            }
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        vulnCounts: { $arrayToObject: "$vulnCounts" }
+                    }
+                }
+            ]);
+
+            const vulnCountsMap = new Map(vulnCounts.map(item => [item._id, item.vulnCounts]));
+
+            // Process each request to add postman URL and vuln counts
             const data = rawRequests.map(request => {
                 const result = { ...request };
+                result.vulnCounts = vulnCountsMap.get(request._id.toString()) || {};
 
                 if (request.integrationId) {
                     // Find the matching collection in integration
