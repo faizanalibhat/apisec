@@ -8,7 +8,7 @@ export function supressFilter(rules = [], suppress) {
 
   const conditions = rules.map(rule => ({
     "requestSnapshot._id": ObjectId.createFromHexString(rule.requestId),
-    "ruleSnapshot._id": ObjectId.createFromHexString(rule.ruleI),
+    "ruleSnapshot._id": ObjectId.createFromHexString(rule.ruleId),
   }));
 
   // If suppress = true, return items that *match* these rules
