@@ -298,9 +298,9 @@ export class ScanService {
             }
 
             const sortKeyMap = {
-                'Rules': 'stats.totalRules',
-                'Progress': 'completedRequests',
-                'Vulnerabilities': 'vulnerabilitySummary.total',
+                'rules': 'stats.totalRules',
+                'progress': 'completedRequests',
+                'vulnerabilities': 'vulnerabilitySummary.total',
                 'createdAt': 'createdAt',
                 'name': 'name',
                 'status': 'status'
