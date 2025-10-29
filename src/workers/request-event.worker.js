@@ -44,12 +44,14 @@ async function requestCreatedHandler(payload, msg, channel) {
 
         const bulkOps = [];
 
+        const { _id: sId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
+
         for (let rule of rules) {
 
             let transformed;
 
             try {
-                transformed = await EngineService.transform({ request: request, rule: rule.parsed_yaml });
+                transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
             }
             catch (err) {
                 console.log(err);
