@@ -37,7 +37,7 @@ class RawRequestService {
             const skip = (page - 1) * limit;
 
             // Extract hasVulns filter
-            const { hasVulns, ...mongoFilters } = filters;
+            const { hasVulns, severity, ...mongoFilters } = filters;
 
             const pipeline = [
                 { $match: mongoFilters },
@@ -71,39 +71,43 @@ class RawRequestService {
                     }
                 }
             ];
-            // Add vulnerability filtering
+
+            // Add hasVulns filtering (depends only on vulnStats)
             if (hasVulns) {
-                const conditions = [];
-                const severities = Array.isArray(hasVulns) ? hasVulns : [hasVulns];
+                if (hasVulns === 'true') {
+                    pipeline.push({ $match: { "vulnStats.0": { $exists: true } } });
+                } else if (hasVulns === 'false') {
+                    pipeline.push({ $match: { "vulnStats": { $size: 0 } } });
+                }
+            }
 
-                severities.forEach(severity => {
-                    if (severity === 'true') {
-                        conditions.push({ "vulnStats.0": { $exists: true } });
-                    } else if (severity === 'false') {
-                        conditions.push({ "vulnStats": { $size: 0 } });
-                    } else if (['critical', 'high', 'medium', 'low'].includes(severity)) {
-                        conditions.push({ [`vulnCounts.${severity}`]: { $gt: 0 } });
+            // Now, add the vulnCounts field
+            pipeline.push({
+                $addFields: {
+                    vulnCounts: {
+                        $cond: [
+                            { $gt: [{ $size: "$vulnStats" }, 0] },
+                            { $arrayToObject: "$vulnStats" },
+                            {}
+                        ]
                     }
-                });
+                }
+            });
 
-                if (conditions.length > 0) {
-                    pipeline.push({ $match: { $or: conditions } });
+            // Add severity filtering (depends on vulnCounts)
+            if (severity) {
+                const severities = Array.isArray(severity) ? severity : severity.split(',');
+                const severityConditions = severities
+                    .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
+                    .map(s => ({ [`vulnCounts.${s}`]: { $gt: 0 } }));
+                
+                if (severityConditions.length > 0) {
+                    pipeline.push({ $match: { $or: severityConditions } });
                 }
             }
 
             // Continue with the rest of the pipeline
             pipeline.push(
-                {
-                    $addFields: {
-                        vulnCounts: {
-                            $cond: [
-                                { $gt: [{ $size: "$vulnStats" }, 0] },
-                                { $arrayToObject: "$vulnStats" },
-                                {}
-                            ]
-                        }
-                    }
-                },
                 {
                     $lookup: {
                         from: "integrations",
@@ -188,7 +192,7 @@ class RawRequestService {
                         data: [
                             { $skip: skip },
                             { $limit: limit },
-                            { $project: { vulnStats: 0, integration: 0, hasVulnerabilities: 0 } }
+                            { $project: { vulnStats: 0, integration: 0 } }
                         ],
                         totalCount: [
                             { $count: "total" }
@@ -236,7 +240,7 @@ class RawRequestService {
                 {
                     $lookup: {
                         from: "vulnerabilities",
-                        let: { raw_request_id: { $toString: "$_id" } },
+                        let: { raw_request_id: "$_id" },
                         pipeline: [
                             {
                                 $match: {
@@ -264,29 +268,17 @@ class RawRequestService {
                     }
                 }
             ];
-            // Add vulnerability filtering
-            const vulnConditions = [];
-            if (hasVulns === 'true') {
-                vulnConditions.push({ "vulnStats.0": { $exists: true } });
-            } else if (hasVulns === 'false') {
-                vulnConditions.push({ "vulnStats": { $size: 0 } });
-            }
 
-            if (severity) {
-                const severities = Array.isArray(severity) ? severity : severity.split(',');
-                const severityConditions = severities
-                    .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
-                    .map(s => ({ [`vulnCounts.${severity}`]: { $gt: 0 } }));
-
-                if (severityConditions.length > 0) {
-                    vulnConditions.push({ $or: severityConditions });
+            // Add hasVulns filtering (depends only on vulnStats)
+            if (hasVulns) {
+                if (hasVulns === 'true') {
+                    pipeline.push({ $match: { "vulnStats.0": { $exists: true } } });
+                } else if (hasVulns === 'false') {
+                    pipeline.push({ $match: { "vulnStats": { $size: 0 } } });
                 }
             }
 
-            if (vulnConditions.length > 0) {
-                pipeline.push({ $match: { $and: vulnConditions } });
-            }
-
+            // Now, add the vulnCounts field
             pipeline.push({
                 $addFields: {
                     vulnCounts: {
@@ -298,6 +290,18 @@ class RawRequestService {
                     }
                 }
             });
+
+            // Add severity filtering (depends on vulnCounts)
+            if (severity) {
+                const severities = Array.isArray(severity) ? severity : severity.split(',');
+                const severityConditions = severities
+                    .filter(s => ['critical', 'high', 'medium', 'low', 'info'].includes(s))
+                    .map(s => ({ [`vulnCounts.${s}`]: { $gt: 0 } }));
+                
+                if (severityConditions.length > 0) {
+                    pipeline.push({ $match: { $or: severityConditions } });
+                }
+            }
 
             // Add integration lookup and postman URL
             pipeline.push(
@@ -381,7 +385,7 @@ class RawRequestService {
                         data: [
                             { $skip: skip },
                             { $limit: limit },
-                            { $project: { vulnStats: 0, integration: 0, hasVulnerabilities: 0, score: 0 } }
+                            { $project: { vulnStats: 0, integration: 0, score: 0 } }
                         ],
                         totalCount: [
                             { $count: "total" }
