@@ -1,11 +1,14 @@
+import mongoose from "mongoose";
+const { ObjectId } = mongoose.Types;
+
 export function supressFilter(rules = [], suppress) {
   if (!rules.length) {
     return suppress ? { _id: { $in: [] } } : {};
   }
 
   const conditions = rules.map(rule => ({
-    "requestSnapshot._id": rule.requestId,
-    "ruleSnapshot._id": rule.ruleId
+    "requestSnapshot._id": ObjectId.createFromHexString(rule.requestId),
+    "ruleSnapshot._id": ObjectId.createFromHexString(rule.ruleI),
   }));
 
   // If suppress = true, return items that *match* these rules
