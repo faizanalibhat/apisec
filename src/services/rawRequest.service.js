@@ -55,15 +55,25 @@ class RawRequestService {
                             },
                             {
                                 $group: {
-                                    _id: "$severity",
-                                    count: { $sum: 1 }
+                                    _id: null,
+                                    severities: {
+                                        $push: {
+                                            k: "$_id",
+                                            v: "$count"
+                                        }
+                                    },
+                                    total: { $sum: "$count" }
                                 }
                             },
                             {
                                 $project: {
                                     _id: 0,
-                                    k: "$_id",   // key
-                                    v: "$count"  // value
+                                    stats: {
+                                        $concatArrays: [
+                                            "$severities",
+                                            [{ k: "total", v: "$total" }]
+                                        ]
+                                    }
                                 }
                             }
                         ],
@@ -87,7 +97,7 @@ class RawRequestService {
                     vulnCounts: {
                         $cond: [
                             { $gt: [{ $size: "$vulnStats" }, 0] },
-                            { $arrayToObject: "$vulnStats" },
+                            { $arrayToObject: { $arrayElemAt: ["$vulnStats.stats", 0] } },
                             {}
                         ]
                     }
@@ -251,15 +261,25 @@ class RawRequestService {
                             },
                             {
                                 $group: {
-                                    _id: "$severity",
-                                    count: { $sum: 1 }
+                                    _id: null,
+                                    severities: {
+                                        $push: {
+                                            k: "$_id",
+                                            v: "$count"
+                                        }
+                                    },
+                                    total: { $sum: "$count" }
                                 }
                             },
                             {
                                 $project: {
                                     _id: 0,
-                                    k: "$_id",
-                                    v: "$count"
+                                    stats: {
+                                        $concatArrays: [
+                                            "$severities",
+                                            [{ k: "total", v: "$total" }]
+                                        ]
+                                    }
                                 }
                             }
                         ],
@@ -283,7 +303,7 @@ class RawRequestService {
                     vulnCounts: {
                         $cond: [
                             { $gt: [{ $size: "$vulnStats" }, 0] },
-                            { $arrayToObject: "$vulnStats" },
+                            { $arrayToObject: { $arrayElemAt: ["$vulnStats.stats", 0] } },
                             {}
                         ]
                     }
