@@ -1,29 +1,19 @@
+import mongoose from "mongoose";
+const { ObjectId } = mongoose.Types;
+
 export function supressFilter(rules = [], suppress) {
-    if (!rules.length) {
-        return suppress ? { _id: { $in: [] } } : {};
-    }
+  if (!rules.length) {
+    return suppress ? { _id: { $in: [] } } : {};
+  }
 
-    const ruleIds = rules.map(r => r.ruleId);
-    const requestIds = rules.map(r => r.requestId);
+  const conditions = rules.map(rule => ({
+    "requestSnapshot._id": ObjectId.createFromHexString(rule.requestId),
+    "ruleSnapshot._id": ObjectId.createFromHexString(rule.ruleI),
+  }));
 
-    if (suppress === true || suppress === 'true') {
-        // ✅ Return only suppressed vulnerabilities
-        return {
-            $and: [
-                { "ruleSnapshot._id": { $in: ruleIds } },
-                { "requestSnapshot._id": { $in: requestIds } }
-            ]
-        };
-    } else if (suppress === false || suppress === 'false') {
-        // 🚫 Exclude suppressed vulnerabilities
-        return {
-            $nor: [
-                { "ruleSnapshot._id": { $in: ruleIds } },
-                { "requestSnapshot._id": { $in: requestIds } }
-            ]
-        };
-    }
+  // If suppress = true, return items that *match* these rules
+  if (suppress) return { $and: conditions };
 
-    // 🟢 Default — no suppression filter applied
-    return {};
+  // Otherwise, return items that *do not match* these rules
+  return { $nor: conditions };
 }
