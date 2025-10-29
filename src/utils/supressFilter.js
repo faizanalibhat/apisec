@@ -3,7 +3,7 @@ const { ObjectId } = mongoose.Types;
 
 export function supressFilter(rules = [], suppress) {
     if (!rules.length) {
-        return suppress ? { _id: { $in: [] } } : {};
+        return {};
     }
 
     const ruleIds = rules.map(r => ObjectId.createFromHexString(r.ruleId));
