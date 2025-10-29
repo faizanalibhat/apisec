@@ -5,6 +5,13 @@ export function vulnParser(vuln){
         title: vuln.title,
         assessmentId: vuln.assessmentId,
         description: vuln.description,
+        fullMarkdownReport: `# ${vuln.title}
+#### ${vuln.description}
+## Steps To Reproduce
+${vuln.stepsToReproduce}
+## Impact
+${vuln.impact}
+        `,
         stepsToReproduce: vuln.stepsToReproduce || 'No steps provided',
         impact: vuln.impact || 'No impact provided',
         cvssScore: vuln?.cvssScore || '0',
