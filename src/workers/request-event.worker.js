@@ -71,7 +71,7 @@ async function requestCreatedHandler(payload, msg, channel) {
 
             for (let t of transformed) {
 
-                console.log("new request: ", JSON.stringify(t));
+                console.log("new request: ", t);
 
                 bulkOps.push({
                     insertOne: {
@@ -125,7 +125,7 @@ async function runScan(payload, msg, channel) {
             const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
             if (match.match) {
-                console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectIds);
+                console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
                 const templateContext = TemplateEngine.createVulnerabilityContext({
                     transformedRequest: request,
