@@ -8,6 +8,7 @@ import { ApiError } from '../utils/ApiError.js';
 const ALLOWED_SCAN_STATUSES = ["paused", "resume", "cancelled", "halted"];
 
 class ScanController {
+  
   constructor() {
     this.scanService = new ScanService();
     
