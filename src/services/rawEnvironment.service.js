@@ -33,7 +33,7 @@ class RawEnvironmentService {
             const { page, limit } = pagination;
             const skip = (page - 1) * limit;
 
-            // If no search query, use the existing efficient find() method
+            // If no search query, use the existing efficient find() method which is faster
             if (!searchQuery) {
                 const [data, totalItems] = await Promise.all([
                     RawEnvironment.find(filters)
@@ -54,16 +54,15 @@ class RawEnvironmentService {
                 };
             }
 
-            // If there IS a search query, use an aggregation pipeline
+            // If there IS a search query, use a regex-based aggregation pipeline
             const pipeline = [
-                // Stage 1: Initial match using the text index
-                { $match: { ...filters, $text: { $search: searchQuery } } },
-                { $addFields: { score: { $meta: 'textScore' } } },
+                // Stage 1: Match base filters like orgId
+                { $match: filters },
 
-                // Stage 2: Filter the 'values' array to only include matching variables
+                // Stage 2: Filter the values array based on regex search and store in a temp field
                 {
                     $addFields: {
-                        values: {
+                        matchedValues: {
                             $filter: {
                                 input: "$values",
                                 as: "variable",
@@ -77,18 +76,31 @@ class RawEnvironmentService {
                         }
                     }
                 },
-                
-                // Stage 3: Corrected final match. Keep doc if a value matched OR the name matched.
-                { 
+
+                // Stage 3: Keep documents that either have a name match OR have matching values
+                {
                     $match: {
                         $or: [
-                            { "values.0": { $exists: true } },
-                            { "name": { $regex: searchQuery, $options: "i" } }
+                            { "name": { $regex: searchQuery, $options: "i" } },
+                            { "matchedValues.0": { $exists: true } }
                         ]
                     }
                 },
 
-                // Stage 4: Populate integrationId
+                // Stage 4: Replace original values with the filtered ones, unless no values matched (then keep original)
+                {
+                    $addFields: {
+                        values: {
+                           $cond: {
+                               if: { $gt: [ { $size: "$matchedValues" }, 0 ] },
+                               then: "$matchedValues",
+                               else: "$values"
+                           }
+                        }
+                    }
+                },
+                
+                // Stage 5: Populate integrationId
                 {
                     $lookup: {
                         from: 'integrations',
@@ -112,13 +124,14 @@ class RawEnvironmentService {
                     }
                 },
 
-                // Stage 5: Facet for pagination and total count
+                // Stage 6: Facet for pagination and total count
                 {
                     $facet: {
                         data: [
                             { $sort: sortOptions },
                             { $skip: skip },
-                            { $limit: limit }
+                            { $limit: limit },
+                            { $project: { matchedValues: 0 } } // Clean up temp field
                         ],
                         totalCount: [
                             { $count: "total" }
