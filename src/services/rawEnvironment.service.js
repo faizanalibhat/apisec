@@ -78,8 +78,15 @@ class RawEnvironmentService {
                     }
                 },
                 
-                // Stage 3: Re-check if any values matched, otherwise the document might be irrelevant now
-                { $match: { "values.0": { $exists: true } } },
+                // Stage 3: Corrected final match. Keep doc if a value matched OR the name matched.
+                { 
+                    $match: {
+                        $or: [
+                            { "values.0": { $exists: true } },
+                            { "name": { $regex: searchQuery, $options: "i" } }
+                        ]
+                    }
+                },
 
                 // Stage 4: Populate integrationId
                 {
