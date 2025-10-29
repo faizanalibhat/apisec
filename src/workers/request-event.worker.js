@@ -49,7 +49,7 @@ async function requestCreatedHandler(payload, msg, channel) {
             let transformed;
 
             try {
-                transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml, authProfile });
+                transformed = await EngineService.transform({ request: request, rule: rule.parsed_yaml });
             }
             catch (err) {
                 console.log(err);
@@ -82,7 +82,7 @@ async function requestCreatedHandler(payload, msg, channel) {
             console.log(`[+] CREATED ${created_requests.length} TRANSFORMED REQUESTS`);
         }
     } catch (error) {
-        console.error(`[!] Error processing request.created event for project ${projectId}:`, error);
+        console.log(`[!] Error processing request.created event for project ${projectId}:`, error);
     } finally {
         channel.ack(msg);
     }
