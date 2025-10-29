@@ -25,6 +25,5 @@ export function supressFilter(rules = [], suppress) {
         };
     }
 
-    // 🟢 Default — no suppression filter applied
     return {};
 }
