@@ -43,9 +43,15 @@ class RawRequestService {
                 {
                     $lookup: {
                         from: "vulnerabilities",
-                        localField: "_id",
-                        foreignField: "requestId._id",
+                        let: { raw_request_id: { $toString: "$_id" } },
                         pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ["$requestSnapshot._id", "$raw_request_id"]
+                                    }
+                                }
+                            },
                             {
                                 $group: {
                                     _id: "$severity",
@@ -232,10 +238,16 @@ class RawRequestService {
                 {
                     $lookup: {
                         from: "vulnerabilities",
-                        localField: "_id",
-                        foreignField: "requestId",
+                        let: { raw_request_id: { $toString: "$_id" } },
                         pipeline: [
-                            { $match: { status: 'active' } },
+                            {
+                                $match: {
+                                    status: 'active',
+                                    $expr: {
+                                        $eq: ["$requestSnapshot._id", "$raw_request_id"]
+                                    }
+                                }
+                            },
                             {
                                 $group: {
                                     _id: "$severity",
