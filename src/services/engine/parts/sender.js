@@ -23,7 +23,7 @@ export const sendRequest = async ({ request, rule }) => {
     validateStatus: () => true,
     timeout: REQUEST_TIMEOUT_MS,
 
-    maxRedirects: rule.allow_redirect ? 10 : 0,
+    maxRedirects: rule?.allow_redirect ? 10 : 0,
 
     // ✅ prevent Axios from adding defaults
     transformRequest: [(data, headers) => {

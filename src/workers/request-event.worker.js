@@ -18,88 +18,82 @@ import "../db/mongoose.js";
 const scanService = new ScanService();
 
 async function requestCreatedHandler(payload, msg, channel) {
-    const { projectId, orgId, request, project } = payload;
+  const { projectId, orgId, request, project } = payload;
 
-    try {
-        console.log(`[+] REQUEST SCAN INITIATED`);
+  try {
+    console.log(`[+] REQUEST SCAN INITIATED`);
 
-        if (!projectId || !orgId) {
-            console.error('[!] Invalid payload received. Missing projectId or orgId.', payload);
-            return channel.ack(msg);
-        }
-
-        const scanData = {
-            name: project.name,
-            description: project.description,
-            orgId: orgId,
-            requestIds: [request._id],
-            projectIds: [projectId],
-        }
-
-        const scan = await scanService.createProjectScanInstance(scanData);
-
-        console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
-
-        const ruleIds = project.includedRuleIds;
-
-        const rules = await Rules.find({ _id: { $in: ruleIds } }).lean();
-
-        const bulkOps = [];
-
-        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u } = request;
-
-        let cleanRequest = { ...request };
-
-        // remove fieldws not needed
-        delete cleanRequest._id;
-        delete cleanRequest.id;
-        delete cleanRequest.__v;
-        delete cleanRequest.createdAt;
-        delete cleanRequest.updatedAt;
-
-        for (let rule of rules) {
-
-            let transformed;
-
-            try {
-                transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
-            }
-            catch (err) {
-                console.log(err);
-                continue;
-            }
-
-            for (let t of transformed) {
-
-                console.log("new request: ", JSON.stringify(t));
-
-                bulkOps.push({
-                    insertOne: {
-                        document: {
-                            scanId: scan._id,
-                            orgId,
-                            requestId: requestId,
-                            ruleId: rule._id,
-                            // projectId: projectId,
-                            ...t,
-                            // rawHttp: parser.buildRawRequest(t.method, t.url, t.headers, t.body, []),
-                        }
-                    }
-                });
-            }
-
-            const created_requests = await TransformedRequest.bulkWrite(bulkOps);
-
-            await mqbroker.publish("apisec", "apisec.request.scan", { transformed_request_ids: created_requests.insertedIds, orgId, projectId, request, project });
-
-            console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
-        }
-    } catch (error) {
-        console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
-    } finally {
-        channel.ack(msg);
+    if (!projectId || !orgId) {
+      console.error('[!] Invalid payload received. Missing projectId or orgId.', payload);
+      return channel.ack(msg);
     }
+
+    const scanData = {
+      name: project.name,
+      description: project.description,
+      orgId: orgId,
+      requestIds: [request._id],
+      projectIds: [projectId],
+    };
+
+    const scan = await scanService.createProjectScanInstance(scanData);
+    console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
+
+    const rules = await Rules.find({ _id: { $in: project.includedRuleIds } }).lean();
+
+    const { _id: requestId } = request;
+    let cleanRequest = { ...request };
+    delete cleanRequest._id;
+    delete cleanRequest.__v;
+    delete cleanRequest.createdAt;
+    delete cleanRequest.updatedAt;
+
+    for (let rule of rules) {
+      const bulkOps = []; // ✅ Reset per rule
+
+      let transformed;
+      try {
+        transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
+      } catch (err) {
+        console.log(err);
+        continue;
+      }
+
+      for (let t of transformed) {
+        console.log("new request: ", JSON.stringify(t));
+        bulkOps.push({
+          insertOne: {
+            document: {
+              scanId: scan._id,
+              orgId,
+              requestId,
+              ruleId: rule._id,
+              ...t,
+            },
+          },
+        });
+      }
+
+      const created_requests = await TransformedRequest.bulkWrite(bulkOps);
+      const transformed_request_ids = Object.values(created_requests.insertedIds); // ✅ fix
+
+      await mqbroker.publish("apisec", "apisec.request.scan", {
+        transformed_request_ids,
+        orgId,
+        projectId,
+        request,
+        project,
+      });
+
+      console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
+    }
+  } catch (error) {
+    console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
+  } finally {
+    channel.ack(msg);
+  }
 }
+
 
 
 async function runScan(payload, msg, channel) {
@@ -116,15 +110,14 @@ async function runScan(payload, msg, channel) {
 
             const transformedRequest = request;
             const originalRequest = await Requests.findOne({ _id: request.requestId }).lean();
-
-            const response = await EngineService.sendRequest({ request });
-
             const rule = await Rules.findOne({ _id: request.ruleId }).lean();
+
+            const response = await EngineService.sendRequest({ request, rule: rule.parsed_yaml });
 
             const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
             if (match.match) {
-                console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectIds);
+                console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
                 const templateContext = TemplateEngine.createVulnerabilityContext({
                     transformedRequest: request,
@@ -225,7 +218,7 @@ async function runScan(payload, msg, channel) {
 
 
     } catch (error) {
-        console.error(`[!] Error processing request.created event for project ${projectId}:`, error);
+        console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
     } finally {
         channel.ack(msg);
     }
