@@ -46,7 +46,16 @@ async function requestCreatedHandler(payload, msg, channel) {
 
         const bulkOps = [];
 
-        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
+        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u } = request;
+
+        let cleanRequest = { ...request };
+
+        // remove fieldws not needed
+        delete cleanRequest._id;
+        delete cleanRequest.id;
+        delete cleanRequest.__v;
+        delete cleanRequest.createdAt;
+        delete cleanRequest.updatedAt;
 
         console.log("[+] GIVEN REQUEST: ", cleanRequest);
 
