@@ -1,19 +1,30 @@
 import mongoose from "mongoose";
 const { ObjectId } = mongoose.Types;
 
-export function supressFilter(rules = [], suppress) {
-  if (!rules.length) {
-    return suppress ? { _id: { $in: [] } } : {};
-  }
+export function suppressFilter(rules = [], suppress) {
+    if (!rules.length) {
+        return suppress ? { _id: { $in: [] } } : {};
+    }
 
-  const conditions = rules.map(rule => ({
-    "requestSnapshot._id": ObjectId.createFromHexString(rule.requestId),
-    "ruleSnapshot._id": ObjectId.createFromHexString(rule.ruleId),
-  }));
+    const ruleIds = rules.map(r => r.ruleId);
+    const requestIds = rules.map(r => r.requestId);
 
-  // If suppress = true, return items that *match* these rules
-  if (suppress) return { $and: conditions };
+    if (suppress === true || suppress === 'true') {
+        return {
+            $and: [
+                { "ruleSnapshot._id": { $in: ruleIds } },
+                { "requestSnapshot._id": { $in: requestIds } }
+            ]
+        };
+    } else if (suppress === false || suppress === 'false') {
+        return {
+            $nor: [
+                { "ruleSnapshot._id": { $in: ruleIds } },
+                { "requestSnapshot._id": { $in: requestIds } }
+            ]
+        };
+    }
 
-  // Otherwise, return items that *do not match* these rules
-  return { $nor: conditions };
+    // 🟢 Default — no suppression filter applied
+    return {};
 }
