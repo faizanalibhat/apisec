@@ -1,24 +1,29 @@
-export function supressFilter(rules = [], supress) {
+export function suppressFilter(rules = [], suppress) {
     if (!rules.length) {
-        // If there are no suppression rules, return an empty object unless we are filtering *for* suppressed items.
-        return supress ? { _id: { $in: [] } } : {};
+        return suppress ? { _id: { $in: [] } } : {};
     }
 
-    const suppressionPairs = rules.map(rule => ({
-        $and: [
-            { "requestSnapshot._id": rule.requestId },
-            { "ruleSnapshot._id": rule.ruleId }
-        ]
-    }));
+    const ruleIds = rules.map(r => r.ruleId);
+    const requestIds = rules.map(r => r.requestId);
 
-    if (supress === true || supress === 'true') {
-        // Filter FOR suppressed vulnerabilities
-        return { $or: suppressionPairs };
-    } else if (supress === false || supress === 'false') {
-        // Filter OUT suppressed vulnerabilities
-        return { $nor: suppressionPairs };
+    if (suppress === true || suppress === 'true') {
+        // ✅ Return only suppressed vulnerabilities
+        return {
+            $and: [
+                { "ruleSnapshot._id": { $in: ruleIds } },
+                { "requestSnapshot._id": { $in: requestIds } }
+            ]
+        };
+    } else if (suppress === false || suppress === 'false') {
+        // 🚫 Exclude suppressed vulnerabilities
+        return {
+            $nor: [
+                { "ruleSnapshot._id": { $in: ruleIds } },
+                { "requestSnapshot._id": { $in: requestIds } }
+            ]
+        };
     }
 
-    // By default (supress is null or undefined), do not filter by suppression
+    // 🟢 Default — no suppression filter applied
     return {};
 }
