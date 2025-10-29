@@ -33,10 +33,12 @@ async function requestCreatedHandler(payload, msg, channel) {
             description: project.description,
             orgId: orgId,
             requestIds: [request._id],
-            projectIds: [projectId]
+            projectIds: [projectId],
         }
 
         const scan = await scanService.createProjectScanInstance(scanData);
+
+        console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
 
         const ruleIds = project.includedRuleIds;
 
@@ -45,6 +47,8 @@ async function requestCreatedHandler(payload, msg, channel) {
         const bulkOps = [];
 
         const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
+
+        console.log("[+] GIVEN REQUEST: ", cleanRequest);
 
         for (let rule of rules) {
 
