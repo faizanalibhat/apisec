@@ -81,11 +81,15 @@ async function requestCreatedHandler(payload, msg, channel) {
                 });
             }
 
+
+            console.log("[+] OPERATIONS: ", JSON.stringify(bulkOps));
+
+
             const created_requests = await TransformedRequest.bulkWrite(bulkOps);
 
             await mqbroker.publish("apisec", "apisec.request.scan", { transformed_request_ids: created_requests.insertedIds, orgId, projectId, request, project });
 
-            console.log(`[+] CREATED ${created_requests.length} TRANSFORMED REQUESTS`);
+            console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
         }
     } catch (error) {
         console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
