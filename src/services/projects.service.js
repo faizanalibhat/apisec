@@ -1,6 +1,7 @@
 import { Projects } from '../models/projects.model.js';
 import { PostmanCollections } from '../models/postman-collections.model.js';
 import RawRequest from '../models/rawRequest.model.js';
+import Vulnerability from '../models/vulnerability.model.js';
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
@@ -344,6 +345,15 @@ class ProjectsService {
             { collectionUid: { $in: collectionUids } },
             updateOperation
         );
+
+        // get all raw requests and then move their vulns to projects as well
+        const rawRequests = await RawRequest.find({ collectionUid: { $in: collectionUids } });
+
+        const Ids = rawRequests.map(request => request._id);
+
+        const vulnUpdate = action == 'add' ? { $addToSet: { projectId: projectId } } : { $pull: { projectId: projectId } };
+
+        await Vulnerability.updateMany({ 'requestSnapshot._id': { $in: Ids } }, vulnUpdate);
     }
 
     handleError(error) {
