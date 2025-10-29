@@ -80,7 +80,7 @@ class DashboardService {
     }
 
     async getTotalRules(orgId) {
-        return await Rule.countDocuments({ orgId, isActive: true });
+        return await Rule.countDocuments({ orgId });
     }
 
     async getTotalScans(orgId) {
