@@ -7,7 +7,11 @@ function add(headers, newHeaders) {
 }
 
 function remove(headers, removeHeaders) {
-  removeHeaders.forEach(header => delete headers[header?.toLowerCase?.()]);
+  if (typeof removeHeaders == "string")
+    delete headers[removeHeaders?.toLowerCase?.()];
+  else if (Array.isArray(removeHeaders))
+    for (let header of removeHeaders)
+      delete headers[header?.toLowerCase?.()]
 }
 
 function modify(headers, modifyHeaders) {
@@ -58,9 +62,13 @@ function applyRules(headers, rules) {
     add(headers, rules.add);
   }
 
+  console.log("[+] HEADERS BEFORE : ", headers);
+
   if (rules.remove) {
     remove(headers, rules.remove);
   }
+
+  console.log("[+] HEADERS AFTER : ", headers);
 
   if (rules.modify) {
     modify(headers, rules.modify);
@@ -104,7 +112,7 @@ export default {
 
     let requests = [_.cloneDeep(request)];
 
-    const targetHeaders = requests[0].headers || {};
+    const targetHeaders = _.cloneDeep(requests[0].headers || {});
 
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 

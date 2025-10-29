@@ -105,7 +105,7 @@ export default {
 
     let requests = [_.cloneDeep(request)];
 
-    const targetParams = requests[0].params || {};
+    const targetParams = _cloneDeep(requests[0].params || {});
 
     const transformedParams = applyRules(targetParams, queryRules);
 
