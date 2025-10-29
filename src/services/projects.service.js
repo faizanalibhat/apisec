@@ -10,6 +10,7 @@ import { getPeriodStartDate, getStateDistribution, getSeverityDistribution, getT
 const { ObjectId } = mongoose.Types;
 
 class ProjectsService {
+    
     async findAll(orgId, search, pagination) {
         try {
             const { page, limit } = pagination;
