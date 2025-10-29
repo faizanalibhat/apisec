@@ -175,11 +175,12 @@ class RawRequestService {
                                                                             }
                                                                         ]
                                                                     }
-                                                                },
-                                                                cond: { $eq: ["$$this.name", "$collectionName"] }
-                                                            }
-                                                        },
-                                                        0
+                                                                }
+                                                            },
+                                                            cond: { $eq: ["$$this.name", "$collectionName"] }
+                                                        }
+                                                    },
+                                                    0
                                                 ]
                                             }
                                         },
@@ -385,11 +386,12 @@ class RawRequestService {
                                                                             }
                                                                         ]
                                                                     }
-                                                                },
-                                                                cond: { $eq: ["$$this.name", "$collectionName"] }
-                                                            }
-                                                        },
-                                                        0
+                                                                }
+                                                            },
+                                                            cond: { $eq: ["$$this.name", "$collectionName"] }
+                                                        }
+                                                    },
+                                                    0
                                                 ]
                                             }
                                         },
