@@ -33,10 +33,12 @@ async function requestCreatedHandler(payload, msg, channel) {
             description: project.description,
             orgId: orgId,
             requestIds: [request._id],
-            projectIds: [projectId]
+            projectIds: [projectId],
         }
 
         const scan = await scanService.createProjectScanInstance(scanData);
+
+        console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
 
         const ruleIds = project.includedRuleIds;
 
@@ -44,12 +46,16 @@ async function requestCreatedHandler(payload, msg, channel) {
 
         const bulkOps = [];
 
+        const { _id: requestId, __v: __v, createdAt: _c, updatedAt: _u, ...cleanRequest } = request;
+
+        console.log("[+] GIVEN REQUEST: ", cleanRequest);
+
         for (let rule of rules) {
 
             let transformed;
 
             try {
-                transformed = await EngineService.transform({ request: processedRequest, rule: rule.parsed_yaml, authProfile });
+                transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
             }
             catch (err) {
                 console.log(err);
@@ -63,9 +69,9 @@ async function requestCreatedHandler(payload, msg, channel) {
                 bulkOps.push({
                     insertOne: {
                         document: {
-                            scanId: _id,
+                            scanId: scan._id,
                             orgId,
-                            requestId: request._id,
+                            requestId: requestId,
                             ruleId: rule._id,
                             // projectId: projectId,
                             ...t,
@@ -75,14 +81,18 @@ async function requestCreatedHandler(payload, msg, channel) {
                 });
             }
 
+
+            console.log("[+] OPERATIONS: ", JSON.stringify(bulkOps));
+
+
             const created_requests = await TransformedRequest.bulkWrite(bulkOps);
 
             await mqbroker.publish("apisec", "apisec.request.scan", { transformed_request_ids: created_requests.insertedIds, orgId, projectId, request, project });
 
-            console.log(`[+] CREATED ${created_requests.length} TRANSFORMED REQUESTS`);
+            console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
         }
     } catch (error) {
-        console.error(`[!] Error processing request.created event for project ${projectId}:`, error);
+        console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
     } finally {
         channel.ack(msg);
     }

@@ -259,9 +259,8 @@ export class ScanService {
                 projectIds: actualProjectIds,
                 isProjectBasedScan,
                 status: 'pending',
-                'stats.totalRequests': { $inc: 1 },
                 'stats.totalRules': rules.length,
-                'stats.totalTransformedRequests': { $inc: requests.length * rules.length }
+                $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
             }, { upsert: true, new: true });
 
 
