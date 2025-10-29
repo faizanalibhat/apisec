@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const { ObjectId } = mongoose.Types;
 
-export function suppressFilter(rules = [], suppress) {
+export function supressFilter(rules = [], suppress) {
     if (!rules.length) {
         return suppress ? { _id: { $in: [] } } : {};
     }
