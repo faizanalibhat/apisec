@@ -6,8 +6,8 @@ export function supressFilter(rules = [], suppress) {
         return suppress ? { _id: { $in: [] } } : {};
     }
 
-    const ruleIds = rules.map(r => r.ruleId);
-    const requestIds = rules.map(r => r.requestId);
+    const ruleIds = rules.map(r => ObjectId.createFromHexString(r.ruleId));
+    const requestIds = rules.map(r => ObjectId.createFromHexString(r.requestId));
 
     if (suppress === true || suppress === 'true') {
         return {
