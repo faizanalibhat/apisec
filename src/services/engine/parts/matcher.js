@@ -107,15 +107,13 @@ const match = ({ rule, response }) => {
     allMatches.push(statusMatchResult);
   }
 
-  if (matchRule.body) {
+  if (response?.body && matchRule.body) {
     const bodyMatchResult = bodyMatch(response.body, matchRule.body);
     allMatches.push(bodyMatchResult);
   }
 
-  if (matchRule.header) {
+  if (response?.headers && matchRule.header) {
     const headerMatchResult = headerMatch(response.headers, matchRule.header);
-
-    if (response.headers?.location) console.log(JSON.stringify(response.headers), JSON.stringify(matchRule.header), headerMatchResult);
 
     allMatches.push(headerMatchResult);
   }
