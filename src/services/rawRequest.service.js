@@ -55,6 +55,12 @@ class RawRequestService {
                             },
                             {
                                 $group: {
+                                    _id: "$severity",
+                                    count: { $sum: 1 }
+                                }
+                            },
+                            {
+                                $group: {
                                     _id: null,
                                     severities: {
                                         $push: {
@@ -169,12 +175,11 @@ class RawRequestService {
                                                                             }
                                                                         ]
                                                                     }
-                                                                }
-                                                            },
-                                                            cond: { $eq: ["$$this.name", "$collectionName"] }
-                                                        }
-                                                    },
-                                                    0
+                                                                },
+                                                                cond: { $eq: ["$$this.name", "$collectionName"] }
+                                                            }
+                                                        },
+                                                        0
                                                 ]
                                             }
                                         },
@@ -257,6 +262,12 @@ class RawRequestService {
                                     $expr: {
                                         $eq: ["$requestSnapshot._id", "$$raw_request_id"]
                                     }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: "$severity",
+                                    count: { $sum: 1 }
                                 }
                             },
                             {
@@ -374,12 +385,11 @@ class RawRequestService {
                                                                             }
                                                                         ]
                                                                     }
-                                                                }
-                                                            },
-                                                            cond: { $eq: ["$$this.name", "$collectionName"] }
-                                                        }
-                                                    },
-                                                    0
+                                                                },
+                                                                cond: { $eq: ["$$this.name", "$collectionName"] }
+                                                            }
+                                                        },
+                                                        0
                                                 ]
                                             }
                                         },
