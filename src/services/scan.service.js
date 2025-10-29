@@ -297,11 +297,22 @@ export class ScanService {
                 query.$text = { $search: search };
             }
 
+            const sortKeyMap = {
+                'Rules': 'stats.totalRules',
+                'Progress': 'completedRequests',
+                'Vulnerabilities': 'vulnerabilitySummary.total',
+                'createdAt': 'createdAt',
+                'name': 'name',
+                'status': 'status'
+            };
+
+            const sortField = sortKeyMap[sortBy] || 'createdAt';
             const sort = {};
+
             if (search) {
                 sort.score = { $meta: 'textScore' };
             } else {
-                sort[sortBy] = order === 'asc' ? 1 : -1;
+                sort[sortField] = order === 'asc' ? 1 : -1;
             }
 
             const total = await Scan.countDocuments(query);
