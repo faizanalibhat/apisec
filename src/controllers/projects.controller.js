@@ -238,10 +238,10 @@ class ProjectsController {
         try {
             const { orgId, email: userEmail } = req.authenticatedService;
             const { projectId } = req.params;
-            const { ruleId, action } = req.body;
+            const { ruleId, active } = req.body;
 
-            if (typeof action !== 'boolean') {
-                throw ApiError.badRequest('Action must be a boolean value');
+            if (typeof active !== 'boolean') {
+                throw ApiError.badRequest('Active must be a boolean value');
             }
 
             if (!ruleId) {
@@ -253,7 +253,7 @@ class ProjectsController {
                 orgId,
                 {
                     ruleId,
-                    action,
+                    action: active,
                     modifiedBy: userEmail
                 }
             );
