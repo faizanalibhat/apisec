@@ -122,7 +122,7 @@ const match = ({ rule, response }) => {
 
   const match = allMatches.every(m => m);
 
-  console.log("final match: ", match);
+  // console.log("final match: ", match);
 
   return { match }
 }
