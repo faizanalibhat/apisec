@@ -245,26 +245,50 @@ export class ScanService {
             //     scanData.name = `${project.name} - Security Scan`;
             // }
 
-            // Create scan document
-            const scan = await Scan.findOneAndUpdate({ orgId, name }, {
-                name,
-                description,
-                orgId,
-                scope,
-                ruleIds: rules.map(r => r._id),
-                $push: { requestIds: requests.map(r => r._id) },
-                collectionIds,
-                environmentId,
-                authProfileId,
-                projectIds: actualProjectIds,
-                isProjectBasedScan,
-                status,
-                'stats.totalRules': rules.length,
-                $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
-            }, { upsert: true, new: true });
+            const exists = await Scan.findOne({ orgId, name });
+
+            if (!exists) {
+                // Create scan document
+                const scan = await Scan.findOneAndUpdate({ orgId, name }, {
+                    name,
+                    description,
+                    orgId,
+                    scope,
+                    ruleIds: rules.map(r => r._id),
+                    $push: { requestIds: requests.map(r => r._id) },
+                    collectionIds,
+                    environmentId,
+                    authProfileId,
+                    projectIds: actualProjectIds,
+                    isProjectBasedScan,
+                    status,
+                    'stats.totalRules': rules.length,
+                    $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
+                }, { upsert: true, new: true });
 
 
-            return scan;
+                return scan;
+            }
+            else {
+                const scan = await Scan.findOneAndUpdate({ orgId, name }, {
+                    name,
+                    description,
+                    orgId,
+                    scope,
+                    ruleIds: rules.map(r => r._id),
+                    $push: { requestIds: requests.map(r => r._id) },
+                    collectionIds,
+                    environmentId,
+                    authProfileId,
+                    projectIds: actualProjectIds,
+                    isProjectBasedScan,
+                    'stats.totalRules': rules.length,
+                    $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
+                }, { upsert: true, new: true });
+
+                return scan;
+            }
+
         } catch (error) {
             this.handleError(error);
         }

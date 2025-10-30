@@ -41,6 +41,10 @@ async function requestCreatedHandler(payload, msg, channel) {
 
     console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
 
+    if (["paused", "halted", "cancelled"].includes(scan.status)) {
+        return;
+    }
+
     const rules = await Rules.find({ _id: { $in: project.includedRuleIds } }).lean();
 
     const { _id: requestId } = request;
@@ -114,6 +118,12 @@ async function runScan(payload, msg, channel) {
         const requests = await TransformedRequest.find({ _id: { $in: transformed_request_ids } }).lean();
 
         for (let request of requests) {
+
+            // Update state
+            await TransformedRequest.updateOne(
+                { _id: request._id },
+                { $set: { state: "running" } }
+            );
 
             const transformedRequest = request;
             const originalRequest = await Requests.findOne({ _id: request.requestId }).lean();
@@ -223,9 +233,30 @@ async function runScan(payload, msg, channel) {
 
                   if (updatedVuln.wasNew) {
                       console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
+
+                      await Scan.updateOne({ _id: scanId }, {
+                          $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
+                      });
                   } else {
                       console.log(`[~] Updated existing vulnerability record - ${vulnerabilityData.title}`);
                   }
+
+                  // Update transformed request state
+                  await TransformedRequest.updateOne(
+                      { _id: transformedRequest._id },
+                      {
+                          $set: {
+                              state: "complete",
+                              executionResult: {
+                                  matched: matchResult.match,
+                                  executedAt: new Date(),
+                                  responseStatus: response.status,
+                                  responseTime: response.time,
+                                  response
+                              }
+                          }
+                      }
+                  );
               } catch (vulnError) {
                   console.error("[!] Error creating/updating vulnerability:", vulnError.message);
               }
@@ -233,6 +264,18 @@ async function runScan(payload, msg, channel) {
 
         }
     } catch (error) {
+        await TransformedRequest.updateOne(
+            { _id: transformedRequest._id },
+            {
+                $set: {
+                    state: "failed",
+                    error: {
+                        message: requestError.message,
+                        occurredAt: new Date()
+                    }
+                }
+            }
+        );
         console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
     } finally {
         channel.ack(msg);
