@@ -108,7 +108,7 @@ async function runScan(payload, msg, channel) {
 
     try {
         if (transformed_request_ids.length === 0) {
-            return channel.ack(msg);
+            return;
         }
 
         const requests = await TransformedRequest.find({ _id: { $in: transformed_request_ids } }).lean();
