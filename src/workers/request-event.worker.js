@@ -225,13 +225,13 @@ async function runScan(payload, msg, channel) {
                   };
 
                   // upsert: true -> create if not exists, update otherwise
-                  const updatedVuln = await Vulnerability.findOneAndUpdate(
+                  const result = await Vulnerability.findOneAndUpdate(
                       query,
                       { $set: vulnerabilityData },
-                      { upsert: true, new: true, setDefaultsOnInsert: true }
+                      { upsert: true, new: true, setDefaultsOnInsert: true, rawResult: true }
                   );
 
-                  if (updatedVuln.wasNew) {
+                  if (!result.lastErrorObject.updatedExisting) {
                       console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
 
                       await Scan.updateOne({ _id: scanId }, {
