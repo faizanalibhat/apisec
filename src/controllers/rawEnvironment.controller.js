@@ -49,7 +49,7 @@ class RawEnvironmentController {
             // Validate that if search is provided, environmentId must also be provided
             if (search && !environmentId) {
                 return res.sendApiResponse(
-                    ApiResponse.badRequest('environmentId is required when using search')
+                    ApiResponse.error('environmentId is required when using search', null, 400)
                 );
             }
 
