@@ -118,7 +118,7 @@ const match = ({ rule, response }) => {
     allMatches.push(headerMatchResult);
   }
 
-  console.log(allMatches)
+  console.log("all matches: ", allMatches)
 
   const match = allMatches.every(m => m);
 
