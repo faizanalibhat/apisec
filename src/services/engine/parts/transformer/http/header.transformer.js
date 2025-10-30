@@ -113,11 +113,11 @@ function applyRules(headers, rules) {
 export default {
   transform(request, headerRules, authProfile) {
 
-    if (!headerRules) return [request];
+    if (!headerRules) return [];
 
-    let requests = [_.cloneDeep(request)];
+    let requests = [];
 
-    const targetHeaders = _.cloneDeep(requests[0].headers || {});
+    const targetHeaders = _.cloneDeep(request.headers || {});
 
     console.log("[+] ORINGIAL HEADERS : ", targetHeaders);
 
