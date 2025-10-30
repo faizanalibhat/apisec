@@ -61,7 +61,6 @@ async function requestCreatedHandler(payload, msg, channel) {
       }
 
       for (let t of transformed) {
-        console.log("new request: ", JSON.stringify(t));
         bulkOps.push({
           insertOne: {
             document: {
