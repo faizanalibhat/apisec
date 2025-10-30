@@ -62,13 +62,9 @@ function applyRules(headers, rules) {
     add(headers, rules.add);
   }
 
-  console.log("[+] HEADERS BEFORE : ", headers);
-
   if (rules.remove) {
     remove(headers, rules.remove);
   }
-
-  console.log("[+] HEADERS AFTER : ", headers);
 
   if (rules.modify) {
     modify(headers, rules.modify);
@@ -116,10 +112,9 @@ export default {
 
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 
-    console.log("[+] TRANSFORMED HEADERS : ", transformedHeaders);
-
     requests = transformedHeaders.map(headers => {
       const newRequest = _.cloneDeep(request);
+
       newRequest.headers = headers;
 
             // add auth profile
@@ -134,6 +129,8 @@ export default {
 
         newRequest.headers = newHeaders;
       }
+
+      console.log("[+] FINAL HEADERS : ", newRequest.headers);
 
       return newRequest;
     });
