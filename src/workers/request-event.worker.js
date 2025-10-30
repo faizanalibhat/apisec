@@ -248,7 +248,7 @@ async function runScan(payload, msg, channel) {
                           $set: {
                               state: "complete",
                               executionResult: {
-                                  matched: matchResult.match,
+                                  matched: match.match,
                                   executedAt: new Date(),
                                   responseStatus: response.status,
                                   responseTime: response.time,
