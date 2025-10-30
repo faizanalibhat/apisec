@@ -112,6 +112,8 @@ export default {
 
     const targetHeaders = _.cloneDeep(requests[0].headers || {});
 
+    console.log("[+] ORINGIAL HEADERS : ", targetHeaders);
+
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 
     requests = transformedHeaders.map(headers => {
@@ -119,7 +121,6 @@ export default {
 
       newRequest.headers = headers;
 
-            // add auth profile
       if (authProfile) {
         let newHeaders = { ...(newRequest.headers || {}) };
 
