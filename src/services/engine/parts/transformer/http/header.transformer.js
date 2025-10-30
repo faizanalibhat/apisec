@@ -59,6 +59,7 @@ function handleTransformation(headers, transformations) {
 
 function applyRules(headers, rules) {
   let allHeaders = [];
+  const original = _.cloneDeep(headers);
 
   if (rules.add) {
     add(headers, rules.add);
@@ -95,6 +96,12 @@ function applyRules(headers, rules) {
     }
 
     return allHeaders;
+  }
+
+  const changed = !_.isEqual(headers, original);
+
+  if (!allHeaders.length && !changed) {
+    return [];
   }
 
   return allHeaders?.length > 0 ? allHeaders : [headers];
