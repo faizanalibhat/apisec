@@ -123,105 +123,114 @@ async function runScan(payload, msg, channel) {
 
             const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
-            if (match?.match) {
-                console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
+          if (match?.match) {
+              console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
-                const templateContext = TemplateEngine.createVulnerabilityContext({
-                    transformedRequest: request,
-                    originalRequest: request,
-                    response,
-                    rule,
-                    matchResult: match,
-                    scanId: scanId
-                });
+              const templateContext = TemplateEngine.createVulnerabilityContext({
+                  transformedRequest: request,
+                  originalRequest: request,
+                  response,
+                  rule,
+                  matchResult: match,
+                  scanId: scanId
+              });
 
-                // PROCESS TEMPLATE FIELDS FROM THE RULE
-                const reportFields = rule.parsed_yaml.report;
-                const processedReport = TemplateEngine.processFields({
-                    title: reportFields.title,
-                    description: reportFields.description,
-                    impact: reportFields.impact,
-                    stepsToReproduce: reportFields.stepsToReproduce,
-                    mitigation: reportFields.mitigation
-                }, templateContext);
+              // PROCESS TEMPLATE FIELDS FROM THE RULE
+              const reportFields = rule.parsed_yaml.report;
+              const processedReport = TemplateEngine.processFields({
+                  title: reportFields.title,
+                  description: reportFields.description,
+                  impact: reportFields.impact,
+                  stepsToReproduce: reportFields.stepsToReproduce,
+                  mitigation: reportFields.mitigation
+              }, templateContext);
 
-                // Create vulnerability data with processed templates
-                const vulnerabilityData = {
-                    orgId,
-                    scanName: scan.name,
-                    scanId: scanId,
-                // Deprecated
-                // ruleId: rule._id,
-                // requestId: originalRequest._id,
-                // transformedRequestId: transformedRequest._id,
+              // Create vulnerability data with processed templates
+              const vulnerabilityData = {
+                  orgId,
+                  scanName: scan.name,
+                  scanId,
+                  ruleId: rule._id,
+                  requestId: originalRequest._id,
 
-                ruleSnapshot: rule,
-                requestSnapshot: originalRequest,
-                transformedRequestSnapshot: transformedRequest,
-                projectId: originalRequest.projectIds, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
-                    // ruleId: templateContext.ruleId,
-                    // requestId: templateContext.requestId,
-                    // transformedRequestId: templateContext.transformedRequestId,
+                  ruleSnapshot: rule,
+                  requestSnapshot: originalRequest,
+                  transformedRequestSnapshot: transformedRequest,
+                  projectId: originalRequest.projectIds,
 
-                    // Use processed template values
-                    title: processedReport.title || `${reportFields.vulnerabilityType} in ${originalRequest.name}`,
-                    type: rule.parsed_yaml.report.vulnerabilityType,
-                    severity: rule.parsed_yaml.report.severity,
-                    cvssScore: rule.parsed_yaml.report.cvssScore,
-                    description: processedReport.description,
-                    impact: processedReport.impact,
-                    stepsToReproduce: processedReport.stepsToReproduce,
-                    mitigation: processedReport.mitigation,
-                    tags: Array.isArray(rule.parsed_yaml.report.tags) ? rule.parsed_yaml.report.tags : rule.parsed_yaml.report?.tags?.split?.(",") || [],
+                  title: processedReport.title || `${reportFields.vulnerabilityType} in ${originalRequest.name}`,
+                  type: reportFields.vulnerabilityType,
+                  severity: reportFields.severity,
+                  cvssScore: reportFields.cvssScore,
+                  description: processedReport.description,
+                  impact: processedReport.impact,
+                  stepsToReproduce: processedReport.stepsToReproduce,
+                  mitigation: processedReport.mitigation,
+                  tags: Array.isArray(reportFields.tags)
+                      ? reportFields.tags
+                      : reportFields.tags?.split?.(",") || [],
 
-                    // Technical details
-                    cwe: rule.parsed_yaml.report.cwe,
-                    owasp: rule.parsed_yaml.report.owasp,
+                  cwe: reportFields.cwe,
+                  owasp: reportFields.owasp,
 
-                    // Request/Rule context
-                    requestDetails: {
-                        name: originalRequest.name,
-                        method: originalRequest.method,
-                        url: originalRequest.url,
-                        collectionName: originalRequest.collectionName,
-                        folderName: originalRequest.folderName
-                    },
-                    ruleDetails: {
-                        name: rule.rule_name,
-                        category: rule.category
-                    },
+                  requestDetails: {
+                      name: originalRequest.name,
+                      method: originalRequest.method,
+                      url: originalRequest.url,
+                      collectionName: originalRequest.collectionName,
+                      folderName: originalRequest.folderName
+                  },
+                  ruleDetails: {
+                      name: rule.rule_name,
+                      category: rule.category
+                  },
 
-                    // Evidence
-                    evidence: {
-                        request: {
-                            method: transformedRequest.method,
-                            url: transformedRequest.url,
-                            headers: transformedRequest.headers,
-                            body: transformedRequest.body,
-                            transformations: transformedRequest.appliedTransformations || []
-                        },
-                        response: {
-                            status: response.status,
-                            statusText: response.statusText || '',
-                            headers: response.headers || {},
-                            body: response.body,
-                            size: response.size || 0,
-                            responseTime: response.time || 0
-                        },
-                        highlight: match?.highlight || "",
-                        // matchedCriteria: matchResult.matchedCriteria
-                    }
-                };
+                  evidence: {
+                      request: {
+                          method: transformedRequest.method,
+                          url: transformedRequest.url,
+                          headers: transformedRequest.headers,
+                          body: transformedRequest.body,
+                          transformations: transformedRequest.appliedTransformations || []
+                      },
+                      response: {
+                          status: response.status,
+                          statusText: response.statusText || '',
+                          headers: response.headers || {},
+                          body: response.body,
+                          size: response.size || 0,
+                          responseTime: response.time || 0
+                      },
+                      highlight: match?.highlight || "",
+                  }
+              };
 
-                try {
-                    await Vulnerability.create([vulnerabilityData], { strict: false });
-                    console.log(`[+] Created vulnerability record - ${vulnerabilityData.title}`);
-                } catch (vulnError) {
-                    console.error("[!] Error creating vulnerabilities:", vulnError.message);
-                }
-            }
+              try {
+                  // DEDUPE LOGIC
+                  const query = {
+                      orgId: vulnerabilityData.orgId,
+                      scanId: vulnerabilityData.scanId,
+                      ruleId: vulnerabilityData.ruleId,
+                      requestId: vulnerabilityData.requestId
+                  };
+
+                  // upsert: true -> create if not exists, update otherwise
+                  const updatedVuln = await Vulnerability.findOneAndUpdate(
+                      query,
+                      { $set: vulnerabilityData },
+                      { upsert: true, new: true, setDefaultsOnInsert: true }
+                  );
+
+                  if (updatedVuln.wasNew) {
+                      console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
+                  } else {
+                      console.log(`[~] Updated existing vulnerability record - ${vulnerabilityData.title}`);
+                  }
+              } catch (vulnError) {
+                  console.error("[!] Error creating/updating vulnerability:", vulnError.message);
+              }
+          }
         }
-
 
     } catch (error) {
         console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
