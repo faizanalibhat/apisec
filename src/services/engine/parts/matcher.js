@@ -118,11 +118,11 @@ const match = ({ rule, response }) => {
     allMatches.push(headerMatchResult);
   }
 
-  // console.log(allMatches)
+  console.log(allMatches)
 
   const match = allMatches.every(m => m);
 
-  // console.log("final match: ", match);
+  console.log("final match: ", match);
 
   return { match }
 }
