@@ -14,14 +14,16 @@ export const transformer = {
 
     let requests = [_.cloneDeep(request)];
 
-    // Apply global operators (method, http_version)
+
+    let methodVariations = [];
     if (transformRules.method) {
-      requests = this._applyMethod(requests, transformRules.method);
+      methodVariations = this._applyMethod(requests, transformRules.method);
     }
 
 
+    let versionVariations = [];
     if (transformRules.http_version) {
-      requests = requests.map(req => {
+      versionVariations = requests.map(req => {
         req.http_version = transformRules.http_version;
         return req;
       });
@@ -51,7 +53,7 @@ export const transformer = {
       bodyRequests = requests.flatMap(req => bodyTransformer.transform(req, transformRules.body, authProfile));
     }
 
-    let allRequests = [...requests, ...queryRequests, ...headerRequests, ...bodyRequests];
+    let allRequests = [...methodVariations, ...versionVariations, ...queryRequests, ...headerRequests, ...bodyRequests];
 
     allRequests = allRequests.map(req => this._rebuildUrl(req));
 
