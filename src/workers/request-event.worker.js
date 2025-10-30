@@ -38,23 +38,31 @@ async function requestCreatedHandler(payload, msg, channel) {
     };
 
     const scan = await scanService.createProjectScanInstance(scanData);
+
     console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
 
     const rules = await Rules.find({ _id: { $in: project.includedRuleIds } }).lean();
 
     const { _id: requestId } = request;
+
     let cleanRequest = { ...request };
+
     delete cleanRequest._id;
     delete cleanRequest.__v;
     delete cleanRequest.createdAt;
     delete cleanRequest.updatedAt;
 
+
     for (let rule of rules) {
-      const bulkOps = []; // ✅ Reset per rule
+      const bulkOps = [];
 
       let transformed;
+
       try {
         transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
+
+        for (let k of transformed) console.log("[+] AFTER TRANSFORMATIONS RAN: ", k.headers);
+
       } catch (err) {
         console.log(err);
         continue;
@@ -75,7 +83,7 @@ async function requestCreatedHandler(payload, msg, channel) {
       }
 
       const created_requests = await TransformedRequest.bulkWrite(bulkOps);
-      const transformed_request_ids = Object.values(created_requests.insertedIds); // ✅ fix
+      const transformed_request_ids = Object.values(created_requests.insertedIds);
 
       await mqbroker.publish("apisec", "apisec.request.scan", {
         transformed_request_ids,
