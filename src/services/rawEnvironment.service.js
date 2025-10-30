@@ -59,6 +59,46 @@ class RawEnvironmentService {
         }
     }
 
+    async searchInEnvironment(environmentId, searchTerm, orgId) {
+        try {
+            // Fetch the environment
+            const environment = await RawEnvironment.findOne({
+                _id: environmentId,
+                orgId
+            })
+                .populate('integrationId', 'name')
+                .lean();
+
+            if (!environment) {
+                throw ApiError.notFound('Environment not found');
+            }
+
+            // Case-insensitive search term
+            const searchRegex = new RegExp(searchTerm, 'i');
+
+            // Filter variables that match the search term in key or value
+            const matchingVariables = environment.values.filter(variable => {
+                const keyMatch = searchRegex.test(variable.key);
+                const valueMatch = searchRegex.test(String(variable.value));
+                return keyMatch || valueMatch;
+            });
+
+            // If no matches found, return all variables
+            if (matchingVariables.length === 0) {
+                return environment;
+            }
+
+            // Return environment with only matching variables
+            return {
+                ...environment,
+                values: matchingVariables,
+                _searchResultCount: matchingVariables.length
+            };
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     async findByWorkspace(workspaceId, orgId) {
         try {
             const environments = await RawEnvironment.find({

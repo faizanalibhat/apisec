@@ -42,10 +42,30 @@ class RawEnvironmentController {
                 workspaceId,
                 integrationId,
                 isEdited,
-                search
+                search,
+                environmentId
             } = req.query;
 
-            // Build filters
+            // Validate that if search is provided, environmentId must also be provided
+            if (search && !environmentId) {
+                return res.sendApiResponse(
+                    ApiResponse.badRequest('environmentId is required when using search')
+                );
+            }
+
+            // Handle search within specific environment
+            if (search && environmentId) {
+                const result = await this.service.searchInEnvironment(
+                    environmentId,
+                    search,
+                    orgId
+                );
+                return res.sendApiResponse(
+                    ApiResponse.success('Environment search results retrieved successfully', result)
+                );
+            }
+
+            // Regular listing logic (existing code)
             const filters = {
                 orgId,
                 ...(workspaceId && { workspaceId }),
@@ -53,14 +73,10 @@ class RawEnvironmentController {
                 ...(isEdited !== undefined && { isEdited: isEdited === 'true' }),
             };
 
-            // Parse sort parameter
-            let sortOptions = { createdAt: -1 }; // Default sort
-            if (search) {
-                sortOptions = { score: { $meta: 'textScore' } };
-            } else if (sort) {
+            let sortOptions = { createdAt: -1 };
+            if (sort) {
                 const [field, order] = sort.split(':');
                 const allowedSortFields = ['createdAt', 'name', 'workspaceName', 'postmanUpdatedAt'];
-
                 if (allowedSortFields.includes(field)) {
                     sortOptions = { [field]: order === 'asc' ? 1 : -1 };
                 }
@@ -74,8 +90,7 @@ class RawEnvironmentController {
             const result = await this.service.findAll(
                 filters,
                 sortOptions,
-                paginationOptions,
-                search
+                paginationOptions
             );
 
             const response = ApiResponse.paginated(
