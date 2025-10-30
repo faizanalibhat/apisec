@@ -241,7 +241,7 @@ async function requestEventWorker() {
 
     // Consume events where a new request is created in a project
     await mqbroker.consume("apisec", "apisec.request.created", requestCreatedHandler, 'requestCreatedEventsQueue2');
-    await mqbroker.consume("apisec", "apisec.request.scan", runScan, 'requestScanEventsQueue');
+    await mqbroker.consume("apisec", "apisec.request.scan", runScan, 'requestScanEventsQueue2');
 }
 
 // Start the worker
