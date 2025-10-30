@@ -246,8 +246,8 @@ export class ScanService {
             // }
 
             // Create scan document
-            const scan = await Scan.findOneAndUpdate({ orgId, name: `Project-wide scan on ${name}` }, {
-                name: `Project-wide scan on ${name}`,
+            const scan = await Scan.findOneAndUpdate({ orgId, name }, {
+                name,
                 description,
                 orgId,
                 scope,
