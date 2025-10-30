@@ -101,11 +101,11 @@ function applyRules(params, rules) {
 export default {
   transform(request, queryRules, authProfile) {
 
-    if (!queryRules) return [request];
+    if (!queryRules) return [];
 
-    let requests = [_.cloneDeep(request)];
+    let requests = [];
 
-    const targetParams = _.cloneDeep(requests[0].params || {});
+    const targetParams = _.cloneDeep(request.params || {});
 
     const transformedParams = applyRules(targetParams, queryRules);
 

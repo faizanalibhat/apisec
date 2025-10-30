@@ -154,12 +154,12 @@ function applyRules(body, rules, format) {
 export default {
   transform(request, bodyRules) {
 
-    if (!bodyRules) return [request];
+    if (!bodyRules) return [];
 
-    let requests = [_.cloneDeep(request)];
+    let requests = [];
 
-    const targetBody = requests[0].body || {};
-    const bodyFormat = requests[0].body_format || 'json';
+    const targetBody = request.body || {};
+    const bodyFormat = request.body_format || 'json';
 
     const transformedBodies = applyRules(targetBody, bodyRules, bodyFormat);
 
