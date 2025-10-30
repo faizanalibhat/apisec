@@ -137,13 +137,17 @@ class ProjectsService {
             }
 
             // Remove project ID from all browser extension requests
-            await RawRequest.updateMany(
+            await RawRequest.deleteMany(
                 {
                     projectIds: project._id,
                     source: 'browser-extension'
-                },
-                { $pull: { projectIds: project._id } }
+                }
+                // { $pull: { projectIds: project._id } }
             );
+
+            await Vulnerability.deleteMany({
+                projectId: project._id
+            });
 
             return { message: 'Project deleted successfully' };
         } catch (error) {
