@@ -10,8 +10,10 @@ function remove(headers, removeHeaders) {
   if (typeof removeHeaders == "string")
     delete headers[removeHeaders?.toLowerCase?.()];
   else if (Array.isArray(removeHeaders))
-    for (let header of removeHeaders)
+    for (let header of removeHeaders) {
+      console.log("[+] REMOVING THE HEADER : ", header);
       delete headers[header?.toLowerCase?.()]
+    }
 }
 
 function modify(headers, modifyHeaders) {
