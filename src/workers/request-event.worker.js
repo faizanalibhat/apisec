@@ -220,7 +220,6 @@ async function runScan(payload, msg, channel) {
                     console.error("[!] Error creating vulnerabilities:", vulnError.message);
                 }
             }
-
         }
 
 
