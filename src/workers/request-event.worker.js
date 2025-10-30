@@ -150,8 +150,8 @@ async function runScan(payload, msg, channel) {
                   orgId,
                   scanName: scan.name,
                   scanId,
-                  ruleId: rule._id,
-                  requestId: originalRequest._id,
+                  // ruleId: rule._id,
+                  // requestId: originalRequest._id,
 
                   ruleSnapshot: rule,
                   requestSnapshot: originalRequest,
@@ -210,8 +210,8 @@ async function runScan(payload, msg, channel) {
                   const query = {
                       orgId: vulnerabilityData.orgId,
                       scanId: vulnerabilityData.scanId,
-                      ruleId: vulnerabilityData.ruleId,
-                      requestId: vulnerabilityData.requestId
+                      'ruleSnapshot._id': rule._id,
+                      'requestSnapshot._id': originalRequest._id
                   };
 
                   // upsert: true -> create if not exists, update otherwise
@@ -230,8 +230,8 @@ async function runScan(payload, msg, channel) {
                   console.error("[!] Error creating/updating vulnerability:", vulnError.message);
               }
           }
-        }
 
+        }
     } catch (error) {
         console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
     } finally {
