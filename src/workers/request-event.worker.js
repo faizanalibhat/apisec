@@ -60,9 +60,6 @@ async function requestCreatedHandler(payload, msg, channel) {
 
       try {
         transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
-
-        for (let k of transformed) console.log("[+] AFTER TRANSFORMATIONS RAN: ", k.headers);
-
       } catch (err) {
         console.log(err);
         continue;
