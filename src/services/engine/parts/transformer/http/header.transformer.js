@@ -145,6 +145,8 @@ export default {
       return newRequest;
     });
 
+    console.log("[+] NEW REQUESTS BEING RETURNED : ", requests.length);
+
     return requests;
   }
 };
