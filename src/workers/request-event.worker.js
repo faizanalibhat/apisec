@@ -238,7 +238,7 @@ async function runScan(payload, msg, channel) {
                           $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
                       });
                   } else {
-                      console.log(`[~] Updated existing vulnerability record - ${vulnerabilityData.title}`);
+                      console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
                   }
 
                   // Update transformed request state
