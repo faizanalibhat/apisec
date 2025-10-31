@@ -67,7 +67,7 @@ const rawRequestSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['postman', 'browser-extension'],
+      enum: ['postman', 'browser-extension', 'swagger'],
       default: 'postman',
       index: true,
     },
@@ -78,6 +78,24 @@ const rawRequestSchema = new mongoose.Schema(
         responseHeaders: mongoose.Schema.Types.Mixed,
         responseBody: String,
         extensionTimestamp: Number,
+      },
+      default: null,
+    },
+    swaggerMetadata: {
+      type: {
+        operationId: String,
+        tags: [String],
+        summary: String,
+        description: String,
+        consumes: [String],
+        produces: [String],
+        security: [mongoose.Schema.Types.Mixed],
+        deprecated: Boolean,
+        pathPattern: String,
+        basePath: String,
+        host: String,
+        schemes: [String],
+        servers: [{ url: String, description: String }]
       },
       default: null,
     },
@@ -107,6 +125,7 @@ const rawRequestSchema = new mongoose.Schema(
 rawRequestSchema.index({ name: 'text', url: 'text', description: 'text' });
 rawRequestSchema.index({ method: 1, orgId: 1 });
 rawRequestSchema.index({ collectionName: 1, orgId: 1 });
+rawRequestSchema.index({ source: 1, orgId: 1 });
 
 // Mark as edited when updating
 rawRequestSchema.pre('findOneAndUpdate', function () {

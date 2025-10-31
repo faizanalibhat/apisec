@@ -6,6 +6,12 @@ const integrationSchema = new mongoose.Schema({
         required: [true, 'orgId is required'],
         // index: true
     },
+    type: {
+        type: String,
+        enum: ['postman', 'swagger'],
+        required: [true, 'Integration type is required'],
+        default: 'postman'
+    },
     environmentId: { type: mongoose.Types.ObjectId, required: false },
     name: {
         type: String,
@@ -17,9 +23,10 @@ const integrationSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    // Postman-specific fields
     apiKey: {
         type: String,
-        required: [true, 'API key is required']
+        required: function() { return this.type === 'postman'; }
     },
     postmanUserId: {
         type: String,
@@ -29,21 +36,9 @@ const integrationSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-    workspaces: [{
-        id: {
-            type: String,
-            required: true
-        },
-        name: {
-            type: String,
-            required: true
-        },
-        collections: [{
+    workspaces: {
+        type: [{
             id: {
-                type: String,
-                required: true
-            },
-            uid: {
                 type: String,
                 required: true
             },
@@ -51,12 +46,50 @@ const integrationSchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
-            postmanUrl: {
-                type: String,
-                default: null
-            }
+            collections: [{
+                id: {
+                    type: String,
+                    required: true
+                },
+                uid: {
+                    type: String,
+                    required: true
+                },
+                name: {
+                    type: String,
+                    required: true
+                },
+                postmanUrl: {
+                    type: String,
+                    default: null
+                }
+            }]
+        }],
+        required: function() { return this.type === 'postman'; },
+        default: undefined
+    },
+    // Swagger-specific fields
+    sourceUrl: {
+        type: String,
+        required: function() { return this.type === 'swagger'; }
+    },
+    swaggerSpec: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
+    },
+    swaggerInfo: {
+        title: String,
+        version: String,
+        description: String,
+        host: String,
+        basePath: String,
+        schemes: [String],
+        servers: [{
+            url: String,
+            description: String
         }]
-    }],
+    },
+    // Common metadata
     metadata: {
         lastSyncedAt: {
             type: Date,
@@ -67,6 +100,10 @@ const integrationSchema = new mongoose.Schema({
             default: 0
         },
         totalCollections: {
+            type: Number,
+            default: 0
+        },
+        totalEndpoints: {
             type: Number,
             default: 0
         },
@@ -90,6 +127,7 @@ const integrationSchema = new mongoose.Schema({
 
 // Create text index for searching
 integrationSchema.index({ name: 'text', description: 'text' });
+integrationSchema.index({ type: 1, orgId: 1 });
 
 // Virtual for checking if sync is needed (e.g., not synced in last 24 hours)
 integrationSchema.virtual('needsSync').get(function () {
@@ -111,23 +149,30 @@ integrationSchema.methods.updateSyncStatus = function (status, error = null) {
 };
 
 // Method to update sync metadata
-integrationSchema.methods.updateSyncMetadata = function (totalRequests, totalCollections) {
+integrationSchema.methods.updateSyncMetadata = function (totalRequests, totalCollections, totalEndpoints = null) {
     this.metadata.totalRequests = totalRequests;
     this.metadata.totalCollections = totalCollections;
+    if (totalEndpoints !== null) {
+        this.metadata.totalEndpoints = totalEndpoints;
+    }
     return this.save();
 };
 
 // Method to generate Postman URL for a collection
 integrationSchema.methods.generatePostmanUrl = function (workspaceName, workspaceId, collectionUid) {
-    if (!this.postmanTeamDomain || !this.postmanUserId) {
+    if (this.type !== 'postman' || !this.postmanTeamDomain || !this.postmanUserId) {
         return null;
     }
 
     return `https://${this.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspaceName)}~${workspaceId}/collection/${this.postmanUserId}-${collectionUid}`;
 };
 
-// Method to find collection by name
+// Method to find collection by name (Postman only)
 integrationSchema.methods.findCollectionByName = function (collectionName, workspaceName) {
+    if (this.type !== 'postman' || !this.workspaces) {
+        return null;
+    }
+    
     for (const workspace of this.workspaces) {
         if (!workspaceName || workspace.name === workspaceName) {
             const collection = workspace.collections.find(c => c.name === collectionName);
@@ -142,6 +187,17 @@ integrationSchema.methods.findCollectionByName = function (collectionName, works
     }
     return null;
 };
+
+// Pre-save validation to ensure required fields based on type
+integrationSchema.pre('save', function(next) {
+    if (this.type === 'postman' && !this.apiKey) {
+        next(new Error('API key is required for Postman integrations'));
+    } else if (this.type === 'swagger' && !this.sourceUrl) {
+        next(new Error('Source URL is required for Swagger integrations'));
+    } else {
+        next();
+    }
+});
 
 const Integration = mongoose.model('Integration', integrationSchema);
 
