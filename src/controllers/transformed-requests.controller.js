@@ -41,29 +41,40 @@ export class TransformedRequestsController {
             // --- Lookup Vulnerability ---
             {
                 $lookup: {
-                from: "vulnerabilities",
-                let: { request_id: "$_id" },
-                pipeline: [
-                    {
-                    $match: {
-                        $expr: {
-                        $and: [
-                            { $eq: ["$orgId", orgId] },
-                            { $ne: ["$$request_id", null] },
-                            { $eq: ["$transformedRequestSnapshot._id", "$$request_id"] }
-                        ]
+                    from: "vulnerabilities",
+                    let: { request_id: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$orgId", orgId] },
+                                        { $ne: ["$$request_id", null] },
+                                        { $eq: [{ $toObjectId: "$transformedRequestSnapshot._id" }, "$$request_id"] }
+                                    ]
+                                }
+                            }
                         }
-                    }
-                    }
-                ],
-                as: "vulnerability"
+                    ],
+                    as: "vulnerability"
                 }
             },
             {
                 $addFields: {
-                vulnerability: {
-                    $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null]
+                    vulnerability: {
+                        $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null]
+                    },
                 }
+            },
+            {
+                $addFields: {
+                    vulnerabilityDetected: {
+                        $cond: {
+                            if: { $eq: ["$vulnerability", null] },
+                            then: false,
+                            else: true
+                        }
+                    }
                 }
             },
 
