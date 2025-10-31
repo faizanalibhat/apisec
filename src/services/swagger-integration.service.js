@@ -18,7 +18,7 @@ class SwaggerIntegrationService {
 
             // Validate and fetch Swagger spec
             const specData = await this.swaggerClient.fetchSwaggerSpec(sourceUrl);
-            
+
             // Extract basic info from spec
             const swaggerInfo = this.swaggerParser.extractBasicInfo(specData.spec);
 
@@ -28,7 +28,6 @@ class SwaggerIntegrationService {
                 orgId,
                 name: `${name || swaggerInfo.title} - Environment`,
                 values: environmentVariables,
-                workspaceId: null,
                 workspaceName: 'Swagger Import',
                 isActive: true
             });
@@ -58,10 +57,10 @@ class SwaggerIntegrationService {
             });
 
             // Trigger async sync process
-            await mqbroker.publish("apisec", "apisec.integration.sync", { 
-                integration, 
+            await mqbroker.publish("apisec", "apisec.integration.sync", {
+                integration,
                 sourceUrl,
-                environment: {} 
+                environment: {}
             });
 
             // Return integration without spec data
@@ -77,7 +76,7 @@ class SwaggerIntegrationService {
     async getIntegrations(orgId, page, limit, search) {
         try {
             const skip = (page - 1) * limit;
-            
+
             const query = {
                 orgId,
                 type: 'swagger'
@@ -215,10 +214,10 @@ class SwaggerIntegrationService {
             await integration.save();
 
             // Trigger sync again
-            await mqbroker.publish("apisec", "apisec.integration.sync", { 
-                integration, 
+            await mqbroker.publish("apisec", "apisec.integration.sync", {
+                integration,
                 sourceUrl: integration.sourceUrl,
-                environment: {} 
+                environment: {}
             });
 
             const updatedIntegration = await Integration.findById(id).select('-swaggerSpec').lean();
@@ -245,13 +244,13 @@ class SwaggerIntegrationService {
         try {
             // Update status
             await Integration.updateOne(
-                { _id: integration._id }, 
+                { _id: integration._id },
                 { $set: { 'metadata.status': 'syncing' } }
             );
 
             // Fetch latest spec
             const specData = await this.swaggerClient.fetchSwaggerSpec(sourceUrl);
-            
+
             // Parse endpoints into raw requests
             const rawRequests = await this.swaggerParser.parseSwaggerToRawRequests(
                 specData.spec,

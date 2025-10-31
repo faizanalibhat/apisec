@@ -10,12 +10,12 @@ const rawEnvironmentSchema = new mongoose.Schema(
         integrationId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Integration',
-            required: true,
+            // required: true,
             index: true,
         },
         workspaceId: {
             type: String,
-            required: true,
+            // required: true,
             index: true,
         },
         workspaceName: {
@@ -24,12 +24,12 @@ const rawEnvironmentSchema = new mongoose.Schema(
         },
         postmanEnvironmentId: {
             type: String,
-            required: true,
+            // required: true,
             index: true,
         },
         postmanUid: {
             type: String,
-            required: true,
+            // required: true,
         },
         name: {
             type: String,
@@ -38,7 +38,7 @@ const rawEnvironmentSchema = new mongoose.Schema(
         },
         owner: {
             type: String,
-            required: true,
+            // required: true,
         },
         values: [
             {
@@ -94,7 +94,7 @@ const rawEnvironmentSchema = new mongoose.Schema(
 // Indexes for search functionality
 rawEnvironmentSchema.index({ name: 'text', 'values.key': 'text', 'values.value': 'text' });
 rawEnvironmentSchema.index({ workspaceId: 1, orgId: 1 });
-rawEnvironmentSchema.index({ postmanEnvironmentId: 1, orgId: 1 }, { unique: true });
+rawEnvironmentSchema.index({ postmanEnvironmentId: 1, orgId: 1 }, { unique: true, sparse: true });
 
 // Mark as edited when updating
 rawEnvironmentSchema.pre('findOneAndUpdate', function () {

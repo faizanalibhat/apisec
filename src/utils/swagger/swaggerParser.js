@@ -51,7 +51,7 @@ class SwaggerParser {
             variables.push({
                 key: 'baseUrl',
                 value: spec.servers[0].url,
-                type: 'text',
+                type: 'default',
                 enabled: true
             });
 
@@ -62,7 +62,7 @@ class SwaggerParser {
                         variables.push({
                             key: `server${index}_${key}`,
                             value: varDef.default || '',
-                            type: 'text',
+                            type: 'default',
                             enabled: true,
                             description: varDef.description
                         });
@@ -77,7 +77,7 @@ class SwaggerParser {
             variables.push({
                 key: 'baseUrl',
                 value: `${scheme}://${host}${basePath}`,
-                type: 'text',
+                type: 'default',
                 enabled: true
             });
         }
@@ -100,7 +100,7 @@ class SwaggerParser {
             variables.push({
                 key: param,
                 value: '',
-                type: 'text',
+                type: 'default',
                 enabled: true,
                 description: `Path parameter: ${param}`
             });
@@ -115,7 +115,7 @@ class SwaggerParser {
                     variables.push({
                         key: `${name}_apiKey`,
                         value: '',
-                        type: 'text',
+                        type: 'default',
                         enabled: true,
                         description: `API Key for ${name}`
                     });
@@ -123,7 +123,7 @@ class SwaggerParser {
                     variables.push({
                         key: `${name}_token`,
                         value: '',
-                        type: 'text',
+                        type: 'default',
                         enabled: true,
                         description: `Bearer token for ${name}`
                     });
