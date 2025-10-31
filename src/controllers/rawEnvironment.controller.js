@@ -47,11 +47,11 @@ class RawEnvironmentController {
             } = req.query;
 
             // Validate that if search is provided, environmentId must also be provided
-            if (search && !environmentId) {
-                return res.sendApiResponse(
-                    ApiResponse.error('environmentId is required when using search', null, 400)
-                );
-            }
+            // if (search && !environmentId) {
+            //     return res.sendApiResponse(
+            //         ApiResponse.error('environmentId is required when using search', null, 400)
+            //     );
+            // }
 
             // Handle search within specific environment
             if (search && environmentId) {
@@ -61,7 +61,10 @@ class RawEnvironmentController {
                     orgId
                 );
                 return res.sendApiResponse(
-                    ApiResponse.success('Environment search results retrieved successfully', result)
+                    ApiResponse.success('Environment search results retrieved successfully', [result], {
+                        currentPage: page,
+                        totalItems: result.totalItems,
+                    })
                 );
             }
 
