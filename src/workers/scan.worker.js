@@ -15,6 +15,9 @@ import "../db/mongoose.js";
 
 import { syncRulesFromGithub } from "./sync-rules.worker.js";
 
+import { SwaggerIntegrationService } from "../services/swagger-integration.service.js";
+const swaggerIntegrationService = new SwaggerIntegrationService();
+
 
 const parser = new PostmanParser();
 const integrationService = new IntegrationService();
@@ -609,11 +612,17 @@ async function runAndMatchRequests(payload, msg, channel) {
 
 // sync requests from integration.
 async function syncIntegration(payload, msg, channel) {
-    const { integration, apiKey, environment } = payload;
+    const { integration, apiKey, sourceUrl, environment } = payload;
     console.log("[+] SYNCING INTEGRATION : ", integration);
 
     try {
-        await integrationService.syncIntegration(integration, apiKey, environment);
+        // Check integration type and call appropriate service
+        if (integration.type === 'swagger') {
+            // Need to import SwaggerIntegrationService at top
+            await swaggerIntegrationService.syncIntegration(integration, sourceUrl, environment);
+        } else {
+            await integrationService.syncIntegration(integration, apiKey, environment);
+        }
     }
     catch (err) {
         console.log(err);
