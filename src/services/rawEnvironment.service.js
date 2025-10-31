@@ -92,7 +92,10 @@ class RawEnvironmentService {
             return {
                 ...environment,
                 values: matchingVariables,
-                _searchResultCount: matchingVariables.length
+                _searchResultCount: matchingVariables.length,
+                pagination: {
+                    totalItems: await RawEnvironment.countDocuments(filters)
+                }
             };
         } catch (error) {
             this.handleError(error);
