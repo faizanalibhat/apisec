@@ -295,10 +295,16 @@ class SwaggerParser {
                 }
 
                 // Build raw HTTP request
+                // Convert headers object to array format expected by buildRawRequest
+                const headersArray = Object.entries(requestData.headers).map(([key, value]) => ({
+                    key: key,
+                    value: value
+                }));
+
                 requestData.rawHttp = this.postmanParser.buildRawRequest(
                     requestData.method,
                     requestData.url,
-                    requestData.headers,
+                    headersArray,
                     requestData.body,
                     []
                 );
