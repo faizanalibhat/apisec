@@ -588,9 +588,12 @@ export class ScanService {
                 throw ApiError.notFound('Original scan not found');
             }
 
+            // Remove old rescan prefix to get the base name
+            const baseName = originalScan.name.replace(/^\[Rescan.*?\]\s*/, '');
+
             // Preserve scan data based on scan type
             const scanData = {
-                name: `[Rescan] ${originalScan.name}`,
+                name: `[Rescan] ${baseName}`,
                 description: `Rescan of "${originalScan.name}" initiated on ${new Date().toISOString()}`,
                 orgId: originalScan.orgId,
                 scope: originalScan.scope,
