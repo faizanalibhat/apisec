@@ -588,9 +588,21 @@ export class ScanService {
                 throw ApiError.notFound('Original scan not found');
             }
 
+            // Create a formatted timestamp
+            const now = new Date();
+            const day = now.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayOfMonth = now.getDate();
+            const month = now.toLocaleDateString('en-US', { month: 'short' });
+            const time = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const [hh, mm, ss] = time.split(':');
+            const formattedTimestamp = `${day}, ${dayOfMonth} ${month}, ${hh},${mm},${ss}`;
+    
+            // Remove old rescan prefix to get the base name
+            const baseName = originalScan.name.replace(/^\[Rescan.*?\]\\s*/, '');
+
             // Preserve scan data based on scan type
             const scanData = {
-                name: `[Rescan] ${originalScan.name}`,
+                name: `[Rescan <${formattedTimestamp}>] ${baseName}`,
                 description: `Rescan of "${originalScan.name}" initiated on ${new Date().toISOString()}`,
                 orgId: originalScan.orgId,
                 scope: originalScan.scope,
