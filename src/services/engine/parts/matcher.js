@@ -36,67 +36,85 @@ function contains(target, match) {
 }
 
 function statusMatch(status, match) {
+  let isMatch = false;
   if (typeof match == 'number') {
-    return status == match;
+    isMatch = status == match;
   }
   else if (Array.isArray(match)) {
-    return match.includes(status);
+    isMatch = match.includes(status);
   }
   else if (typeof match == 'object') {
     if (match.in && Array.isArray(match.in)) {
-      return match.in.includes(status);
+      isMatch = match.in.includes(status);
     }
     else if (match.notIn && Array.isArray(match.notIn)) {
-      return !match.notIn.includes(status);
+      isMatch = !match.notIn.includes(status);
     }
   }
+
+  if (isMatch) {
+    return { location: 'status', matched_on: status };
+  }
+  return null;
 }
 
 function bodyMatch(body, match) {
+  let isMatch = false;
   if (match.contains) {
-    return contains(JSON.stringify(body), match.contains);
+    isMatch = contains(JSON.stringify(body), match.contains);
   }
 
   if (match.regex) {
     const regex = new RegExp(match.regex);
-    return regex.test(JSON.stringify(body));
+    isMatch = regex.test(JSON.stringify(body));
   }
+
+  if (isMatch) {
+    return { location: 'body', matched_on: match };
+  }
+  return null;
 }
 
 function headerMatch(header, match) {
+  let isMatch = false;
   if (match.contains) {
-    return contains(JSON.stringify(header), match.contains);
+    isMatch = contains(JSON.stringify(header), match.contains);
   }
 
   if (match.regex) {
     const regex = new RegExp(match.regex);
-    return regex.test(JSON.stringify(header));
+    isMatch = regex.test(JSON.stringify(header));
   }
 
   for (let [key,val] of Object.entries(match)) {
 
     let target = header[key?.toLowerCase?.()];
 
-    if (!target) return false;
+    if (!target) continue;
 
     if (typeof val == 'string') {
-      return target == val;
+      isMatch = target == val;
     }
 
     if (val.contains) {
-      return contains(target, val.contains);
+      isMatch = contains(target, val.contains);
     }
 
     if (val.regex) {
       const regex = new RegExp(val.regex);
-      return regex.test(target);
+      isMatch = regex.test(target);
+    }
+    if (isMatch) {
+      return { location: `header.${key}`, matched_on: val };
     }
   }
+  return null;
 }
 
 
 const match = ({ rule, response }) => {
   const allMatches = [];
+  const matchDetails = [];
 
   const matchRule = rule.match_on;
 
@@ -104,27 +122,41 @@ const match = ({ rule, response }) => {
 
   if (matchRule.status) {
     const statusMatchResult = statusMatch(response.status, matchRule.status);
-    allMatches.push(statusMatchResult);
+    if (statusMatchResult) {
+      allMatches.push(true);
+      matchDetails.push(statusMatchResult);
+    } else {
+      allMatches.push(false);
+    }
   }
 
   if (response?.body && matchRule.body) {
     const bodyMatchResult = bodyMatch(response.body, matchRule.body);
-    allMatches.push(bodyMatchResult);
+    if (bodyMatchResult) {
+      allMatches.push(true);
+      matchDetails.push(bodyMatchResult);
+    } else {
+      allMatches.push(false);
+    }
   }
 
   if (response?.headers && matchRule.header) {
     const headerMatchResult = headerMatch(response.headers, matchRule.header);
-
-    allMatches.push(headerMatchResult);
+    if (headerMatchResult) {
+      allMatches.push(true);
+      matchDetails.push(headerMatchResult);
+    } else {
+      allMatches.push(false);
+    }
   }
 
   console.log("all matches: ", allMatches)
 
-  const match = allMatches.every(m => m);
+  const isMatch = allMatches.length > 0 && allMatches.every(m => m);
 
-  console.log("final match: ", match);
+  console.log("final match: ", isMatch);
 
-  return { match }
+  return { match: isMatch, details: matchDetails }
 }
 
 const matcher = { match };

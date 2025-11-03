@@ -477,6 +477,9 @@ async function runAndMatchRequests(payload, msg, channel) {
                 cwe: rule.parsed_yaml.report.cwe,
                 owasp: rule.parsed_yaml.report.owasp,
 
+                matched_by: transformedRequest.appliedTransformations,
+                matched_at: matchResult.details,
+
                 // Request/Rule context
                 requestDetails: {
                     name: originalRequest.name,
