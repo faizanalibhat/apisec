@@ -87,51 +87,34 @@ function bodyMatch(body, match) {
 }
 
 function headerMatch(header, match) {
-  let isMatch = false;
-  let highlight = null;
-  if (match.contains) {
-    isMatch = contains(JSON.stringify(header), match.contains);
-    if (isMatch) {
-        const pattern = Array.isArray(match.contains) ? match.contains.map(escapeRegex).join('|') : escapeRegex(match.contains);
-        highlight = `/${pattern}/gi`;
+    const results = [];
+    for (const [key, val] of Object.entries(match)) {
+        let isMatch = false;
+        let highlight = null;
+        const target = header[key?.toLowerCase?.()];
+
+        if (!target) continue;
+
+        if (typeof val === 'string') {
+            isMatch = target === val;
+            if (isMatch) highlight = `/${escapeRegex(val)}/gi`;
+        } else if (val.contains) {
+            isMatch = contains(target, val.contains);
+            if (isMatch) {
+                const pattern = Array.isArray(val.contains) ? val.contains.map(escapeRegex).join('|') : escapeRegex(val.contains);
+                highlight = `/${pattern}/gi`;
+            }
+        } else if (val.regex) {
+            const regex = new RegExp(val.regex);
+            isMatch = regex.test(target);
+            if (isMatch) highlight = `/${val.regex}/gi`;
+        }
+
+        if (isMatch) {
+            results.push({ location: `header.${key}`, matched_on: val, highlight });
+        }
     }
-  }
-
-  if (match.regex) {
-    const regex = new RegExp(match.regex);
-    isMatch = regex.test(JSON.stringify(header));
-    if (isMatch) highlight = `/${match.regex}/gi`;
-  }
-
-  for (let [key,val] of Object.entries(match)) {
-
-    let target = header[key?.toLowerCase?.()];
-
-    if (!target) continue;
-
-    if (typeof val == 'string') {
-      isMatch = target == val;
-      if (isMatch) highlight = `/${escapeRegex(val)}/gi`;
-    }
-
-    if (val.contains) {
-      isMatch = contains(target, val.contains);
-      if (isMatch) {
-          const pattern = Array.isArray(val.contains) ? val.contains.map(escapeRegex).join('|') : escapeRegex(val.contains);
-          highlight = `/${pattern}/gi`;
-      }
-    }
-
-    if (val.regex) {
-      const regex = new RegExp(val.regex);
-      isMatch = regex.test(target);
-      if (isMatch) highlight = `/${val.regex}/gi`;
-    }
-    if (isMatch) {
-      return { location: `header.${key}`, matched_on: val, highlight };
-    }
-  }
-  return null;
+    return results;
 }
 
 
@@ -142,14 +125,14 @@ const match = ({ rule, response }) => {
 
   const matchRule = rule.match_on;
 
-  if (!matchRule) return { match: false };
+  if (!matchRule) return { match: false, details: [], highlight: {} };
 
   if (matchRule.status) {
     const statusMatchResult = statusMatch(response.status, matchRule.status);
     if (statusMatchResult) {
       allMatches.push(true);
       matchDetails.push(statusMatchResult);
-      if(statusMatchResult.highlight) highlights.status = statusMatchResult.highlight;
+      if (statusMatchResult.highlight) highlights.status = statusMatchResult.highlight;
     } else {
       allMatches.push(false);
     }
@@ -160,28 +143,32 @@ const match = ({ rule, response }) => {
     if (bodyMatchResult) {
       allMatches.push(true);
       matchDetails.push(bodyMatchResult);
-      if(bodyMatchResult.highlight) highlights.body = bodyMatchResult.highlight;
+      if (bodyMatchResult.highlight) highlights.body = bodyMatchResult.highlight;
     } else {
       allMatches.push(false);
     }
   }
 
   if (response?.headers && matchRule.header) {
-    const headerMatchResult = headerMatch(response.headers, matchRule.header);
-    if (headerMatchResult) {
-      allMatches.push(true);
-      matchDetails.push(headerMatchResult);
-      if(headerMatchResult.highlight) highlights.header = headerMatchResult.highlight;
+    const headerMatchResults = headerMatch(response.headers, matchRule.header);
+    if (headerMatchResults.length > 0) {
+        highlights.header = {};
+        for (const result of headerMatchResults) {
+            allMatches.push(true);
+            matchDetails.push(result);
+            if (result.highlight) {
+                const key = result.location.split('.')[1];
+                highlights.header[key] = result.highlight;
+            }
+        }
     } else {
-      allMatches.push(false);
+        if (Object.keys(matchRule.header).length > 0) {
+             allMatches.push(false);
+        }
     }
   }
 
-  console.log("all matches: ", allMatches)
-
   const isMatch = allMatches.length > 0 && allMatches.every(m => m);
-
-  console.log("final match: ", isMatch);
 
   return { match: isMatch, details: matchDetails, highlight: highlights }
 }

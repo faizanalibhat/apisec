@@ -510,8 +510,7 @@ async function runAndMatchRequests(payload, msg, channel) {
                         body: response.body,
                         size: response.size || 0,
                         responseTime: response.time || 0
-                    },
-                    highlight: matchResult?.highlight || "",
+                    }
                     // matchedCriteria: matchResult.matchedCriteria
                 }
             };
