@@ -509,7 +509,8 @@ async function runAndMatchRequests(payload, msg, channel) {
                         headers: response.headers || {},
                         body: response.body,
                         size: response.size || 0,
-                        responseTime: response.time || 0
+                        responseTime: response.time || 0,
+                        version: response.version || ''
                     }
                     // matchedCriteria: matchResult.matchedCriteria
                 }

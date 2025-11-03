@@ -44,6 +44,8 @@ const transformedRequestSchema = new mongoose.Schema({
     type: Object,
     default: {}
   },
+  version: String,
+
 
   // Execution state
   state: {
@@ -83,7 +85,9 @@ const transformedRequestSchema = new mongoose.Schema({
       headers: Object,
       body: mongoose.Schema.Types.Mixed,
       size: Number,
-      error: String
+      error: String,
+      version: String
+
     }
   },
 
