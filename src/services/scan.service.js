@@ -424,6 +424,15 @@ export class ScanService {
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
                         "stats.totalTransformedRequests": { $size: "$transformedRequests" },
+                        "stats.processedRequests": { 
+                            $size: { 
+                                $filter: { 
+                                    input: "$transformedRequests", 
+                                    as: "req", 
+                                    cond: { $in: ["$$req.state", ["complete", "failed"]] } 
+                                } 
+                            } 
+                        },
                         "vulnerabilitySummary.total": {
                             $add: [
                                 { $ifNull: ["$vulnerabilitySummary.critical", 0] },
