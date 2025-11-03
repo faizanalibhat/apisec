@@ -479,6 +479,7 @@ async function runAndMatchRequests(payload, msg, channel) {
 
                 matched_by: transformedRequest.appliedTransformations,
                 matched_at: matchResult.details,
+                highlight: matchResult.highlight,
 
                 // Request/Rule context
                 requestDetails: {
