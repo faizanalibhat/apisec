@@ -134,9 +134,9 @@ class RawRequestController {
           currentPage: result.currentPage,
           totalPages: result.totalPages,
           totalItems: result.totalItems,
-          itemsPerPage: result.itemsPerPage,
-          summary: result.summary
+          itemsPerPage: result.itemsPerPage
         },
+        summary: result.summary,
         filters: supported_filters
       });
     } catch (error) {
