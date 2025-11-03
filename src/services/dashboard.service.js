@@ -3,6 +3,7 @@ import RawRequest from '../models/rawRequest.model.js';
 import Scan from '../models/scan.model.js';
 import Vulnerability from '../models/vulnerability.model.js';
 import { ApiError } from '../utils/ApiError.js';
+import { resolveCweToType } from '../utils/cwe.util.js';
 
 class DashboardService {
     // Convert period string to date
@@ -218,13 +219,17 @@ class DashboardService {
             }
         ]);
 
-        // Convert to object format
-        const cweMap = {};
-        cweAgg.forEach(item => {
-            cweMap[item._id] = item.count;
-        });
+        // Resolve CWE names in parallel
+        const resolvedCwes = await Promise.all(cweAgg.map(async (item) => {
+            const name = await resolveCweToType(item._id);
+            return {
+                cwe: item._id,
+                name: name,
+                count: item.count
+            };
+        }));
 
-        return cweMap;
+        return resolvedCwes;
     }
 
     async getVulnerabilitiesByStatus(orgId) {
