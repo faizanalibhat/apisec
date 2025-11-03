@@ -136,6 +136,41 @@ async function runScan(payload, msg, channel) {
           if (match?.match) {
               console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
+              try
+              {
+                // Unconditionally update state to complete after processing
+                await TransformedRequest.updateOne(
+                    { _id: transformedRequest._id },
+                    {
+                        $set: {
+                            state: "complete",
+                            executionResult: {
+                                matched: match.match,
+                                executedAt: new Date(),
+                                responseStatus: response.status,
+                                responseTime: response.time,
+                                response
+                            }
+                        }
+                    }
+                );
+
+            } catch (requestError) {
+                console.error(`[!] Error processing request ${transformedRequest._id}:`, requestError);
+                await TransformedRequest.updateOne(
+                    { _id: transformedRequest._id },
+                    {
+                        $set: {
+                            state: "failed",
+                            error: {
+                                message: requestError.message,
+                                occurredAt: new Date()
+                            }
+                        }
+                    }
+                );
+            }
+
               const templateContext = TemplateEngine.createVulnerabilityContext({
                   transformedRequest: request,
                   originalRequest: request,
