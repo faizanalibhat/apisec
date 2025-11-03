@@ -6,15 +6,19 @@ const vulnerabilityService = new VulnerabilityService();
 
 async function vulnerabilityUpdatedHandler(payload, msg, channel) {
   try {
-    const { data: vuln } = payload;
+    const { vuln } = payload;
+
+    console.log("[+] UPDATE EVENT RECIEVED : ", vuln.title, vuln.state);
+
     if (!vuln || !vuln.universalVulnId) {
       console.error('[!] Invalid payload received. Missing universalVulnId.', payload);
-      return channel.ack(msg);
     }
 
     console.log(`[+] Received vulnerability update for ${vuln.universalVulnId}`);
 
     await vulnerabilityService.updateVulnerabilityFromVM(vuln);
+
+    console.log("[+] STATE SYNCED ");
 
   } catch (error) {
     console.error(`[!] Error processing vm.vuln.update event:`, error.message);
