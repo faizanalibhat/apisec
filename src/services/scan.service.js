@@ -424,6 +424,7 @@ export class ScanService {
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
                         "stats.totalTransformedRequests": { $size: "$transformedRequests" },
+                        "stats.processedRequests": "$completedRequests",
                         "stats.processedRequests": { 
                             $size: { 
                                 $filter: { 
