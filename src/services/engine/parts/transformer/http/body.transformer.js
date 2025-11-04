@@ -144,13 +144,13 @@ function applyRules(body, rules, format) {
     if (allBodies.length) {
       let transformedParams = []
       for (let p of allBodies) {
-        transformedParams.push(...(handleTransformation(p, rules.transformations) || []));
+        transformedParams.push(...(handleTransformation(p, rules.transformations, format) || []));
       }
 
       allBodies.push(...transformedParams);
     }
     else {
-      allBodies = handleTransformation(modified, rules.transformations);
+      allBodies = handleTransformation(modified, rules.transformations, format);
     }
 
     return allBodies;
