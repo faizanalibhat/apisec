@@ -147,6 +147,7 @@ class RawRequestService {
                 }
             }
 
+
             pipeline.push({
                 $addFields: {
                     vulnCounts: {
@@ -174,6 +175,7 @@ class RawRequestService {
                     }
                 }
             });
+
 
 
             // Add severity filtering
@@ -383,14 +385,31 @@ class RawRequestService {
             pipeline.push({
                 $addFields: {
                     vulnCounts: {
-                        $cond: [
+                    $cond: [
+                        {
+                        $and: [
                             { $gt: [{ $size: "$vulnStats" }, 0] },
-                            { $arrayToObject: { $arrayElemAt: ["$vulnStats.stats", 0] } },
-                            {}
+                            { $gt: [{ $size: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] } }, 0] }
                         ]
+                        },
+                        {
+                        $arrayToObject: {
+                            $map: {
+                            input: { $arrayElemAt: ["$vulnStats.stats", 0] },
+                            as: "item",
+                            in: {
+                                k: "$$item.severity",
+                                v: "$$item.count"
+                            }
+                            }
+                        }
+                        },
+                        {} // fallback if vulnStats or stats are empty
+                    ]
                     }
                 }
             });
+            
 
             // Add severity filtering
             if (severity) {
