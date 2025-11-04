@@ -100,6 +100,8 @@ function applyRules(headers, rules) {
 
   const changed = !_.isEqual(headers, original);
 
+  console.log("[+] HEADER CHANGED : ", headers);
+
   if (!allHeaders.length && !changed) {
     return [];
   }
@@ -119,7 +121,7 @@ export default {
 
     const targetHeaders = _.cloneDeep(request.headers || {});
 
-    console.log("[+] ORINGIAL HEADERS : ", targetHeaders);
+    // console.log("[+] ORINGIAL HEADERS : ", targetHeaders);
 
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 
