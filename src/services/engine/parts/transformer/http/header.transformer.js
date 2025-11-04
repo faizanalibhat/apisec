@@ -1,5 +1,13 @@
 import _ from 'lodash';
 
+function normalizeHeaders(header) {
+    const normalized = {};
+    for (let [key, value] of Object.entries(header)) {
+      normalized[key.toLowerCase()] = value;
+    }
+    return normalized;
+}
+
 
 // helper functions one for each operation
 function add(headers, newHeaders) {
@@ -59,6 +67,8 @@ function handleTransformation(headers, transformations) {
 
 function applyRules(headers, rules) {
   let allHeaders = [];
+
+  headers = normalizeHeaders(headers);
   const original = _.cloneDeep(headers);
 
   if (rules.add) {
