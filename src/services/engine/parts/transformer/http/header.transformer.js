@@ -19,7 +19,6 @@ function remove(headers, removeHeaders) {
     delete headers[removeHeaders?.toLowerCase?.()];
   else if (Array.isArray(removeHeaders))
     for (let header of removeHeaders) {
-      console.log("[+] REMOVING THE HEADER : ", header);
       delete headers[header?.toLowerCase?.()]
     }
 }
@@ -110,8 +109,6 @@ function applyRules(headers, rules) {
 
   const changed = !_.isEqual(headers, original);
 
-  console.log("[+] HEADER CHANGED : ", changed, headers);
-
   if (!allHeaders.length && !changed) {
     return [];
   }
@@ -135,8 +132,6 @@ export default {
 
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 
-    for (let k of transformedHeaders) console.log("[+] NEW HEADERS : ", k);
-
     requests = transformedHeaders.map(headers => {
       const newRequest = _.cloneDeep(request);
 
@@ -156,8 +151,6 @@ export default {
 
       return newRequest;
     });
-
-    console.log("[+] NEW REQUESTS BEING RETURNED : ", requests.length);
 
     return requests;
   }

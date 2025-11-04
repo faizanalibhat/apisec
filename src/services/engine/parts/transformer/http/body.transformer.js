@@ -154,8 +154,6 @@ function applyRules(body, rules, format) {
     return allBodies;
   }
 
-  // return allHeaders.length > 0 ? allHeaders : [headers];
-
   return allBodies?.length > 0 ? allBodies : [modified];
 }
 
@@ -171,6 +169,8 @@ export default {
     const bodyFormat = request.body_format || 'json';
 
     const transformedBodies = applyRules(targetBody, bodyRules, bodyFormat);
+
+    for (let k of transformedBodies) console.log("[+] TRANSFORMED BODIES : ", k);
 
     requests = transformedBodies.map(body => {
       const newRequest = _.cloneDeep(request);
