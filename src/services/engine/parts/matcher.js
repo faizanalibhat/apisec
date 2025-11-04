@@ -36,95 +36,141 @@ function contains(target, match) {
 }
 
 function statusMatch(status, match) {
+  let isMatch = false;
+  let highlight = null;
   if (typeof match == 'number') {
-    return status == match;
+    isMatch = status == match;
+    if (isMatch) highlight = `/${match}/`;
   }
   else if (Array.isArray(match)) {
-    return match.includes(status);
+    isMatch = match.includes(status);
+    if (isMatch) highlight = `/${status}/`;
   }
   else if (typeof match == 'object') {
     if (match.in && Array.isArray(match.in)) {
-      return match.in.includes(status);
+      isMatch = match.in.includes(status);
+      if (isMatch) highlight = `/${status}/`;
     }
     else if (match.notIn && Array.isArray(match.notIn)) {
-      return !match.notIn.includes(status);
+      isMatch = !match.notIn.includes(status);
+      // No highlight for notIn
     }
   }
+
+  if (isMatch) {
+    return { location: 'status', matched_on: status, highlight };
+  }
+  return null;
 }
 
 function bodyMatch(body, match) {
+  let isMatch = false;
+  let highlight = null;
   if (match.contains) {
-    return contains(JSON.stringify(body), match.contains);
+    isMatch = contains(JSON.stringify(body), match.contains);
+    if (isMatch) {
+        const pattern = Array.isArray(match.contains) ? match.contains.map(escapeRegex).join('|') : escapeRegex(match.contains);
+        highlight = `/${pattern}/gi`;
+    }
   }
 
   if (match.regex) {
     const regex = new RegExp(match.regex);
-    return regex.test(JSON.stringify(body));
+    isMatch = regex.test(JSON.stringify(body));
+    if (isMatch) highlight = `/${match.regex}/gi`;
   }
+
+  if (isMatch) {
+    return { location: 'body', matched_on: match, highlight };
+  }
+  return null;
 }
 
 function headerMatch(header, match) {
-  if (match.contains) {
-    return contains(JSON.stringify(header), match.contains);
-  }
+    const results = [];
+    for (const [key, val] of Object.entries(match)) {
+        let isMatch = false;
+        let highlight = null;
+        const target = header[key?.toLowerCase?.()];
 
-  if (match.regex) {
-    const regex = new RegExp(match.regex);
-    return regex.test(JSON.stringify(header));
-  }
+        if (!target) continue;
 
-  for (let [key,val] of Object.entries(match)) {
+        if (typeof val === 'string') {
+            isMatch = target === val;
+            if (isMatch) highlight = `/${escapeRegex(val)}/gi`;
+        } else if (val.contains) {
+            isMatch = contains(target, val.contains);
+            if (isMatch) {
+                const pattern = Array.isArray(val.contains) ? val.contains.map(escapeRegex).join('|') : escapeRegex(val.contains);
+                highlight = `/${pattern}/gi`;
+            }
+        } else if (val.regex) {
+            const regex = new RegExp(val.regex);
+            isMatch = regex.test(target);
+            if (isMatch) highlight = `/${val.regex}/gi`;
+        }
 
-    let target = header[key?.toLowerCase?.()];
-
-    if (!target) return false;
-
-    if (typeof val == 'string') {
-      return target == val;
+        if (isMatch) {
+            results.push({ location: `header.${key}`, matched_on: val, highlight });
+        }
     }
-
-    if (val.contains) {
-      return contains(target, val.contains);
-    }
-
-    if (val.regex) {
-      const regex = new RegExp(val.regex);
-      return regex.test(target);
-    }
-  }
+    return results;
 }
 
 
 const match = ({ rule, response }) => {
   const allMatches = [];
+  const matchDetails = [];
+  const highlights = {};
 
   const matchRule = rule.match_on;
 
-  if (!matchRule) return { match: false };
+  if (!matchRule) return { match: false, details: [], highlight: {} };
 
   if (matchRule.status) {
     const statusMatchResult = statusMatch(response.status, matchRule.status);
-    allMatches.push(statusMatchResult);
+    if (statusMatchResult) {
+      allMatches.push(true);
+      matchDetails.push(statusMatchResult);
+      if (statusMatchResult.highlight) highlights.status = statusMatchResult.highlight;
+    } else {
+      allMatches.push(false);
+    }
   }
 
   if (response?.body && matchRule.body) {
     const bodyMatchResult = bodyMatch(response.body, matchRule.body);
-    allMatches.push(bodyMatchResult);
+    if (bodyMatchResult) {
+      allMatches.push(true);
+      matchDetails.push(bodyMatchResult);
+      if (bodyMatchResult.highlight) highlights.body = bodyMatchResult.highlight;
+    } else {
+      allMatches.push(false);
+    }
   }
 
   if (response?.headers && matchRule.header) {
-    const headerMatchResult = headerMatch(response.headers, matchRule.header);
-
-    allMatches.push(headerMatchResult);
+    const headerMatchResults = headerMatch(response.headers, matchRule.header);
+    if (headerMatchResults.length > 0) {
+        highlights.header = {};
+        for (const result of headerMatchResults) {
+            allMatches.push(true);
+            matchDetails.push(result);
+            if (result.highlight) {
+                const key = result.location.split('.')[1];
+                highlights.header[key] = result.highlight;
+            }
+        }
+    } else {
+        if (Object.keys(matchRule.header).length > 0) {
+             allMatches.push(false);
+        }
+    }
   }
 
-  console.log("all matches: ", allMatches)
+  const isMatch = allMatches.length > 0 && allMatches.every(m => m);
 
-  const match = allMatches.every(m => m);
-
-  console.log("final match: ", match);
-
-  return { match }
+  return { match: isMatch, details: matchDetails, highlight: highlights }
 }
 
 const matcher = { match };

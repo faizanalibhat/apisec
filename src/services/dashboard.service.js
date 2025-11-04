@@ -3,6 +3,7 @@ import RawRequest from '../models/rawRequest.model.js';
 import Scan from '../models/scan.model.js';
 import Vulnerability from '../models/vulnerability.model.js';
 import { ApiError } from '../utils/ApiError.js';
+import { resolveCweToType } from '../utils/cwe.util.js';
 
 class DashboardService {
     // Convert period string to date
@@ -64,7 +65,8 @@ class DashboardService {
                 topVulns,
                 vulnBySeverity,
                 vulnByCWE,
-                vulnByStatus
+                vulnByStatus,
+                vulnByCWEDetails: this._resolvedCweNames
             };
         } catch (error) {
             this.handleError(error);
@@ -146,12 +148,12 @@ class DashboardService {
             orgId,
             status: 'active'
         })
-        .sort({ severity: 1, createdAt: -1 }) // Sort by severity (critical first) then by date
-        .limit(5)
-        // .populate('ruleId', 'ruleName category')
-        // .populate('requestId', 'name url method collectionName')
-        // .populate('transformedRequestId', 'method url')
-        .lean();
+            .sort({ severity: 1, createdAt: -1 }) // Sort by severity (critical first) then by date
+            .limit(5)
+            // .populate('ruleId', 'ruleName category')
+            // .populate('requestId', 'name url method collectionName')
+            // .populate('transformedRequestId', 'method url')
+            .lean();
 
         // console.log("rule: ", topVulns.map(vuln => vuln.ruleId));
         // console.log("request: ", topVulns.map(vuln => vuln.requestId));
@@ -159,7 +161,7 @@ class DashboardService {
 
         // Map severity to numeric value for proper sorting
         const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, informational: 4 };
-        
+
         return topVulns.sort((a, b) => {
             const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
             if (severityDiff !== 0) return severityDiff;
@@ -218,11 +220,23 @@ class DashboardService {
             }
         ]);
 
-        // Convert to object format
+        // Convert to object format (original format)
         const cweMap = {};
         cweAgg.forEach(item => {
             cweMap[item._id] = item.count;
         });
+
+        const resolvedCwes = await Promise.all(cweAgg.map(async (item) => {
+            const name = await resolveCweToType(item._id);
+            return {
+                cwe: item._id,
+                name: name,
+                count: item.count
+            };
+        }));
+
+        // Store resolved names in a class property if needed for future use
+        this._resolvedCweNames = resolvedCwes;
 
         return cweMap;
     }

@@ -5,7 +5,7 @@ import Vulnerability from '../models/vulnerability.model.js';
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
-import { getPeriodStartDate, getStateDistribution, getSeverityDistribution, getTotalVulnerabilities, getTotalResolvedVulnerabilities } from '../helpers/project.js';
+import { getPeriodStartDate, getStateDistribution, getSeverityDistribution, getTotalVulnerabilities, getTotalResolvedVulnerabilities, getTotalRawRequests, getTotalTransformedRequests, getTotalRules, getActiveRulesCount } from '../helpers/project.js';
 
 const { ObjectId } = mongoose.Types;
 
@@ -68,11 +68,16 @@ class ProjectsService {
         try {
             const { collectionUids = [], ...restData } = projectData;
 
+            // Find all active rules for the organization
+            const activeRules = await Rule.find({ orgId, isActive: true }).select('_id').lean();
+            const activeRuleIds = activeRules.map(rule => rule._id);
+
             // Create the project
             const project = await Projects.create({
                 orgId,
                 ...restData,
-                collectionUids
+                collectionUids,
+                includedRuleIds: activeRuleIds // Set all active rules by default
             });
 
             // Update collections and raw requests with project ID
@@ -127,23 +132,10 @@ class ProjectsService {
                 throw ApiError.notFound('Project not found');
             }
 
-            // Remove project ID from collections and raw requests
-            if (project.collectionUids?.length > 0) {
-                await this.updateCollectionsAndRequests(
-                    project.collectionUids,
-                    project._id,
-                    'remove'
-                );
-            }
-
-            // Remove project ID from all browser extension requests
-            await RawRequest.deleteMany(
-                {
-                    projectIds: project._id,
-                    source: 'browser-extension'
-                }
-                // { $pull: { projectIds: project._id } }
-            );
+            // Delete all raw requests associated with this project
+            await RawRequest.deleteMany({
+                projectIds: project._id
+            });
 
             await Vulnerability.deleteMany({
                 projectId: project._id
@@ -159,18 +151,30 @@ class ProjectsService {
         try {
             const startDate = getPeriodStartDate(period);
 
+            // Get project details first, as it's needed for active rule calculation
+            const project = await this.findById(projectId, orgId);
+
             // Execute all queries in parallel for performance
             const [
                 stateDistribution,
                 severityDistribution,
                 totalVulns,
-                totalResolved
+                totalResolved,
+                totalRawRequests,
+                totalTransformedRequests,
+                totalRules
             ] = await Promise.all([
                 getStateDistribution(projectId, orgId, startDate),
                 getSeverityDistribution(projectId, orgId, startDate),
                 getTotalVulnerabilities(projectId, orgId, startDate),
-                getTotalResolvedVulnerabilities(projectId, orgId, startDate)
+                getTotalResolvedVulnerabilities(projectId, orgId, startDate),
+                getTotalRawRequests(projectId, orgId),
+                getTotalTransformedRequests(projectId, orgId),
+                getTotalRules(orgId)
             ]);
+
+            // Calculate active rules for the project
+            const totalActiveRules = getActiveRulesCount(project, totalRules);
 
             // Calculate remediation percentage
             const remediation = totalVulns > 0
@@ -182,7 +186,11 @@ class ProjectsService {
                 severity_distribution: severityDistribution,
                 remediation,
                 totalVulns,
-                totalResolved
+                totalResolved,
+                totalRawRequests,
+                totalTransformedRequests,
+                totalRules,
+                totalActiveRules
             };
         } catch (error) {
             this.handleError(error);
@@ -249,26 +257,12 @@ class ProjectsService {
         try {
             const project = await this.findById(projectId, orgId);
 
-            // Get all active organization rules
-            const allRules = await Rule.find({
+            // Get all active organization rules that are in the project's included list
+            const effectiveRules = await Rule.find({
                 orgId,
-                isActive: true
+                isActive: true,
+                _id: { $in: project.includedRuleIds || [] }
             }).lean();
-
-            // Apply rule filtering logic
-            let effectiveRules;
-
-            if (project.includedRuleIds && project.includedRuleIds.length > 0) {
-                // Whitelist approach - only use included rules
-                effectiveRules = allRules.filter(rule =>
-                    project.includedRuleIds.some(id => id.toString() === rule._id.toString())
-                );
-            } else {
-                // Use all rules minus excluded ones
-                effectiveRules = allRules.filter(rule =>
-                    !project.excludedRuleIds?.some(id => id.toString() === rule._id.toString())
-                );
-            }
 
             return effectiveRules;
         } catch (error) {
@@ -279,6 +273,17 @@ class ProjectsService {
     async updateRuleSettings(projectId, orgId, ruleData) {
         try {
             const { ruleId, action: active, modifiedBy } = ruleData;
+
+            // Find the project first to check its current state
+            const project = await this.findById(projectId, orgId);
+
+            // Prevent removal of the last rule
+            if (!active) { // If deactivating a rule
+                const isLastRule = project.includedRuleIds.length === 1 && project.includedRuleIds[0].toString() === ruleId;
+                if (isLastRule) {
+                    throw ApiError.badRequest('A project must have at least one active rule. You cannot remove the last rule.');
+                }
+            }
 
             // Validate that rule ID exists and belongs to organization
             if (ruleId) {
@@ -307,13 +312,13 @@ class ProjectsService {
             }
 
 
-            const project = await Projects.findOneAndUpdate(
+            const updatedProject = await Projects.findOneAndUpdate(
                 { _id: projectId, orgId },
                 updateData,
                 { new: true, runValidators: true }
             ).lean();
 
-            if (!project) {
+            if (!updatedProject) {
                 throw ApiError.notFound('Project not found');
             }
 
@@ -321,11 +326,11 @@ class ProjectsService {
             const effectiveRules = await this.getEffectiveRules(projectId, orgId, modifiedBy);
 
             return {
-                ...project,
+                ...updatedProject,
                 ruleStats: {
                     effectiveRuleCount: effectiveRules.length,
-                    includedCount: project.includedRuleIds?.length || 0,
-                    excludedCount: project.excludedRuleIds?.length || 0
+                    includedCount: updatedProject.includedRuleIds?.length || 0,
+                    excludedCount: updatedProject.excludedRuleIds?.length || 0
                 }
             };
         } catch (error) {

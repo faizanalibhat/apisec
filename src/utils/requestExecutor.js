@@ -112,7 +112,9 @@ class RequestExecutor {
         headers: response.headers,
         body: response.data,
         responseTime: responseTime,
-        size: JSON.stringify(response.data).length
+        size: JSON.stringify(response.data).length,
+        version: response.httpVersion
+
       },
       timestamp: new Date().toISOString()
     };

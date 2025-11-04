@@ -10,7 +10,7 @@ export const transformer = {
   transform({ request, rule, authProfile }) {
     const transformRules = rule.transform;
 
-    if (!transformRules) return [request];
+    if (!transformRules) return [];
 
     let requests = [_.cloneDeep(request)];
 
@@ -24,7 +24,7 @@ export const transformer = {
     let versionVariations = [];
     if (transformRules.http_version) {
       versionVariations = requests.map(req => {
-        req.http_version = transformRules.http_version;
+        req.version = transformRules.http_version;
         return req;
       });
     }

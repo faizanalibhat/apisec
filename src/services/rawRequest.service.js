@@ -2,6 +2,8 @@ import RawRequest from '../models/rawRequest.model.js';
 import Integration from '../models/integration.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import Vulnerability from '../models/vulnerability.model.js';
+import TransformedRequest from '../models/transformedRequest.model.js';
+import mongoose from 'mongoose';
 
 class RawRequestService {
     async create(data) {
@@ -29,6 +31,54 @@ class RawRequestService {
         } catch (error) {
             this.handleError(error);
         }
+    }
+
+    async getProjectSummary(projectId, orgId) {
+        if (!projectId) return null;
+
+        // Ensure projectId is a valid ObjectId
+        if (!mongoose.Types.ObjectId.isValid(projectId)) {
+            // Or handle as an error, depending on desired behavior
+            return null; 
+        }
+
+        const objectId = new mongoose.Types.ObjectId(projectId);
+
+        // 1. Get all raw request IDs for the project
+        const rawRequests = await RawRequest.find({ projectIds: objectId, orgId }).select('_id').lean();
+        const rawRequestIds = rawRequests.map(r => r._id);
+
+        if (rawRequestIds.length === 0) {
+            return {
+                totalRequests: 0,
+                totalTransformedRequests: 0,
+                totalRequestsSent: 0,
+                totalVulnsFound: 0
+            };
+        }
+
+        // 2. Get total transformed requests
+        const totalTransformedRequests = await TransformedRequest.countDocuments({
+            requestId: { $in: rawRequestIds }
+        });
+
+        // 3. Get total requests sent (state: 'complete')
+        const totalRequestsSent = await TransformedRequest.countDocuments({
+            requestId: { $in: rawRequestIds },
+            state: 'complete'
+        });
+
+        // 4. Get total vulnerabilities found
+        const totalVulnsFound = await Vulnerability.countDocuments({
+            "requestSnapshot._id": { $in: rawRequestIds }
+        });
+
+        return {
+            totalRequests: rawRequestIds.length,
+            totalTransformedRequests,
+            totalRequestsSent,
+            totalVulnsFound
+        };
     }
 
     async findAllWithSort(filters, sortOptions, pagination) {
@@ -220,12 +270,16 @@ class RawRequestService {
             const result = await RawRequest.aggregate(pipeline);
             const totalItems = result[0].totalCount[0]?.total || 0;
 
+            const projectId = filters.projectIds ? filters.projectIds.toString() : null;
+            const summary = await this.getProjectSummary(projectId, filters.orgId);
+
             return {
                 data: result[0].data,
                 currentPage: page,
                 totalPages: Math.ceil(totalItems / limit),
                 totalItems,
                 itemsPerPage: limit,
+                summary
             };
         } catch (error) {
             this.handleError(error);
@@ -434,12 +488,16 @@ class RawRequestService {
             const result = await RawRequest.aggregate(pipeline);
             const totalItems = result[0].totalCount[0]?.total || 0;
 
+            const projectId = additionalFilters.projectIds ? additionalFilters.projectIds.toString() : null;
+            const summary = await this.getProjectSummary(projectId, additionalFilters.orgId);
+
             return {
                 data: result[0].data,
                 currentPage: page,
                 totalPages: Math.ceil(totalItems / limit),
                 totalItems,
                 itemsPerPage: limit,
+                summary
             };
         } catch (error) {
             this.handleError(error);

@@ -477,6 +477,10 @@ async function runAndMatchRequests(payload, msg, channel) {
                 cwe: rule.parsed_yaml.report.cwe,
                 owasp: rule.parsed_yaml.report.owasp,
 
+                matched_by: transformedRequest.appliedTransformations,
+                matched_at: matchResult.details,
+                highlight: matchResult.highlight,
+
                 // Request/Rule context
                 requestDetails: {
                     name: originalRequest.name,
@@ -505,9 +509,9 @@ async function runAndMatchRequests(payload, msg, channel) {
                         headers: response.headers || {},
                         body: response.body,
                         size: response.size || 0,
-                        responseTime: response.time || 0
-                    },
-                    highlight: matchResult?.highlight || "",
+                        responseTime: response.time || 0,
+                        version: response.version || ''
+                    }
                     // matchedCriteria: matchResult.matchedCriteria
                 }
             };
