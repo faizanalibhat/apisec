@@ -148,27 +148,27 @@ class RawRequestService {
             }
 
 
-            pipeline.push({
-            $addFields: {
-                vulnCounts: {
-                $arrayToObject: {
-                    $map: {
-                    input: {
-                        $ifNull: [
-                        { $arrayElemAt: ["$vulnStats.stats", 0] },
-                        [] // if vulnStats or stats is missing, use empty array
-                        ]
-                    },
-                    as: "item",
-                    in: {
-                        k: "$$item.k",
-                        v: "$$item.v"
-                    }
-                    }
-                }
-                }
-            }
-            });
+            // pipeline.push({
+            // $addFields: {
+            //     vulnCounts: {
+            //     $arrayToObject: {
+            //         $map: {
+            //         input: {
+            //             $ifNull: [
+            //             { $arrayElemAt: ["$vulnStats.stats", 0] },
+            //             [] // if vulnStats or stats is missing, use empty array
+            //             ]
+            //         },
+            //         as: "item",
+            //         in: {
+            //             k: "$$item.k",
+            //             v: "$$item.v"
+            //         }
+            //         }
+            //     }
+            //     }
+            // }
+            // });
 
 
 
@@ -377,19 +377,19 @@ class RawRequestService {
             }
 
             // Now, add the vulnCounts field
-            pipeline.push({
-                $addFields: {
-                vulnCounts: {
-                    $arrayToObject: {
-                    $map: {
-                        input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
-                        as: "item",
-                        in: { k: "$$item.k", v: "$$item.v" }
-                    }
-                    }
-                }
-                }
-            });
+            // pipeline.push({
+            //     $addFields: {
+            //     vulnCounts: {
+            //         $arrayToObject: {
+            //         $map: {
+            //             input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
+            //             as: "item",
+            //             in: { k: "$$item.k", v: "$$item.v" }
+            //         }
+            //         }
+            //     }
+            //     }
+            // });
             
 
             // Add severity filtering
