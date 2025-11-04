@@ -66,7 +66,7 @@ function handleTransformation(params, transformations) {
 function applyRules(params, rules) {
   let allParams = [];
 
-  params = normalizeHeaders(params);
+  params = normalizeParams(params);
   const original = _.cloneDeep(params);
 
 
