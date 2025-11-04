@@ -16,9 +16,7 @@ function add(body, newParams, format) {
   if (format === 'json') {
     let newBody = JSON.parse(jsonCleanBody(body));
     newBody = Object.assign(newBody, newParams);
-    body = JSON.stringify(newBody);
-
-    return body;
+    return JSON.stringify(newBody);
   } else {
     // add other logic here
   }
@@ -29,9 +27,7 @@ function remove(body, removeParams, format) {
     let newBody = JSON.parse(jsonCleanBody(body));
     removeParams.forEach(param => delete newBody[param]);
 
-    body = JSON.stringify(newBody);
-
-    return body;
+    return JSON.stringify(newBody);
   }
   else {}
 }
@@ -44,9 +40,7 @@ function modify(body, modifyParams, format) {
       if (newBody[param]) newBody[param] = value;
     });
 
-    body = JSON.stringify(newBody);
-
-    return body;
+    return JSON.stringify(newBody);
   }
   else {}
 }
@@ -58,9 +52,7 @@ function replace_all_values(body, value, format) {
       newBody[key] = value;
     });
 
-    body = JSON.stringify(newBody);
-
-    return body;
+    return JSON.stringify(newBody);
   }
   else {}
 }
@@ -122,21 +114,31 @@ function applyRules(body, rules, format) {
     modified = add(modified, rules.add, format);
   }
 
+  console.log("[+] AFTER ADD : ", modified);
+
   if (rules.remove) {
     modified = remove(modified, rules.remove, format);
   }
+
+  console.log("[+] AFTER REMOVE : ", modified);
 
   if (rules.modify) {
     modified = modify(modified, rules.modify, format);
   }
 
+  console.log("[+] AFTER MODIFY : ", modified);
+
   if (rules.replace_all_values) {
     modified = replace_all_values(modified, rules.replace_all_values, format);
   }
 
+  console.log("[+] AFTER REPLACE ALL : ", modified);
+
   if (rules.replace_all_values_one_by_one) {
     allBodies = replace_all_values_one_by_one(modified, rules.replace_all_values_one_by_one, format);
   }
+
+  console.log("[+] AFTER REPLACE ALL ONE BY ONE : ", modified);
 
   if (rules.transformations) {
     if (allBodies.length) {
@@ -153,6 +155,8 @@ function applyRules(body, rules, format) {
 
     return allBodies;
   }
+
+  console.log("[+] AFTER TRANSFORMATIONS :  ", allBodies);
 
   return allBodies?.length > 0 ? allBodies : [modified];
 }
@@ -171,8 +175,6 @@ export default {
     console.log("[+] TRANSFORMATION TRIGGERED: ", targetBody, bodyFormat);
 
     const transformedBodies = applyRules(targetBody, bodyRules, bodyFormat);
-
-    for (let k of transformedBodies) console.log("[+] TRANSFORMED BODIES : ", k);
 
     requests = transformedBodies.map(body => {
       const newRequest = _.cloneDeep(request);
