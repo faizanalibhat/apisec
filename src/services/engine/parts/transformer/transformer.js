@@ -10,7 +10,7 @@ export const transformer = {
   transform({ request, rule, authProfile }) {
     const transformRules = rule.transform;
 
-    if (!transformRules) return [request];
+    if (!transformRules) return [];
 
     let requests = [_.cloneDeep(request)];
 
