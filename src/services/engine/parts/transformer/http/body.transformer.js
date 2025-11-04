@@ -1,11 +1,20 @@
 import _ from 'lodash';
 
 
+function jsonCleanBody(body) {
+    if (typeof body == "string") {
+        return body.replace(/[\s\n\t]+/g, '');
+    }
+    else {
+        return body;
+    }
+}
+
 
 // helper functions one for each operation
 function add(body, newParams, format) {
   if (format === 'json') {
-    let newBody = JSON.parse(body);
+    let newBody = JSON.parse(jsonCleanBody(body));
     newBody = Object.assign(newBody, newParams);
     body = JSON.stringify(newBody);
 
@@ -17,7 +26,7 @@ function add(body, newParams, format) {
 
 function remove(body, removeParams, format) {
   if (format === 'json') {
-    let newBody = JSON.parse(body);
+    let newBody = JSON.parse(jsonCleanBody(body));
     removeParams.forEach(param => delete newBody[param]);
 
     body = JSON.stringify(newBody);
@@ -29,7 +38,7 @@ function remove(body, removeParams, format) {
 
 function modify(body, modifyParams, format) {
   if (format === 'json') {
-    let newBody = JSON.parse(body);
+    let newBody = JSON.parse(jsonCleanBody(body));
 
     Object.entries(modifyParams).forEach((param, value) => {
       if (newBody[param]) newBody[param] = value;
@@ -44,7 +53,7 @@ function modify(body, modifyParams, format) {
 
 function replace_all_values(body, value, format) {
   if (format === 'json') {
-    let newBody = JSON.parse(body);
+    let newBody = JSON.parse(jsonCleanBody(body));
     Object.keys(newBody).forEach(key => {
       newBody[key] = value;
     });
@@ -61,7 +70,7 @@ function replace_all_values_one_by_one(body, value, format) {
 
   if (format === 'json') {
     try {
-      const cleanBody = body.replace(/[\s\n\t]+/g, '');
+      const cleanBody = jsonCleanBody(body);
 
       let newBody = JSON.parse(cleanBody);
 
