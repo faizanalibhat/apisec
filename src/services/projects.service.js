@@ -132,23 +132,10 @@ class ProjectsService {
                 throw ApiError.notFound('Project not found');
             }
 
-            // Remove project ID from collections and raw requests
-            if (project.collectionUids?.length > 0) {
-                await this.updateCollectionsAndRequests(
-                    project.collectionUids,
-                    project._id,
-                    'remove'
-                );
-            }
-
-            // Remove project ID from all browser extension requests
-            await RawRequest.deleteMany(
-                {
-                    projectIds: project._id,
-                    source: 'browser-extension'
-                }
-                // { $pull: { projectIds: project._id } }
-            );
+            // Delete all raw requests associated with this project
+            await RawRequest.deleteMany({
+                projectIds: project._id
+            });
 
             await Vulnerability.deleteMany({
                 projectId: project._id
