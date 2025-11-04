@@ -374,6 +374,7 @@ export class ScanService {
                         from: "transformedrequests",
                         localField: "_id",
                         foreignField: "scanId",
+                        pipeline: [{ $project: { "state": 1 }}]
                         as: "transformedRequests"
                     }
                 },
@@ -384,6 +385,7 @@ export class ScanService {
                         from: "raw_requests",
                         localField: "requestIds",
                         foreignField: "_id",
+                        pipeline: [{ $project: { "_id": 1 }}]
                         as: "rawRequests"
                     }
                 },
@@ -394,6 +396,7 @@ export class ScanService {
                         from: "rules",
                         localField: "ruleIds",
                         foreignField: "_id",
+                        pipeline: [{ $project: { "_id": 1 }}]
                         as: "rules"
                     }
                 },
