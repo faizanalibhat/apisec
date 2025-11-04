@@ -119,163 +119,168 @@ async function runScan(payload, msg, channel) {
 
         for (let request of requests) {
 
-            // Update state
-            await TransformedRequest.updateOne(
-                { _id: request._id },
-                { $set: { state: "running" } }
-            );
+            try {
+                // Update state
+                await TransformedRequest.updateOne(
+                    { _id: request._id },
+                    { $set: { state: "running" } }
+                );
 
-            const transformedRequest = request;
-            const originalRequest = await Requests.findOne({ _id: request.requestId }).lean();
-            const rule = await Rules.findOne({ _id: request.ruleId }).lean();
+                const transformedRequest = request;
 
-            const response = await EngineService.sendRequest({ request, rule: rule.parsed_yaml });
+                const originalRequest = await Requests.findOne({ _id: request.requestId }).lean();
+                const rule = await Rules.findOne({ _id: request.ruleId }).lean();
 
-            const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
+                const response = await EngineService.sendRequest({ request, rule: rule.parsed_yaml });
 
-          if (match?.match) {
-              console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
+                const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
-              const templateContext = TemplateEngine.createVulnerabilityContext({
-                  transformedRequest: request,
-                  originalRequest: request,
-                  response,
-                  rule,
-                  matchResult: match,
-                  scanId: scanId
-              });
+                if (match?.match) {
+                    console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
-              // PROCESS TEMPLATE FIELDS FROM THE RULE
-              const reportFields = rule.parsed_yaml.report;
-              const processedReport = TemplateEngine.processFields({
-                  title: reportFields.title,
-                  description: reportFields.description,
-                  impact: reportFields.impact,
-                  stepsToReproduce: reportFields.stepsToReproduce,
-                  mitigation: reportFields.mitigation
-              }, templateContext);
+                    const templateContext = TemplateEngine.createVulnerabilityContext({
+                        transformedRequest: request,
+                        originalRequest: request,
+                        response,
+                        rule,
+                        matchResult: match,
+                        scanId: scanId
+                    });
 
-              // Create vulnerability data with processed templates
-              const vulnerabilityData = {
-                  orgId,
-                  scanName: scan.name,
-                  scanId,
-                  // ruleId: rule._id,
-                  // requestId: originalRequest._id,
+                    // PROCESS TEMPLATE FIELDS FROM THE RULE
+                    const reportFields = rule.parsed_yaml.report;
+                    const processedReport = TemplateEngine.processFields({
+                        title: reportFields.title,
+                        description: reportFields.description,
+                        impact: reportFields.impact,
+                        stepsToReproduce: reportFields.stepsToReproduce,
+                        mitigation: reportFields.mitigation
+                    }, templateContext);
 
-                  ruleSnapshot: rule,
-                  requestSnapshot: originalRequest,
-                  transformedRequestSnapshot: transformedRequest,
-                  projectId: originalRequest.projectIds,
+                    // Create vulnerability data with processed templates
+                    const vulnerabilityData = {
+                        orgId,
+                        scanName: scan.name,
+                        scanId,
+                        // ruleId: rule._id,
+                        // requestId: originalRequest._id,
 
-                  title: processedReport.title || `${reportFields.vulnerabilityType} in ${originalRequest.name}`,
-                  type: reportFields.vulnerabilityType,
-                  severity: reportFields.severity,
-                  cvssScore: reportFields.cvssScore,
-                  description: processedReport.description,
-                  impact: processedReport.impact,
-                  stepsToReproduce: processedReport.stepsToReproduce,
-                  mitigation: processedReport.mitigation,
-                  tags: Array.isArray(reportFields.tags)
-                      ? reportFields.tags
-                      : reportFields.tags?.split?.(",") || [],
+                        ruleSnapshot: rule,
+                        requestSnapshot: originalRequest,
+                        transformedRequestSnapshot: transformedRequest,
+                        projectId: originalRequest.projectIds,
 
-                  cwe: reportFields.cwe,
-                  owasp: reportFields.owasp,
+                        title: processedReport.title || `${reportFields.vulnerabilityType} in ${originalRequest.name}`,
+                        type: reportFields.vulnerabilityType,
+                        severity: reportFields.severity,
+                        cvssScore: reportFields.cvssScore,
+                        description: processedReport.description,
+                        impact: processedReport.impact,
+                        stepsToReproduce: processedReport.stepsToReproduce,
+                        mitigation: processedReport.mitigation,
+                        tags: Array.isArray(reportFields.tags)
+                            ? reportFields.tags
+                            : reportFields.tags?.split?.(",") || [],
 
-                  requestDetails: {
-                      name: originalRequest.name,
-                      method: originalRequest.method,
-                      url: originalRequest.url,
-                      collectionName: originalRequest.collectionName,
-                      folderName: originalRequest.folderName
-                  },
-                  ruleDetails: {
-                      name: rule.rule_name,
-                      category: rule.category
-                  },
+                        cwe: reportFields.cwe,
+                        owasp: reportFields.owasp,
 
-                  evidence: {
-                      request: {
-                          method: transformedRequest.method,
-                          url: transformedRequest.url,
-                          headers: transformedRequest.headers,
-                          body: transformedRequest.body,
-                          transformations: transformedRequest.appliedTransformations || []
-                      },
-                      response: {
-                          status: response.status,
-                          statusText: response.statusText || '',
-                          headers: response.headers || {},
-                          body: response.body,
-                          size: response.size || 0,
-                          responseTime: response.time || 0
-                      },
-                      highlight: match?.highlight || "",
-                  }
-              };
+                        requestDetails: {
+                            name: originalRequest.name,
+                            method: originalRequest.method,
+                            url: originalRequest.url,
+                            collectionName: originalRequest.collectionName,
+                            folderName: originalRequest.folderName
+                        },
+                        ruleDetails: {
+                            name: rule.rule_name,
+                            category: rule.category
+                        },
 
-              try {
-                  // DEDUPE LOGIC
-                  const query = {
-                      orgId: vulnerabilityData.orgId,
-                      scanId: vulnerabilityData.scanId,
-                      'ruleSnapshot._id': rule._id,
-                      'requestSnapshot._id': originalRequest._id
-                  };
+                        evidence: {
+                            request: {
+                                method: transformedRequest.method,
+                                url: transformedRequest.url,
+                                headers: transformedRequest.headers,
+                                body: transformedRequest.body,
+                                transformations: transformedRequest.appliedTransformations || []
+                            },
+                            response: {
+                                status: response.status,
+                                statusText: response.statusText || '',
+                                headers: response.headers || {},
+                                body: response.body,
+                                size: response.size || 0,
+                                responseTime: response.time || 0
+                            },
+                            highlight: match?.highlight || "",
+                        }
+                    };
 
-                  // upsert: true -> create if not exists, update otherwise
-                  const result = await Vulnerability.findOneAndUpdate(
-                      query,
-                      { $set: vulnerabilityData },
-                      { upsert: true, new: true, setDefaultsOnInsert: true, rawResult: true }
-                  );
+                    try {
+                        // DEDUPE LOGIC
+                        const query = {
+                            orgId: vulnerabilityData.orgId,
+                            scanId: vulnerabilityData.scanId,
+                            'ruleSnapshot._id': rule._id,
+                            'requestSnapshot._id': originalRequest._id
+                        };
 
-                  if (!result.lastErrorObject.updatedExisting) {
-                      console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
+                        // upsert: true -> create if not exists, update otherwise
+                        const result = await Vulnerability.findOneAndUpdate(
+                            query,
+                            { $set: vulnerabilityData },
+                            { upsert: true, new: true, setDefaultsOnInsert: true, rawResult: true }
+                        );
 
-                      await Scan.updateOne({ _id: scanId }, {
-                          $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
-                      });
-                  } else {
-                      console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
-                  }
+                        if (!result.lastErrorObject.updatedExisting) {
+                            console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
 
-                  // Update transformed request state
-                  await TransformedRequest.updateOne(
-                      { _id: transformedRequest._id },
-                      {
-                          $set: {
-                              state: "complete",
-                              executionResult: {
-                                  matched: match.match,
-                                  executedAt: new Date(),
-                                  responseStatus: response.status,
-                                  responseTime: response.time,
-                                  response
-                              }
-                          }
-                      }
-                  );
-              } catch (vulnError) {
-                  console.error("[!] Error creating/updating vulnerability:", vulnError.message);
-              }
-          }
+                            await Scan.updateOne({ _id: scanId }, {
+                                $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
+                            });
+                        } else {
+                            console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
+                        }
 
-        }
-    } catch (error) {
-        await TransformedRequest.updateOne(
-            { _id: transformedRequest._id },
-            {
-                $set: {
-                    state: "failed",
-                    error: {
-                        message: requestError.message,
-                        occurredAt: new Date()
+                        // Update transformed request state
+                        await TransformedRequest.updateOne(
+                            { _id: transformedRequest._id },
+                            {
+                                $set: {
+                                    state: "complete",
+                                    executionResult: {
+                                        matched: match.match,
+                                        executedAt: new Date(),
+                                        responseStatus: response.status,
+                                        responseTime: response.time,
+                                        response
+                                    }
+                                }
+                            }
+                        );
+                    } catch (vulnError) {
+                        console.error("[!] Error creating/updating vulnerability:", vulnError.message);
                     }
                 }
+
             }
-        );
+            catch(err) {
+                await TransformedRequest.updateOne(
+                    { _id: request._id },
+                    {
+                        $set: {
+                            state: "failed",
+                            error: {
+                                message: requestError.message,
+                                occurredAt: new Date()
+                            }
+                        }
+                    }
+                );
+            }
+        }
+    } catch (error) {
         console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
     } finally {
         channel.ack(msg);
