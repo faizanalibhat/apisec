@@ -99,7 +99,7 @@ function handleTransformation(body, transformations, format) {
   const allParams = [];
 
   for (let transformation of transformations) {
-    const cloneParam = _.cloneDeep(body);
+    const cloneParam = body;
     allParams.push(...(applyRules(cloneParam, transformation, format) || []));
   }
 
