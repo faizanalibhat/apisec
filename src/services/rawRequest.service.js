@@ -147,18 +147,28 @@ class RawRequestService {
                 }
             }
 
-            // Now, add the vulnCounts field
             pipeline.push({
                 $addFields: {
                     vulnCounts: {
-                        $cond: [
-                            { $gt: [{ $size: "$vulnStats" }, 0] },
-                            { $arrayToObject: { $arrayElemAt: ["$vulnStats.stats", 0] } },
-                            {}
-                        ]
+                    $cond: [
+                        { $gt: [{ $size: "$vulnStats" }, 0] },
+                        {
+                        $arrayToObject: {
+                            $map: {
+                            input: { $arrayElemAt: ["$vulnStats.stats", 0] },
+                            as: "item",
+                            in: {
+                                k: "$$item.severity",
+                                v: "$$item.count"
+                            }
+                            }
+                        }
+                        },
+                        {}
+                    ]
                     }
                 }
-            });
+            })
 
             // Add severity filtering
             if (severity) {
