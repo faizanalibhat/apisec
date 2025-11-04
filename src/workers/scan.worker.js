@@ -606,7 +606,6 @@ async function runAndMatchRequests(payload, msg, channel) {
             }
         );
 
-        // failedCount++;
     }
     finally {
         channel.ack(msg);
