@@ -1,6 +1,16 @@
 import _ from 'lodash';
 
 
+function normalizeParams(query) {
+    const normalized = {};
+    for (let [key, value] of Object.entries(query)) {
+      normalized[key.toLowerCase()] = value;
+    }
+    return normalized;
+}
+
+
+
 
 // helper functions one for each operation
 function add(params, newParams) {
@@ -56,6 +66,10 @@ function handleTransformation(params, transformations) {
 function applyRules(params, rules) {
   let allParams = [];
 
+  params = normalizeHeaders(params);
+  const original = _.cloneDeep(params);
+
+
   if (rules.add) {
     add(params, rules.add);
   }
@@ -90,6 +104,14 @@ function applyRules(params, rules) {
     }
 
     return allParams;
+  }
+
+  const changed = !_.isEqual(params, original);
+
+  console.log("[+] Params CHANGED : ", changed, params);
+
+  if (!allParams.length && !changed) {
+    return [];
   }
 
   return allParams?.length > 0 ? allParams : [params];
