@@ -323,7 +323,7 @@ export class ScanService {
 
             const sortKeyMap = {
                 'rules': 'stats.totalRules',
-                'progress': 'completedRequests',
+                'progress': 'processedRequests',
                 'vulnerabilities': 'vulnerabilitySummary.total',
                 'createdAt': 'createdAt',
                 'name': 'name',
@@ -401,12 +401,30 @@ export class ScanService {
                 // 7. Compute counts and override stats
                 {
                     $addFields: {
-                        completedRequests: {
+                        processedRequests: {
                             $size: {
                                 $filter: {
                                     input: "$transformedRequests",
                                     as: "req",
                                     cond: { $in: ["$$req.state", ["complete", "failed"]] }
+                                }
+                            }
+                        },
+                        completedRequests: {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "complete"] }
+                                }
+                            }
+                        },
+                        failedRequests: {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "failed"] }
                                 }
                             }
                         },
@@ -424,15 +442,23 @@ export class ScanService {
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
                         "stats.totalTransformedRequests": { $size: "$transformedRequests" },
-                        "stats.processedRequests": "$completedRequests",
-                        "stats.processedRequests": { 
-                            $size: { 
-                                $filter: { 
-                                    input: "$transformedRequests", 
-                                    as: "req", 
-                                    cond: { $in: ["$$req.state", ["complete", "failed"]] } 
-                                } 
-                            } 
+                        "stats.processedRequests": {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
+                                }
+                            }
+                        },
+                        "stats.failedRequests": {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "failed"] }
+                                }
+                            }
                         },
                         "vulnerabilitySummary.total": {
                             $add: [
