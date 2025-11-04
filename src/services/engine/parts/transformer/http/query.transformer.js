@@ -129,6 +129,8 @@ export default {
 
     const targetParams = _.cloneDeep(request.params || {});
 
+    if (!Object.keys(targetParams).length) return [];
+
     const transformedParams = applyRules(targetParams, queryRules);
 
     requests = transformedParams.map(params => {

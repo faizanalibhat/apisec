@@ -128,7 +128,7 @@ export default {
 
     const targetHeaders = _.cloneDeep(request.headers || {});
 
-    // console.log("[+] ORINGIAL HEADERS : ", targetHeaders);
+    if (!Object.keys(targetHeaders).length) return [];
 
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 
@@ -141,7 +141,6 @@ export default {
         let newHeaders = { ...(newRequest.headers || {}) };
 
         // newHeaders.authorization = authProfile.authValue;
-
         authProfile?.customHeaders?.map?.(({key, value}) => {
           newHeaders[key] = value;
         });
