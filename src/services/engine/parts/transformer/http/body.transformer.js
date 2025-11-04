@@ -168,6 +168,8 @@ export default {
     const targetBody = request.body || {};
     const bodyFormat = request.body_format || 'json';
 
+    console.log("[+] TRANSFORMATION TRIGGERED: ", targetBody, bodyFormat);
+
     const transformedBodies = applyRules(targetBody, bodyRules, bodyFormat);
 
     for (let k of transformedBodies) console.log("[+] TRANSFORMED BODIES : ", k);
