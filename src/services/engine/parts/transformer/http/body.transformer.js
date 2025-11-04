@@ -169,8 +169,8 @@ export default {
 
     let requests = [];
 
-    const targetBody = request.body || {};
-    const bodyFormat = request.body_format || 'json';
+    const targetBody = request.body;
+    const bodyFormat = request.body_format;
 
     if (!targetBody || !bodyFormat) return [];
 
