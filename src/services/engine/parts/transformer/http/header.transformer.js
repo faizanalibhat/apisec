@@ -100,7 +100,7 @@ function applyRules(headers, rules) {
 
   const changed = !_.isEqual(headers, original);
 
-  console.log("[+] HEADER CHANGED : ", headers);
+  console.log("[+] HEADER CHANGED : ", changed, headers);
 
   if (!allHeaders.length && !changed) {
     return [];
