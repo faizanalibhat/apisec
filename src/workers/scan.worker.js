@@ -152,6 +152,18 @@ async function transformationHandler(payload, msg, channel) {
         if (bulkOps.length > 0) {
             await TransformedRequest.bulkWrite(bulkOps);
         }
+        else {
+            await Scan.updateOne({ _id: _id }, {
+                $set: {
+                    status: "failed",
+                    error: {
+                        message: "No Transformed Requests",
+                        stack: err.stack,
+                        occurredAt: new Date()
+                    }
+                }
+            });
+        }
 
         // Update scan stats
         await Scan.updateOne({ _id: _id }, {
