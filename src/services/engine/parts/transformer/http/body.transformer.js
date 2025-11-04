@@ -152,7 +152,7 @@ function applyRules(body, rules, format) {
 
 
 export default {
-  transform(request, bodyRules) {
+  transform(request, bodyRules, authProfile) {
 
     if (!bodyRules) return [];
 
