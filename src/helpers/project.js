@@ -1,4 +1,8 @@
 import Vulnerability from '../models/vulnerability.model.js';
+import RawRequest from '../models/rawRequest.model.js';
+import Scan from '../models/scan.model.js';
+import TransformedRequest from '../models/transformedRequest.model.js';
+import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
 const { ObjectId } = mongoose.Types;
@@ -134,6 +138,52 @@ export const getTotalResolvedVulnerabilities = async (projectId, orgId, startDat
     } catch (error) {
         handleError(error);
     }
+};
+
+export const getTotalRawRequests = async (projectId, orgId) => {
+    try {
+        return await RawRequest.countDocuments({
+            projectIds: ObjectId.createFromHexString(projectId),
+            orgId
+        });
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+export const getTotalTransformedRequests = async (projectId, orgId) => {
+    try {
+        // Find scans related to the project
+        const scans = await Scan.find({ projectIds: projectId, orgId }).select('_id').lean();
+        const scanIds = scans.map(s => s._id);
+
+        if (scanIds.length === 0) {
+            return 0;
+        }
+
+        // Count transformed requests for those scans
+        return await TransformedRequest.countDocuments({ scanId: { $in: scanIds }, orgId });
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+export const getTotalRules = async (orgId) => {
+    try {
+        return await Rule.countDocuments({ orgId, isActive: true });
+    } catch (error) {
+        handleError(error);
+    }
+};
+
+export const getActiveRulesCount = (project, totalRules) => {
+    if (project.includedRuleIds && project.includedRuleIds.length > 0) {
+        return project.includedRuleIds.length;
+    }
+    if (project.excludedRuleIds && project.excludedRuleIds.length > 0) {
+        return totalRules - project.excludedRuleIds.length;
+    }
+    return totalRules;
 };
 
 const handleError = (error) => {

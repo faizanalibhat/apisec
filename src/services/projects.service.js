@@ -5,7 +5,7 @@ import Vulnerability from '../models/vulnerability.model.js';
 import Rule from '../models/rule.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import mongoose from 'mongoose';
-import { getPeriodStartDate, getStateDistribution, getSeverityDistribution, getTotalVulnerabilities, getTotalResolvedVulnerabilities } from '../helpers/project.js';
+import { getPeriodStartDate, getStateDistribution, getSeverityDistribution, getTotalVulnerabilities, getTotalResolvedVulnerabilities, getTotalRawRequests, getTotalTransformedRequests, getTotalRules, getActiveRulesCount } from '../helpers/project.js';
 
 const { ObjectId } = mongoose.Types;
 
@@ -159,18 +159,30 @@ class ProjectsService {
         try {
             const startDate = getPeriodStartDate(period);
 
+            // Get project details first, as it's needed for active rule calculation
+            const project = await this.findById(projectId, orgId);
+
             // Execute all queries in parallel for performance
             const [
                 stateDistribution,
                 severityDistribution,
                 totalVulns,
-                totalResolved
+                totalResolved,
+                totalRawRequests,
+                totalTransformedRequests,
+                totalRules
             ] = await Promise.all([
                 getStateDistribution(projectId, orgId, startDate),
                 getSeverityDistribution(projectId, orgId, startDate),
                 getTotalVulnerabilities(projectId, orgId, startDate),
-                getTotalResolvedVulnerabilities(projectId, orgId, startDate)
+                getTotalResolvedVulnerabilities(projectId, orgId, startDate),
+                getTotalRawRequests(projectId, orgId),
+                getTotalTransformedRequests(projectId, orgId),
+                getTotalRules(orgId)
             ]);
+
+            // Calculate active rules for the project
+            const totalActiveRules = getActiveRulesCount(project, totalRules);
 
             // Calculate remediation percentage
             const remediation = totalVulns > 0
@@ -182,7 +194,11 @@ class ProjectsService {
                 severity_distribution: severityDistribution,
                 remediation,
                 totalVulns,
-                totalResolved
+                totalResolved,
+                totalRawRequests,
+                totalTransformedRequests,
+                totalRules,
+                totalActiveRules
             };
         } catch (error) {
             this.handleError(error);
