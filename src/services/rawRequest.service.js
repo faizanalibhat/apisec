@@ -151,7 +151,12 @@ class RawRequestService {
                 $addFields: {
                     vulnCounts: {
                     $cond: [
-                        { $gt: [{ $size: "$vulnStats" }, 0] },
+                        {
+                        $and: [
+                            { $gt: [{ $size: "$vulnStats" }, 0] },
+                            { $gt: [{ $size: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] } }, 0] }
+                        ]
+                        },
                         {
                         $arrayToObject: {
                             $map: {
@@ -164,11 +169,12 @@ class RawRequestService {
                             }
                         }
                         },
-                        {}
+                        {} // fallback if vulnStats or stats are empty
                     ]
                     }
                 }
-            })
+            });
+
 
             // Add severity filtering
             if (severity) {
