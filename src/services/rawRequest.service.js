@@ -705,6 +705,7 @@ class RawRequestService {
     }
 
     handleError(error) {
+        console.log(error);
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => ({
                 field: err.path,
