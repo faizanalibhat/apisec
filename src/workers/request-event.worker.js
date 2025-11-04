@@ -64,6 +64,8 @@ async function requestCreatedHandler(payload, msg, channel) {
 
             try {
                 transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
+
+                console.log("[+] TRANSFORMED REQUESTS HEADER OUTSIDE : ", transformed.headers);
             } catch (err) {
                 console.log(err);
                 continue;
