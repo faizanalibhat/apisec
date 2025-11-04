@@ -52,7 +52,6 @@ const rawEnvironmentSchema = new mongoose.Schema(
                 },
                 type: {
                     type: String,
-                    enum: ['default', 'secret', 'any'],
                     default: 'default',
                 },
                 enabled: {
