@@ -47,16 +47,15 @@ class RuleController {
             const { page = 1, limit = 20, isActive, search, projectId, withVulnCount } = req.query;
 
             const filters = {};
-            filters.$and = [];
-
             if (search) {
-                filters.$and.push({
-                    $or: [
-                        { rule_name: { $regex: search, $options: 'i' } }
-                    ]
-                })
+                filters.$and = [
+                    {
+                        $or: [
+                            { rule_name: { $regex: search, $options: 'i' } }
+                        ]
+                    }
+                ];
             }
-
 
             const result = await this.ruleService.getRules({
                 orgId,
