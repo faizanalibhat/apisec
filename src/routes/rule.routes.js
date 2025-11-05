@@ -13,6 +13,7 @@ router
     .put("/:ruleId", controller.updateRule)
     .delete("/:ruleId", controller.deleteRule)
     .post("/sync/default-rules", controller.syncDefaultRules)
-    .patch("/:ruleId/status", controller.updateRuleStatus);
+    .patch("/:ruleId/status", controller.updateRuleStatus)
+    .get("/:ruleId/vuln", controller.getVulnerabilityCountForRule);
 
 export default router;

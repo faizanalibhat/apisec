@@ -1,4 +1,5 @@
 import { RuleService } from '../services/rule.service.js';
+import { VulnerabilityService } from '../services/vulnerability.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { mqbroker } from '../services/rabbitmq.service.js';
@@ -8,7 +9,8 @@ import yaml from "js-yaml";
 class RuleController {
     constructor() {
         this.ruleService = new RuleService();
-        
+        this.vulnerabilityService = new VulnerabilityService();
+
         // Bind methods to maintain context
         this.createRule = this.createRule.bind(this);
         this.getRules = this.getRules.bind(this);
@@ -18,6 +20,7 @@ class RuleController {
         this.searchRules = this.searchRules.bind(this);
         this.updateRuleStatus = this.updateRuleStatus.bind(this);
         this.syncDefaultRules = this.syncDefaultRules.bind(this);
+        this.getVulnerabilityCountForRule = this.getVulnerabilityCountForRule.bind(this);
     }
 
     async createRule(req, res, next) {
@@ -174,6 +177,21 @@ class RuleController {
         }
     }
 
+    async getVulnerabilityCountForRule(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { ruleId } = req.params;
+
+            const count = await this.vulnerabilityService.countVulnerabilitiesByRule(ruleId, orgId);
+
+            res.sendApiResponse(
+                ApiResponse.success('Vulnerability count fetched successfully', { count })
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
 
     async syncDefaultRules(req, res, next) {
         const { orgId } = req.authenticatedService;
@@ -195,5 +213,6 @@ export const {
     deleteRule,
     searchRules,
     updateRuleStatus,
-    syncDefaultRules
+    syncDefaultRules,
+    getVulnerabilityCountForRule
 } = ruleController;
