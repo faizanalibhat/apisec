@@ -1,6 +1,7 @@
 import Joi from 'joi';
 import mongoose from 'mongoose';
 import { ApiError } from '../../utils/ApiError.js';
+import { Projects } from '../../models/projects.model.js';
 
 const objectIdSchema = Joi.string().custom((value, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -69,6 +70,25 @@ export const validateObjectId = (req, res, next) => {
     next(error);
   }
 };
+
+export const validateProjectCollectingStatus = async (req, res, next) => {
+    try {
+        const { projectId } = req.params;
+        const project = await Projects.findById(projectId);
+
+        if (!project) {
+            throw ApiError.notFound('Project not found');
+        }
+
+        if (!project.isCollecting) {
+            throw ApiError.forbidden('Request collection is disabled for this project');
+        }
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+}
 
 export const validateCreateProject = (req, res, next) => {
   const schema = Joi.object({

@@ -32,6 +32,7 @@ class ProjectsController {
         this.updateBrowserRequest = this.updateBrowserRequest.bind(this);
         this.deleteBrowserRequest = this.deleteBrowserRequest.bind(this);
         this.getProjectDashboard = this.getProjectDashboard.bind(this);
+        this.toggleCollectionStatus = this.toggleCollectionStatus.bind(this);
     }
 
     async getProjects(req, res, next) {
@@ -148,6 +149,19 @@ class ProjectsController {
                     ...dashboardData
                 })
             );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async toggleCollectionStatus(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
+            const { isCollecting } = req.body;
+
+            const project = await this.projectsService.toggleCollectionStatus(projectId, orgId, isCollecting);
+            res.sendApiResponse(ApiResponse.success('Project collection status updated successfully', project));
         } catch (error) {
             next(error);
         }
@@ -579,5 +593,6 @@ export const {
     getBrowserRequest,
     updateBrowserRequest,
     deleteBrowserRequest,
-    getProjectDashboard
+    getProjectDashboard,
+    toggleCollectionStatus
 } = controller;

@@ -12,6 +12,7 @@ router.get('/:projectId', authenticateService(), projectsController.getProject);
 router.patch('/:projectId', authenticateService(), projectsController.updateProject);
 router.delete('/:projectId', authenticateService(), projectsController.deleteProject);
 router.get('/:projectId/dashboard', authenticateService(), projectsController.getProjectDashboard);
+router.patch('/:projectId/collection', authenticateService(), projectsController.toggleCollectionStatus);
 
 // Collection management routes
 router.post('/:projectId/collections/add', authenticateService(), projectsController.addCollection);
@@ -25,8 +26,8 @@ router.put('/:projectId/rules', authenticateService(), projectsController.update
 
 // Browser request routes
 router.get('/:projectId/browser-requests', authenticateService(), projectsController.getBrowserRequests);
-router.post('/:projectId/browser-requests/:orgId', projectsController.createBrowserRequest);
-router.post('/:projectId/browser-requests/bulk/:orgId', projectsController.bulkCreateBrowserRequests);
+router.post('/:projectId/browser-requests/:orgId', validation.validateProjectCollectingStatus, projectsController.createBrowserRequest);
+router.post('/:projectId/browser-requests/bulk/:orgId', validation.validateProjectCollectingStatus, projectsController.bulkCreateBrowserRequests);
 router.get('/:projectId/browser-requests/:requestId', authenticateService(), projectsController.getBrowserRequest);
 router.put('/:projectId/browser-requests/:requestId', authenticateService(), projectsController.updateBrowserRequest);
 router.delete('/:projectId/browser-requests/:requestId', authenticateService(), projectsController.deleteBrowserRequest);

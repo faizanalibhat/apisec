@@ -13,6 +13,8 @@ const schema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String },
 
+    isCollecting: { type: Boolean, default: true },
+
     collaborators: { type: [ownerSchema], default: [] },
 
     collectionUids: { type: [String], default: [] },

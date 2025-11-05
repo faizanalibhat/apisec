@@ -338,6 +338,24 @@ class ProjectsService {
         }
     }
 
+    async toggleCollectionStatus(projectId, orgId, isCollecting) {
+        try {
+            const project = await Projects.findOneAndUpdate(
+                { _id: projectId, orgId },
+                { $set: { isCollecting } },
+                { new: true, runValidators: true }
+            ).lean();
+
+            if (!project) {
+                throw ApiError.notFound('Project not found');
+            }
+
+            return project;
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     // Helper method to update collections and raw requests
     async updateCollectionsAndRequests(collectionUids, projectId, action) {
         const updateOperation = action === 'add'
