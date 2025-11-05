@@ -3,6 +3,9 @@ import * as controller from '../controllers/rule.controller.js';
 
 const router = express.Router();
 
+// Summary endpoint
+router.get('/summary', controller.getRulesSummary);
+
 // Search endpoint
 router.get('/search', controller.searchRules);
 

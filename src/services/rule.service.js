@@ -106,6 +106,63 @@ class RuleService {
         }
     }
 
+    async getRulesSummary({ orgId, filters, page, limit, isActive }) {
+        try {
+            const query = { orgId, ...filters };
+
+            if (isActive !== undefined) {
+                query.isActive = isActive === 'true';
+            }
+
+            const skip = (page - 1) * limit;
+
+            const total = await Rule.countDocuments(query);
+
+            const pipeline = [
+                { $match: query },
+                {
+                    $lookup: {
+                        from: 'vulnerabilities',
+                        localField: '_id',
+                        foreignField: 'ruleSnapshot._id',
+                        as: 'vulnerabilities'
+                    }
+                },
+                {
+                    $addFields: {
+                        vulnerabilityCount: { $size: '$vulnerabilities' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        rule_name: 1,
+                        vulnerabilityCount: 1
+                    }
+                },
+                { $sort: { rule_name: 1 } },
+                { $skip: skip },
+                { $limit: limit }
+            ];
+
+            const rules = await Rule.aggregate(pipeline);
+
+            return {
+                data: rules,
+                pagination: {
+                    total,
+                    page,
+                    limit,
+                    pages: Math.ceil(total / limit),
+                    hasNextPage: page < Math.ceil(total / limit),
+                    hasPrevPage: page > 1
+                }
+            };
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     async getRule(ruleId, orgId) {
         try {
             const rule = await Rule.findOne({

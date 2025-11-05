@@ -12,6 +12,7 @@ class RuleController {
         // Bind methods to maintain context
         this.createRule = this.createRule.bind(this);
         this.getRules = this.getRules.bind(this);
+        this.getRulesSummary = this.getRulesSummary.bind(this);
         this.getRule = this.getRule.bind(this);
         this.updateRule = this.updateRule.bind(this);
         this.deleteRule = this.deleteRule.bind(this);
@@ -70,6 +71,42 @@ class RuleController {
             res.sendApiResponse(
                 ApiResponse.paginated(
                     'Rules fetched successfully',
+                    result.data,
+                    result.pagination
+                )
+            );
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async getRulesSummary(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { page = 1, limit = 20, isActive, search } = req.query;
+
+            const filters = {};
+            if (search) {
+                filters.$and = [
+                    {
+                        $or: [
+                            { rule_name: { $regex: search, $options: 'i' } }
+                        ]
+                    }
+                ];
+            }
+
+            const result = await this.ruleService.getRulesSummary({
+                orgId,
+                filters,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                isActive
+            });
+
+            res.sendApiResponse(
+                ApiResponse.paginated(
+                    'Rules summary fetched successfully',
                     result.data,
                     result.pagination
                 )
@@ -190,6 +227,7 @@ const ruleController = new RuleController();
 export const {
     createRule,
     getRules,
+    getRulesSummary,
     getRule,
     updateRule,
     deleteRule,
