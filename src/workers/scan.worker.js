@@ -25,6 +25,7 @@ const integrationService = new IntegrationService();
 
 async function transformationHandler(payload, msg, channel) {
     const { _id, requestIds, ruleIds, environmentId, orgId, projectId, scope, authProfileId } = payload;
+    const processedUrls = new Set();
     try {
         console.log("[+] TRANSFORMATION TRIGGERED : ", _id);
 
@@ -126,6 +127,12 @@ async function transformationHandler(payload, msg, channel) {
                 }
 
                 for (let t of transformed) {
+
+                    const urlKey = `${t.method}::${t.url}`;
+                    if (processedUrls.has(urlKey)) {
+                        continue;
+                    }
+                    processedUrls.add(urlKey);
 
                     console.log("[+] CREATING REQUESTS WITH FOLLOWING PROJECT IDS: ", t.projectIds);
 

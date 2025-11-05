@@ -25,6 +25,10 @@ export const transformer = {
       requests = this._applyMethod(requests, transformRules.method);
     }
 
+    if (transformRules.recursive) {
+      requests = this._applyRecursivePath(requests);
+    }
+
 
     // Apply component transformers
     // if (transformRules.path) {
@@ -96,6 +100,45 @@ export const transformer = {
       });
     });
 
+    return result;
+  },
+
+  _applyRecursivePath(requests) {
+    const result = [];
+    requests.forEach(req => {
+      try {
+        const originalUrl = new URL(req.url);
+        let path = originalUrl.pathname;
+
+        // Normalize path: remove trailing slash, unless it's just "/"
+        if (path.length > 1 && path.endsWith('/')) {
+          path = path.slice(0, -1);
+        }
+
+        // Loop, creating a request for each path level
+        while (path) {
+          const newReq = _.cloneDeep(req);
+          const newUrl = new URL(req.url);
+          newUrl.pathname = path;
+          newReq.url = newUrl.toString();
+          result.push(newReq);
+
+          // Truncate the path for the next iteration.
+          // Stop if we are at the root or a first-level path like '/users'.
+          const lastSlashIndex = path.lastIndexOf('/');
+          if (lastSlashIndex > 0) {
+            path = path.substring(0, lastSlashIndex);
+          } else {
+            // This was the last segment (e.g., '/users' or '/'), so we stop.
+            path = '';
+          }
+        }
+      } catch (error) {
+        console.error(`[!] Error parsing URL for recursive transform: ${req.url}`, error);
+        // If URL is invalid, just add the original request and continue
+        result.push(_.cloneDeep(req));
+      }
+    });
     return result;
   }
 };
