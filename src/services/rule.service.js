@@ -31,7 +31,7 @@ class RuleService {
         }
     }
 
-    async getRules({ orgId, filters, page, limit, isActive, projectId }) {
+    async getRules({ orgId, filters, page, limit, isActive, projectId, withVulnCount }) {
         try {
             const query = { orgId, ...filters };
 
@@ -48,14 +48,42 @@ class RuleService {
                 project = await projectService.findById(projectId, orgId);
             }
 
-            const [rules, total] = await Promise.all([
-                Rule.find(query)
+            let rules;
+            const total = await Rule.countDocuments(query);
+
+            if (withVulnCount) {
+                const pipeline = [
+                    { $match: query },
+                    {
+                        $lookup: {
+                            from: 'vulnerabilities',
+                            localField: '_id',
+                            foreignField: 'ruleSnapshot._id',
+                            as: 'vulnerabilities'
+                        }
+                    },
+                    {
+                        $addFields: {
+                            vulnerabilityCount: { $size: '$vulnerabilities' }
+                        }
+                    },
+                    {
+                        $project: {
+                            vulnerabilities: 0
+                        }
+                    },
+                    { $sort: { createdAt: -1 } },
+                    { $skip: skip },
+                    { $limit: limit }
+                ];
+                rules = await Rule.aggregate(pipeline);
+            } else {
+                rules = await Rule.find(query)
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
-                    .lean(),
-                Rule.countDocuments(query)
-            ]);
+                    .lean();
+            }
 
             const data = rules.map(rule => {
                 const isInProject = project ? project.includedRuleIds.some(id => id.toString() === rule._id.toString()) : false;
