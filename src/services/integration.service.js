@@ -158,6 +158,12 @@ class IntegrationService {
                 orgId
             });
 
+            // Delete all collections associated with this integration
+            await PostmanCollections.deleteMany({
+                integrationId: integration._id,
+                orgId
+            });
+
             // Delete the integration
             await integration.deleteOne();
 
