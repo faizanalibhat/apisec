@@ -374,7 +374,7 @@ export class ScanService {
                         from: "transformedrequests",
                         localField: "_id",
                         foreignField: "scanId",
-                        pipeline: [{ $project: { "state": 1 }}],
+                        // pipeline: [{ $project: { "state": 1 }}],
                         as: "transformedRequests"
                     }
                 },
