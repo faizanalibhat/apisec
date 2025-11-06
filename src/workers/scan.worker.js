@@ -11,6 +11,7 @@ import { PostmanParser } from "../utils/postman/postmanParser.js";
 import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js";
 import { AuthProfile } from "../models/auth-profile.model.js";
+import { Projects } from "../models/projects.model.js";
 import "../db/mongoose.js";
 
 import { syncRulesFromGithub } from "./sync-rules.worker.js";
@@ -415,6 +416,22 @@ async function runAndMatchRequests(payload, msg, channel) {
         const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
         const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
 
+        // RULE-CHECK: Check if the rule is globally disabled
+        if (!rule.isActive) {
+            // console.log(`[+] Skipping request for globally disabled rule: ${rule.rule_name}`);
+            return;
+        }
+
+        // RULE-CHECK: Check if the rule is disabled at the project level
+        if (originalRequest.projectIds && originalRequest.projectIds.length > 0) {
+            const projects = await Projects.find({ _id: { $in: originalRequest.projectIds } }).lean();
+            const isExcluded = projects.some(p => p.excludedRuleIds.map(id => id.toString()).includes(rule._id.toString()));
+
+            if (isExcluded) {
+                // console.log(`[+] Skipping request for project-excluded rule: ${rule.rule_name}`);
+                return;
+            }
+        }
 
         // Send the request
         // console.log(`[+] Sending request to: ${transformedRequest.url}`);
