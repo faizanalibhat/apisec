@@ -28,6 +28,25 @@ class RuleController {
 
             const json_parsed = yaml.load(raw_yaml);
 
+            // --- Start Validation ---
+            const { rule_name, report } = json_parsed;
+            if (!rule_name) {
+                throw ApiError.badRequest('Validation failed: rule_name is required in YAML.');
+            }
+            if (!report) {
+                throw ApiError.badRequest('Validation failed: report object is required in YAML.');
+            }
+            if (!report.title) {
+                throw ApiError.badRequest('Validation failed: report.title is required.');
+            }
+            if (!report.description) {
+                throw ApiError.badRequest('Validation failed: report.description is required.');
+            }
+            if (!report.severity) {
+                throw ApiError.badRequest('Validation failed: report.severity is required.');
+            }
+            // --- End Validation ---
+
             const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml, parsed_yaml: json_parsed };
 
             // parse yaml & store both json & yaml
@@ -139,6 +158,9 @@ class RuleController {
 
             // Get existing rule to merge with
             const existingRule = await this.ruleService.getRule(ruleId, orgId);
+            if (!existingRule) {
+                throw ApiError.notFound('Rule not found');
+            }
 
             // Parse new yaml
             const new_json = yaml.load(raw_yaml);
@@ -155,6 +177,25 @@ class RuleController {
                 ...new_json,
                 report: merged_report
             };
+
+            // --- Start Validation ---
+            const { rule_name, report } = final_json;
+            if (!rule_name) {
+                throw ApiError.badRequest('Validation failed: rule_name cannot be removed.');
+            }
+            if (!report) {
+                throw ApiError.badRequest('Validation failed: report object cannot be removed.');
+            }
+            if (!report.title) {
+                throw ApiError.badRequest('Validation failed: report.title is required.');
+            }
+            if (!report.description) {
+                throw ApiError.badRequest('Validation failed: report.description is required.');
+            }
+            if (!report.severity) {
+                throw ApiError.badRequest('Validation failed: report.severity is required.');
+            }
+            // --- End Validation ---
 
             // Construct the complete data object to save
             const ruleData = {
