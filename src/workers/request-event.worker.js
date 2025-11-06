@@ -59,7 +59,7 @@ async function requestCreatedHandler(payload, msg, channel) {
 
         for (let rule of rules) {
 
-            console.log(rule?.parsed_yaml?.transform);
+            console.log(cleanRequest.headers);
 
             const bulkOps = [];
 
