@@ -149,25 +149,26 @@ class RawRequestService {
 
 
             pipeline.push({
-            $addFields: {
-                vulnCounts: {
-                $arrayToObject: {
-                    $map: {
-                    input: {
-                        $ifNull: [
-                        { $arrayElemAt: ["$vulnStats.stats", 0] },
-                        [] // if vulnStats or stats is missing, use empty array
-                        ]
-                    },
-                    as: "item",
-                    in: {
-                        k: "$$item.k",
-                        v: "$$item.v"
-                    }
+                $addFields: {
+                    vulnCounts: {
+                        $arrayToObject: {
+                            $map: {
+                                input: {
+                                    $filter: {
+                                        input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
+                                        as: "item",
+                                        cond: { $ne: ["$$item.k", null] }
+                                    }
+                                },
+                                as: "item",
+                                in: {
+                                    k: "$$item.k",
+                                    v: "$$item.v"
+                                }
+                            }
+                        }
                     }
                 }
-                }
-            }
             });
 
 
