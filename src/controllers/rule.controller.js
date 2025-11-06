@@ -135,12 +135,34 @@ class RuleController {
         try {
             const { orgId } = req.authenticatedService;
             const { ruleId } = req.params;
-
             const raw_yaml = req.body;
 
-            const json_parsed = yaml.load(raw_yaml);
+            // Get existing rule to merge with
+            const existingRule = await this.ruleService.getRule(ruleId, orgId);
 
-            const ruleData = { ...json_parsed, orgId, raw_yaml: raw_yaml, parsed_yaml: json_parsed };
+            // Parse new yaml
+            const new_json = yaml.load(raw_yaml);
+
+            // Deep merge 'report' object manually
+            const merged_report = {
+                ...(existingRule.report || {}),
+                ...(new_json.report || {})
+            };
+
+            // Create the final merged object for the whole rule, ensuring nested objects are merged
+            const final_json = {
+                ...existingRule.parsed_yaml,
+                ...new_json,
+                report: merged_report
+            };
+
+            // Construct the complete data object to save
+            const ruleData = {
+                ...final_json,
+                orgId,
+                raw_yaml: raw_yaml, // always use the new raw_yaml
+                parsed_yaml: final_json
+            };
 
             const rule = await this.ruleService.updateRule(ruleId, ruleData, orgId);
 
