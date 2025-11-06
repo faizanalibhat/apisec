@@ -106,13 +106,13 @@ function applyRules(params, rules) {
     return allParams;
   }
 
-  const changed = !_.isEqual(params, original);
+  // const changed = !_.isEqual(params, original);
 
-  console.log("[+] Params CHANGED : ", changed, params);
+  // console.log("[+] Params CHANGED : ", changed, params);
 
-  if (!allParams.length && !changed) {
-    return [];
-  }
+  // if (!allParams.length && !changed) {
+  //   return [];
+  // }
 
   return allParams?.length > 0 ? allParams : [params];
 }

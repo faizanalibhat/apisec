@@ -107,11 +107,11 @@ function applyRules(headers, rules) {
     return allHeaders;
   }
 
-  const changed = !_.isEqual(headers, original);
+  // const changed = !_.isEqual(headers, original);
 
-  if (!allHeaders.length && !changed) {
-    return [];
-  }
+  // if (!allHeaders.length && !changed) {
+  //   return [];
+  // }
 
   return allHeaders?.length > 0 ? allHeaders : [headers];
 }
