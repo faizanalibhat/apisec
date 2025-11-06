@@ -562,6 +562,10 @@ async function runAndMatchRequests(payload, msg, channel) {
             try {
                 await Vulnerability.create([vulnerabilityData], { strict: false });
                 console.log(`[+] Created vulnerability record - ${vulnerabilityData.title}`);
+
+                await Scan.updateOne({ _id: _id }, {
+                    $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
+                });
             } catch (vulnError) {
                 console.error("[!] Error creating vulnerabilities:", vulnError.message);
             }
