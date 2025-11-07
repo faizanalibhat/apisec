@@ -14,6 +14,7 @@ import TemplateEngine from "../utils/template.js";
 import { AuthProfile } from "../models/auth-profile.model.js";
 import { Projects } from '../models/projects.model.js';
 import "../db/mongoose.js";
+import mongoose from 'mongoose';
 
 const scanService = new ScanService();
 
