@@ -1,21 +1,89 @@
-export function vulnParser(vuln){
+export function vulnParser(vuln) {
+
+    const evidence = vuln.evidence || {};
+    const request = evidence.request || {};
+    const response = evidence.response || {};
+    const requestSnapshot = vuln.requestSnapshot || {};
+    const ruleSnapshot = vuln.ruleSnapshot || {};
+    const cvss = vuln.cvss || {};
+
+    const fullMarkdownReport = `
+# ${vuln.title}
+
+**${vuln.description}**
+
+---
+
+### Details
+
+| Severity | CVSS Score | CWE | OWASP |
+| :--- | :--- | :--- | :--- |
+| **${vuln.severity}** | ${cvss.score || 'N/A'} | ${vuln.cwe || 'N/A'} | ${vuln.owasp || 'N/A'} |
+
+---
+
+### Steps to Reproduce
+
+${vuln.stepsToReproduce || 'No steps provided.'}
+
+---
+
+### Impact
+
+${vuln.impact || 'No impact provided.'}
+
+---
+
+### Remediation
+
+${vuln.remediation || 'No remediation provided.'}
+
+---
+
+### Evidence
+
+#### Request
+
+\`\`\`http
+${request.method} ${request.url}
+${Object.entries(request.headers || {}).map(([key, value]) => `${key}: ${value}`).join('\n')}
+
+${request.body ? JSON.stringify(request.body, null, 2) : ''}
+\`\`\`
+
+#### Response
+
+\`\`\`http
+HTTP/1.1 ${response.status} ${response.statusText}
+${Object.entries(response.headers || {}).map(([key, value]) => `${key}: ${value}`).join('\n')}
+
+${response.body ? JSON.stringify(response.body, null, 2) : ''}
+\`\`\`
+
+---
+
+### Additional Context
+
+**Original Request:**
+*   **Name:** ${requestSnapshot.name}
+*   **URL:** ${requestSnapshot.method} ${requestSnapshot.url}
+*   **Collection:** ${requestSnapshot.collectionName}
+
+**Detection Rule:**
+*   **Name:** ${ruleSnapshot.ruleName}
+*   **Category:** ${ruleSnapshot.category}
+`;
 
     return {
         orgId: vuln.orgId,
         title: vuln.title,
         assessmentId: vuln.assessmentId,
         description: vuln.description,
-        fullMarkdownReport: `# ${vuln.title}
-#### ${vuln.description}
-## Steps To Reproduce
-${vuln.stepsToReproduce}
-## Impact
-${vuln.impact}
-        `,
+        fullMarkdownReport,
         stepsToReproduce: vuln.stepsToReproduce || 'No steps provided',
         impact: vuln.impact || 'No impact provided',
-        cvssScore: vuln?.cvssScore || '0',
-        cvssString: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N',
+        cvssScore: cvss.score || '0',
+        cvssString: cvss.vector || 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N',
         state: "In Review",
         affectedAssets: [{
             value: vuln?.transformedRequestSnapshot?.url,
@@ -25,9 +93,9 @@ ${vuln.impact}
         reportOrigin: "apisec-import",
         references: [],
         vulnerableComponent: {
-            name: vuln.requestSnapshot?.name,
+            name: requestSnapshot?.name,
             type: 'api',
-            value: vuln.requestSnapshot?.url
+            value: requestSnapshot?.url
         },
         solution: vuln?.remediation,
         cwe: vuln.cwe,
