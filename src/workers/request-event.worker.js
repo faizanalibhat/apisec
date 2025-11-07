@@ -430,7 +430,7 @@ async function runScan(payload, msg, channel) {
         }
         
         // After processing all requests, recalculate vulnerability stats
-        await this.recalculateScanVulnerabilityStats(scanId);
+        await recalculateScanVulnerabilityStats(scanId);
         
     } catch (error) {
         console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
