@@ -65,7 +65,7 @@ class RawRequestService {
         // 3. Get total requests sent (state: 'complete')
         const totalRequestsSent = await TransformedRequest.countDocuments({
             requestId: { $in: rawRequestIds },
-            state: 'complete'
+            state: { $in: ["complete", "failed" ] }
         });
 
         // 4. Get total vulnerabilities found
