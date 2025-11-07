@@ -124,7 +124,11 @@ export class ScanService {
                 stats: {
                     totalRequests: requests.length,
                     totalRules: rules.length,
-                    totalTransformedRequests: requests.length * rules.length
+                    totalTransformedRequests: requests.length * rules.length,
+                    processedRequests: 0,
+                    completedRequests: 0,
+                    failedRequests: 0,
+                    vulnerabilitiesFound: 0
                 }
             });
 
@@ -240,51 +244,73 @@ export class ScanService {
                 throw ApiError.badRequest('No browser requests found for this project. Please import requests first.');
             }
 
-            // Update scan name if not provided
-            // if (!scanData.name) {
-            //     scanData.name = `${project.name} - Security Scan`;
-            // }
-
             const exists = await Scan.findOne({ orgId, name });
 
             if (!exists) {
-                // Create scan document
-                const scan = await Scan.findOneAndUpdate({ orgId, name }, {
+                // Create new scan document
+                const scan = await Scan.create({
                     name,
                     description,
                     orgId,
                     scope,
                     ruleIds: rules.map(r => r._id),
-                    $push: { requestIds: requests.map(r => r._id) },
+                    requestIds: requests.map(r => r._id),
                     collectionIds,
                     environmentId,
                     authProfileId,
                     projectIds: actualProjectIds,
                     isProjectBasedScan,
                     status,
-                    'stats.totalRules': rules.length,
-                    $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
-                }, { upsert: true, new: true });
-
+                    stats: {
+                        totalRequests: requests.length,
+                        totalRules: rules.length,
+                        totalTransformedRequests: requests.length * rules.length,
+                        processedRequests: 0,
+                        completedRequests: 0,
+                        failedRequests: 0,
+                        vulnerabilitiesFound: 0
+                    },
+                    vulnerabilitySummary: {
+                        critical: 0,
+                        high: 0,
+                        medium: 0,
+                        low: 0
+                    }
+                });
 
                 return scan;
             }
             else {
-                const scan = await Scan.findOneAndUpdate({ orgId, name }, {
-                    name,
-                    description,
-                    orgId,
-                    scope,
-                    ruleIds: rules.map(r => r._id),
-                    $push: { requestIds: requests.map(r => r._id) },
-                    collectionIds,
-                    environmentId,
-                    authProfileId,
-                    projectIds: actualProjectIds,
-                    isProjectBasedScan,
-                    'stats.totalRules': rules.length,
-                    $inc: { 'stats.totalRequests': 1, 'stats.totalTransformedRequests': requests.length * rules.length },
-                }, { upsert: true, new: true });
+                // Update existing scan - properly handle stats
+                const currentScan = exists;
+                
+                // Add new request IDs without duplicates
+                const updatedRequestIds = [...new Set([...currentScan.requestIds.map(id => id.toString()), ...requests.map(r => r._id.toString())])];
+                const newTotalRequests = updatedRequestIds.length;
+                const newTransformedRequests = requests.length * rules.length;
+                
+                const scan = await Scan.findOneAndUpdate(
+                    { orgId, name },
+                    {
+                        $set: {
+                            description,
+                            scope,
+                            ruleIds: rules.map(r => r._id),
+                            collectionIds,
+                            environmentId,
+                            authProfileId,
+                            projectIds: actualProjectIds,
+                            isProjectBasedScan,
+                            'stats.totalRules': rules.length,
+                            'stats.totalRequests': newTotalRequests,
+                            requestIds: updatedRequestIds
+                        },
+                        $inc: {
+                            'stats.totalTransformedRequests': newTransformedRequests
+                        }
+                    },
+                    { new: true }
+                );
 
                 return scan;
             }
@@ -374,7 +400,6 @@ export class ScanService {
                         from: "transformedrequests",
                         localField: "_id",
                         foreignField: "scanId",
-                        // pipeline: [{ $project: { "state": 1 }}], .. comment later
                         as: "transformedRequests"
                     }
                 },
@@ -508,7 +533,7 @@ export class ScanService {
             this.handleError(error);
         }
     }
-
+    
     async getScan(scanId, orgId) {
         try {
             const scan = await Scan.findOne({

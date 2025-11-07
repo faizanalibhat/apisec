@@ -56,9 +56,7 @@ async function requestCreatedHandler(payload, msg, channel) {
         delete cleanRequest.createdAt;
         delete cleanRequest.updatedAt;
 
-
         for (let rule of rules) {
-
             console.log(cleanRequest.headers);
 
             const bulkOps = [];
@@ -67,7 +65,6 @@ async function requestCreatedHandler(payload, msg, channel) {
 
             try {
                 transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
-
             } catch (err) {
                 console.log(err);
                 continue;
@@ -82,6 +79,7 @@ async function requestCreatedHandler(payload, msg, channel) {
                             orgId,
                             requestId,
                             ruleId: rule._id,
+                            projectId: [projectId], // Fix: Ensure projectId is properly set as array
                             ...t,
                         },
                     },
@@ -110,8 +108,6 @@ async function requestCreatedHandler(payload, msg, channel) {
     }
 }
 
-
-
 async function runScan(payload, msg, channel) {
     const { orgId, projectId, request, project, transformed_request_ids, scanId, scan } = payload;
 
@@ -122,30 +118,62 @@ async function runScan(payload, msg, channel) {
 
         const requests = await TransformedRequest.find({ _id: { $in: transformed_request_ids } }).lean();
 
-        for (let request of requests) {
-
+        for (let transformedRequest of requests) {
             try {
-                // Update state
+                // Update state to running
                 await TransformedRequest.updateOne(
-                    { _id: request._id },
+                    { _id: transformedRequest._id },
                     { $set: { state: "running" } }
                 );
 
-                const transformedRequest = request;
+                const originalRequest = await Requests.findOne({ _id: transformedRequest.requestId }).lean();
+                const rule = await Rules.findOne({ _id: transformedRequest.ruleId }).lean();
 
-                const originalRequest = await Requests.findOne({ _id: request.requestId }).lean();
-                const rule = await Rules.findOne({ _id: request.ruleId }).lean();
+                // Send the request
+                const response = await EngineService.sendRequest({ request: transformedRequest, rule: rule.parsed_yaml });
 
-                const response = await EngineService.sendRequest({ request, rule: rule.parsed_yaml });
+                // Check for request error
+                if (response.error) {
+                    console.log("[!] Request errored out: ", response.message || response.error);
 
+                    // Mark as failed
+                    await TransformedRequest.updateOne(
+                        { _id: transformedRequest._id },
+                        {
+                            $set: {
+                                state: "failed",
+                                execution: {
+                                    status: "failed",
+                                    completedAt: new Date(),
+                                    response: {
+                                        error: response.message || response.error || "Request failed"
+                                    }
+                                },
+                                error: {
+                                    message: response.message || response.error || "Request failed",
+                                    occurredAt: new Date()
+                                }
+                            }
+                        }
+                    );
+
+                    // Update scan stats for failed request
+                    await Scan.updateOne({ _id: scanId }, {
+                        $inc: { 'stats.processedRequests': 1, 'stats.failedRequests': 1 },
+                    });
+
+                    continue; // Skip to next request
+                }
+
+                // Match the response
                 const match = await EngineService.match({ response: response, rule: rule.parsed_yaml });
 
                 if (match?.match) {
                     console.log("[+] MATCH FOUND : [GIVEN PROJECT ID] : ", originalRequest.projectIds, transformedRequest.projectId);
 
                     const templateContext = TemplateEngine.createVulnerabilityContext({
-                        transformedRequest: request,
-                        originalRequest: request,
+                        transformedRequest: transformedRequest,
+                        originalRequest: originalRequest,
                         response,
                         rule,
                         matchResult: match,
@@ -167,9 +195,6 @@ async function runScan(payload, msg, channel) {
                         orgId,
                         scanName: scan.name,
                         scanId,
-                        // ruleId: rule._id,
-                        // requestId: originalRequest._id,
-
                         ruleSnapshot: rule,
                         requestSnapshot: originalRequest,
                         transformedRequestSnapshot: transformedRequest,
@@ -241,71 +266,155 @@ async function runScan(payload, msg, channel) {
                         if (!result.lastErrorObject.updatedExisting) {
                             console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
 
-                                                    await Scan.updateOne({ _id: scanId }, {
-                                                        $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
-                                                    });
-                            
-                                                    await Scan.updateOne({ _id: scanId }, {
-                                                        $inc: { 'stats.processedRequests': 1, 'stats.completedRequests': 1 },
-                                                    });
-                                                } else {
-                                                    console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
-                                                }
-                        // Update transformed request state
+                            // Only increment vulnerability stats on new vulnerability creation
+                            await Scan.updateOne({ _id: scanId }, {
+                                $inc: {
+                                    'stats.vulnerabilitiesFound': 1,
+                                    [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1
+                                },
+                            });
+                        } else {
+                            console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
+                        }
+
+                        // Update transformed request state to complete with vulnerability detected
                         await TransformedRequest.updateOne(
                             { _id: transformedRequest._id },
                             {
                                 $set: {
                                     state: "complete",
+                                    vulnerabilityDetected: true,
+                                    execution: {
+                                        status: "success",
+                                        startedAt: new Date(),
+                                        completedAt: new Date(),
+                                        responseTime: response.time || 0,
+                                        response: {
+                                            status: response.status,
+                                            statusText: response.statusText || '',
+                                            headers: response.headers || {},
+                                            body: response.body,
+                                            size: response.size || 0,
+                                            error: null,
+                                            version: response.version || ''
+                                        }
+                                    },
                                     executionResult: {
-                                        matched: match.match,
+                                        matched: true,
                                         executedAt: new Date(),
                                         responseStatus: response.status,
                                         responseTime: response.time,
                                         response
+                                    },
+                                    matchResults: {
+                                        matched: true,
+                                        matchedCriteria: match.matchedCriteria,
+                                        details: match.details || {}
                                     }
                                 }
                             }
                         );
+
+                        // Update scan stats for successful completion
+                        await Scan.updateOne({ _id: scanId }, {
+                            $inc: { 'stats.processedRequests': 1, 'stats.completedRequests': 1 },
+                        });
+
                     } catch (vulnError) {
                         console.error("[!] Error creating/updating vulnerability:", vulnError.message);
+
+                        // Even if vulnerability creation fails, mark request as complete
+                        await TransformedRequest.updateOne(
+                            { _id: transformedRequest._id },
+                            {
+                                $set: {
+                                    state: "complete",  // check later if state here should be complete or not
+                                    execution: {
+                                        status: "success",
+                                        completedAt: new Date(),
+                                        response: {
+                                            status: response.status,
+                                            error: "Vulnerability creation failed"
+                                        }
+                                    }
+                                }
+                            }
+                        );
+
+                        await Scan.updateOne({ _id: scanId }, {
+                            $inc: { 'stats.processedRequests': 1, 'stats.completedRequests': 1 },
+                        });
                     }
                 } else {
+                    // No match found - mark as complete without vulnerability
                     await TransformedRequest.updateOne(
-                        { _id: request._id },
+                        { _id: transformedRequest._id },
                         {
                             $set: {
                                 state: "complete",
+                                vulnerabilityDetected: false,
+                                execution: {
+                                    status: "success",
+                                    startedAt: new Date(),
+                                    completedAt: new Date(),
+                                    responseTime: response.time || 0,
+                                    response: {
+                                        status: response.status,
+                                        statusText: response.statusText || '',
+                                        headers: response.headers || {},
+                                        body: response.body,
+                                        size: response.size || 0,
+                                        error: null,
+                                        version: response.version || ''
+                                    }
+                                },
                                 executionResult: {
                                     matched: false,
                                     executedAt: new Date(),
                                     responseStatus: response.status,
                                     responseTime: response.time,
+                                    response
                                 },
-                            },
+                                matchResults: {
+                                    matched: false,
+                                    details: {}
+                                }
+                            }
                         }
                     );
 
+                    // Update scan stats for completed request without vulnerability
                     await Scan.updateOne({ _id: scanId }, {
                         $inc: { 'stats.processedRequests': 1, 'stats.completedRequests': 1 },
                     });
                 }
 
-            }
-            catch(err) {
+            } catch (err) {
+                console.error(`[!] Error processing transformed request ${transformedRequest._id}:`, err);
+
+                // Mark transformed request as failed
                 await TransformedRequest.updateOne(
-                    { _id: request._id },
+                    { _id: transformedRequest._id },
                     {
                         $set: {
                             state: "failed",
+                            execution: {
+                                status: "failed",
+                                completedAt: new Date(),
+                                response: {
+                                    error: err.message || "Unknown error"
+                                }
+                            },
                             error: {
                                 message: err.message,
+                                stack: err.stack,
                                 occurredAt: new Date()
                             }
                         }
                     }
                 );
 
+                // Update scan stats for failed request
                 await Scan.updateOne({ _id: scanId }, {
                     $inc: { 'stats.processedRequests': 1, 'stats.failedRequests': 1 },
                 });
@@ -317,8 +426,6 @@ async function runScan(payload, msg, channel) {
         channel.ack(msg);
     }
 }
-
-
 
 /**
  * Initializes the worker to consume request-related events.
