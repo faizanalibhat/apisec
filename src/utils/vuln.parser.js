@@ -70,8 +70,12 @@ ${response.body ? JSON.stringify(response.body, null, 2) : ''}
 *   **Collection:** ${requestSnapshot.collectionName}
 
 **Detection Rule:**
-*   **Name:** ${ruleSnapshot.ruleName}
-*   **Category:** ${ruleSnapshot.category}
+*   **Name:** ${ruleSnapshot.rule_name}
+
+**Rule Snapshot:**
+\`\`\`json
+${JSON.stringify(ruleSnapshot, null, 2)}
+\`\`\`
 `;
 
     return {
