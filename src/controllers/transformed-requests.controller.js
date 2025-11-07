@@ -9,7 +9,7 @@ export class TransformedRequestsController {
 
     static getRequests = async (req, res, next) => {
         const { orgId } = req.authenticatedService;
-        const { scanId, search, method, statusCode } = req.query;
+        const { scanId, search, method, statusCode, ruleId, hasVulns } = req.query;
 
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -33,11 +33,17 @@ export class TransformedRequestsController {
             filters["executionResult.responseStatus"] = { $in: String(statusCode)?.split(",")?.map(s => parseInt(s)) };
         }
 
+        if (ruleId) {
+            filters.ruleId = ObjectId.createFromHexString(ruleId);
+        }
+
+        if (hasVulns) {
+            filters.vulnerabilityDetected = hasVulns === 'true';
+        }
+
         console.log("JSON FILTERS: ", JSON.stringify(filters));
 
         const pipeline = [
-            { $match: filters },
-
             // --- Lookup Vulnerability ---
             {
                 $lookup: {
@@ -106,7 +112,7 @@ export class TransformedRequestsController {
                 }
                 }
             },
-
+            { $match: filters },
             // --- Lookup Rule ---
             {
                 $lookup: {
