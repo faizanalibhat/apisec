@@ -241,13 +241,16 @@ async function runScan(payload, msg, channel) {
                         if (!result.lastErrorObject.updatedExisting) {
                             console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
 
-                            await Scan.updateOne({ _id: scanId }, {
-                                $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
-                            });
-                        } else {
-                            console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
-                        }
-
+                                                    await Scan.updateOne({ _id: scanId }, {
+                                                        $inc: { 'stats.vulnerabilitiesFound': 1, [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 },
+                                                    });
+                            
+                                                    await Scan.updateOne({ _id: scanId }, {
+                                                        $inc: { 'stats.processedRequests': 1, 'stats.completedRequests': 1 },
+                                                    });
+                                                } else {
+                                                    console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
+                                                }
                         // Update transformed request state
                         await TransformedRequest.updateOne(
                             { _id: transformedRequest._id },
@@ -267,6 +270,25 @@ async function runScan(payload, msg, channel) {
                     } catch (vulnError) {
                         console.error("[!] Error creating/updating vulnerability:", vulnError.message);
                     }
+                } else {
+                    await TransformedRequest.updateOne(
+                        { _id: request._id },
+                        {
+                            $set: {
+                                state: "complete",
+                                executionResult: {
+                                    matched: false,
+                                    executedAt: new Date(),
+                                    responseStatus: response.status,
+                                    responseTime: response.time,
+                                },
+                            },
+                        }
+                    );
+
+                    await Scan.updateOne({ _id: scanId }, {
+                        $inc: { 'stats.processedRequests': 1, 'stats.completedRequests': 1 },
+                    });
                 }
 
             }
@@ -283,6 +305,10 @@ async function runScan(payload, msg, channel) {
                         }
                     }
                 );
+
+                await Scan.updateOne({ _id: scanId }, {
+                    $inc: { 'stats.processedRequests': 1, 'stats.failedRequests': 1 },
+                });
             }
         }
     } catch (error) {
