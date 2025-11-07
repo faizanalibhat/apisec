@@ -3,6 +3,7 @@ import Rule from '../models/rule.model.js';
 import RawRequest from '../models/rawRequest.model.js';
 import RawEnvironment from '../models/rawEnvironment.model.js';
 import TransformedRequest from '../models/transformedRequest.model.js';
+import Vulnerability from '../models/vulnerability.model.js';
 import { Projects } from '../models/projects.model.js';
 import ProjectsService from './projects.service.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -664,6 +665,9 @@ export class ScanService {
 
             // Delete all transformed requests associated with this scan
             await TransformedRequest.deleteMany({ scanId });
+
+            // Delete all vulnerabilities associated with this scan
+            await Vulnerability.deleteMany({ scanId });
 
             // Delete the scan
             await Scan.findByIdAndDelete(scanId);
