@@ -277,7 +277,7 @@ async function runScan(payload, msg, channel) {
                         $set: {
                             state: "failed",
                             error: {
-                                message: requestError.message,
+                                message: err.message,
                                 occurredAt: new Date()
                             }
                         }
