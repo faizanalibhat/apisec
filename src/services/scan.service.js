@@ -8,6 +8,7 @@ import ProjectsService from './projects.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { TransformerService } from './transformer.service.js';
 import { mqbroker } from './rabbitmq.service.js';
+import mongoose from 'mongoose';
 
 export class ScanService {
 
@@ -394,13 +395,44 @@ export class ScanService {
                     }
                 },
                 
-                // 4. Lookup transformed requests for each scan
+                // 4. Optimized lookup for transformed requests counts
                 {
                     $lookup: {
                         from: "transformedrequests",
-                        localField: "_id",
-                        foreignField: "scanId",
-                        as: "transformedRequests"
+                        let: { scanId: "$_id" },
+                        pipeline: [
+                            { $match: { $expr: { $eq: ["$scanId", "$$scanId"] } } },
+                            {
+                                $group: {
+                                    _id: null,
+                                    processedRequests: {
+                                        $sum: {
+                                            $cond: [{ $in: ["$state", ["complete", "failed"]] }, 1, 0]
+                                        }
+                                    },
+                                    completedRequests: {
+                                        $sum: {
+                                            $cond: [{ $eq: ["$state", "complete"] }, 1, 0]
+                                        }
+                                    },
+                                    failedRequests: {
+                                        $sum: {
+                                            $cond: [{ $eq: ["$state", "failed"] }, 1, 0]
+                                        }
+                                    },
+                                    totalTransformed: { $sum: 1 }
+                                }
+                            }
+                        ],
+                        as: "transformedReqCounts"
+                    }
+                },
+
+                // Unwind the results from the lookup
+                {
+                    $unwind: {
+                        path: "$transformedReqCounts",
+                        preserveNullAndEmptyArrays: true
                     }
                 },
                 
@@ -429,34 +461,10 @@ export class ScanService {
                 // 7. Compute counts and override stats
                 {
                     $addFields: {
-                        processedRequests: {
-                            $size: {
-                                $filter: {
-                                    input: "$transformedRequests",
-                                    as: "req",
-                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
-                                }
-                            }
-                        },
-                        completedRequests: {
-                            $size: {
-                                $filter: {
-                                    input: "$transformedRequests",
-                                    as: "req",
-                                    cond: { $eq: ["$$req.state", "complete"] }
-                                }
-                            }
-                        },
-                        failedRequests: {
-                            $size: {
-                                $filter: {
-                                    input: "$transformedRequests",
-                                    as: "req",
-                                    cond: { $eq: ["$$req.state", "failed"] }
-                                }
-                            }
-                        },
-                        totalRequests: { $size: "$transformedRequests" },
+                        processedRequests: { $ifNull: ["$transformedReqCounts.processedRequests", 0] },
+                        completedRequests: { $ifNull: ["$transformedReqCounts.completedRequests", 0] },
+                        failedRequests: { $ifNull: ["$transformedReqCounts.failedRequests", 0] },
+                        totalRequests: { $ifNull: ["$transformedReqCounts.totalTransformed", 0] },
                         environmentId: "$environment._id",
                         environmentName: "$environment.name",
                         projectNames: {
@@ -469,25 +477,9 @@ export class ScanService {
                         // Override stats values with actual counts
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
-                        "stats.totalTransformedRequests": { $size: "$transformedRequests" },
-                        "stats.processedRequests": {
-                            $size: {
-                                $filter: {
-                                    input: "$transformedRequests",
-                                    as: "req",
-                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
-                                }
-                            }
-                        },
-                        "stats.failedRequests": {
-                            $size: {
-                                $filter: {
-                                    input: "$transformedRequests",
-                                    as: "req",
-                                    cond: { $eq: ["$$req.state", "failed"] }
-                                }
-                            }
-                        },
+                        "stats.totalTransformedRequests": { $ifNull: ["$transformedReqCounts.totalTransformed", 0] },
+                        "stats.processedRequests": { $ifNull: ["$transformedReqCounts.processedRequests", 0] },
+                        "stats.failedRequests": { $ifNull: ["$transformedReqCounts.failedRequests", 0] },
                         "vulnerabilitySummary.total": {
                             $add: [
                                 { $ifNull: ["$vulnerabilitySummary.critical", 0] },
@@ -502,7 +494,7 @@ export class ScanService {
                 // 8. Remove the lookup arrays to avoid large payloads
                 {
                     $project: {
-                        transformedRequests: 0,
+                        transformedReqCounts: 0,
                         rawRequests: 0,
                         rules: 0,
                         findings: 0,
@@ -536,34 +528,75 @@ export class ScanService {
     
     async getScan(scanId, orgId) {
         try {
-            const scan = await Scan.findOne({
-                _id: scanId,
-                orgId
-            })
-                .populate('ruleIds', 'rule_name description report.severity')
-                .populate('requestIds', 'name method url source')
-                .populate('environmentId', 'name workspaceName')
-                .populate('projectIds', 'name description')
-                .lean();
+            const pipeline = [
+                // Match the specific scan
+                { $match: { _id: new mongoose.Types.ObjectId(scanId), orgId } },
+
+                // Lookup related data
+                { $lookup: { from: 'rules', localField: 'ruleIds', foreignField: '_id', as: 'rules' } },
+                { $lookup: { from: 'raw_requests', localField: 'requestIds', foreignField: '_id', as: 'requests' } },
+                { $lookup: { from: 'environments', localField: 'environmentId', foreignField: '_id', as: 'environment' } },
+                { $lookup: { from: 'projects', localField: 'projectIds', foreignField: '_id', as: 'projects' } },
+
+                // Unwind environment for easier access
+                { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
+
+                // Add computed fields
+                {
+                    $addFields: {
+                        "vulnerabilitySummary.total": {
+                            $add: [
+                                { $ifNull: ["$vulnerabilitySummary.critical", 0] },
+                                { $ifNull: ["$vulnerabilitySummary.high", 0] },
+                                { $ifNull: ["$vulnerabilitySummary.medium", 0] },
+                                { $ifNull: ["$vulnerabilitySummary.low", 0] }
+                            ]
+                        },
+                        projectInfo: {
+                            $cond: {
+                                if: { $and: ["$isProjectBasedScan", { $gt: [{ $size: "$projects" }, 0] }] },
+                                then: {
+                                    name: { $arrayElemAt: ["$projects.name", 0] },
+                                    description: { $arrayElemAt: ["$projects.description", 0] },
+                                    scanType: 'project-based'
+                                },
+                                else: "$$REMOVE"
+                            }
+                        },
+                        // Slim down populated fields
+                        ruleIds: {
+                            $map: { input: "$rules", as: "r", in: { _id: "$$r._id", rule_name: "$$r.rule_name", description: "$$r.description", severity: "$$r.report.severity" } }
+                        },
+                        requestIds: {
+                            $map: { input: "$requests", as: "req", in: { _id: "$$req._id", name: "$$req.name", method: "$$req.method", url: "$$req.url", source: "$$req.source" } }
+                        },
+                        environmentId: {
+                            _id: "$environment._id",
+                            name: "$environment.name",
+                            workspaceName: "$environment.workspaceName"
+                        },
+                        projectIds: {
+                            $map: { input: "$projects", as: "p", in: { _id: "$$p._id", name: "$$p.name", description: "$$p.description" } }
+                        }
+                    }
+                },
+
+                // Final projection
+                {
+                    $project: {
+                        rules: 0, // Remove the temporary lookup fields
+                        requests: 0,
+                        environment: 0,
+                        projects: 0
+                    }
+                }
+            ];
+
+            const result = await Scan.aggregate(pipeline);
+            const scan = result[0];
 
             if (!scan) {
                 throw ApiError.notFound('Scan not found');
-            }
-
-            // Add total to vulnerabilitySummary
-            if (scan.vulnerabilitySummary) {
-                const { critical = 0, high = 0, medium = 0, low = 0 } = scan.vulnerabilitySummary;
-                scan.vulnerabilitySummary.total = critical + high + medium + low;
-            }
-
-            // Add additional metadata for project-based scans
-            if (scan.isProjectBasedScan && scan.projectIds && scan.projectIds.length > 0) {
-                const project = scan.projectIds[0];
-                scan.projectInfo = {
-                    name: project.name,
-                    description: project.description,
-                    scanType: 'project-based'
-                };
             }
 
             return scan;
