@@ -203,6 +203,12 @@ export const validateUpdateRawRequest = [
     .trim()
     .isLength({ max: 1000 })
     .withMessage('Description must not exceed 1000 characters'),
+  
+  body('rawHttp')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('rawHttp content cannot be empty'),
 
   // Prevent updating certain fields
   body(['_id', 'orgId', 'integrationId', 'createdAt', 'updatedAt'])
