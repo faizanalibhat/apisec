@@ -1,9 +1,12 @@
-function escapeRegex(regex) {
-  return regex.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
+// function escapeRegex(regex) {
+//   return regex.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+// }
 
 function regexMatch(target, regex) {
-  const regexObj = new RegExp(escapeRegex(regex), 'gi');
+  // The escapeRegex function was incorrectly escaping already-valid regex patterns from rules,
+  // breaking character classes like \s and quantifiers like *.
+  // const regexObj = new RegExp(escapeRegex(regex), 'gi');
+  const regexObj = new RegExp(regex, 'gi');
   return regexObj.test(target);
 }
 
@@ -66,18 +69,26 @@ function statusMatch(status, match) {
 function bodyMatch(body, match) {
   let isMatch = false;
   let highlight = null;
+
+  // If the body is not a string, JSON.stringify it. This preserves plain text
+  // bodies, allowing regex anchors like ^ to work correctly, while still enabling
+  // matching against JSON object content.
+  const target = typeof body === 'string' ? body : JSON.stringify(body);
+
   if (match.contains) {
-    isMatch = contains(JSON.stringify(body), match.contains);
-    if (isMatch) {
-        const pattern = Array.isArray(match.contains) ? match.contains.map(escapeRegex).join('|') : escapeRegex(match.contains);
-        highlight = `/${pattern}/gi`;
+    if (contains(target, match.contains)) {
+      isMatch = true;
+      const pattern = Array.isArray(match.contains) ? match.contains.join('|') : match.contains;
+      highlight = `/${pattern}/gi`;
     }
   }
 
-  if (match.regex) {
+  if (!isMatch && match.regex) {
     const regex = new RegExp(match.regex);
-    isMatch = regex.test(JSON.stringify(body));
-    if (isMatch) highlight = `/${match.regex}/gi`;
+    if (regex.test(target)) {
+      isMatch = true;
+      highlight = `/${match.regex}/gi`;
+    }
   }
 
   if (isMatch) {
@@ -97,11 +108,11 @@ function headerMatch(header, match) {
 
         if (typeof val === 'string') {
             isMatch = target === val;
-            if (isMatch) highlight = `/${escapeRegex(val)}/gi`;
+            if (isMatch) highlight = `/${val}/gi`;
         } else if (val.contains) {
             isMatch = contains(target, val.contains);
             if (isMatch) {
-                const pattern = Array.isArray(val.contains) ? val.contains.map(escapeRegex).join('|') : escapeRegex(val.contains);
+                const pattern = Array.isArray(val.contains) ? val.contains.join('|') : val.contains;
                 highlight = `/${pattern}/gi`;
             }
         } else if (val.regex) {
