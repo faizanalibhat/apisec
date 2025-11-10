@@ -126,7 +126,7 @@ async function requestCreatedHandler(payload, msg, channel) {
                             orgId,
                             requestId,
                             ruleId: rule._id,
-                            projectId: [new mongoose.Types.ObjectId(projectId)],
+                            projectId: [projectId],
                             ...t,
                         },
                     },
