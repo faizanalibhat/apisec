@@ -8,7 +8,8 @@ const router = express.Router();
 router.post('/bulk/delete', validation.validateBulkDelete, rawRequestController.bulkDelete);
 
 router
-  .post('/', validation.validateCreateRawRequest, rawRequestController.createRawRequest)
+  // .post('/', validation.validateCreateRawRequest, rawRequestController.createRawRequest)
+  .post('/', rawRequestController.createRawRequest)
   // .get('/', validation.validateGetRawRequests, rawRequestController.getRawRequests)
   .get('/', rawRequestController.getRawRequests)
   .get('/:id', validation.validateObjectId, rawRequestController.getRawRequest)
