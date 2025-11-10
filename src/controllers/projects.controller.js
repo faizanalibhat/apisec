@@ -381,7 +381,7 @@ class ProjectsController {
                 orgId,
                 method: rawRequestData.method,
                 url: rawRequestData.url,
-                projectId: [projectId],
+                projectId: projectId,
                 source: 'browser-extension'
             });
 
