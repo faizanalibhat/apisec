@@ -1,6 +1,7 @@
 import ProjectsService from '../services/projects.service.js';
 import RawRequestService from '../services/rawRequest.service.js';
 import RawRequest from '../models/rawRequest.model.js';
+import TransformedRequest from '../models/transformedRequest.model.js';
 import { RuleService } from '../services/rule.service.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -406,7 +407,7 @@ class ProjectsController {
             // Double-check that we haven't already triggered a scan for this request
             const existingTransformations = await TransformedRequest.countDocuments({
                 requestId: newRequest._id,
-                projectId: [new mongoose.Types.ObjectId(projectId)]
+                projectId: [projectId],
             });
 
             if (existingTransformations > 0) {
