@@ -127,12 +127,15 @@ rawRequestSchema.index({ method: 1, orgId: 1 });
 rawRequestSchema.index({ collectionName: 1, orgId: 1 });
 rawRequestSchema.index({ source: 1, orgId: 1 });
 
+// Add compound unique index for project-based uniqueness
+rawRequestSchema.index({ orgId: 1, projectIds: 1, method: 1, url: 1 }, { unique: true, partialFilterExpression: { source: 'browser-extension' } });
+
 // Mark as edited when updating
 rawRequestSchema.pre('findOneAndUpdate', function () {
   const update = this.getUpdate();
   if (!update.$set) update.$set = {};
   update.$set.isEdited = true;
-  
+
   // Store original data on first edit
   if (!update.$set.originalData && !this.getOptions().skipEdit) {
     update.$setOnInsert = { originalData: this.getQuery() };

@@ -356,12 +356,8 @@ class ProjectsController {
 
     async createBrowserRequest(req, res, next) {
         try {
-            // const { orgId } = req.authenticatedService;
             const { projectId, orgId } = req.params;
             const browserData = req.body;
-
-            // filter out reuqests to accept
-
 
             console.log("[+] BROWSER REQUEST RECIEVED: ", browserData);
 
@@ -376,33 +372,34 @@ class ProjectsController {
             // Transform browser extension data to raw request format
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
-            const originalRequest = await RawRequest.findOneAndUpdate(
-                { orgId, method: rawRequestData.method, url: rawRequestData.url },
-                { $set: rawRequestData },
-                { upsert: true, new: false }
-            );
+            // Check for duplicate - include projectIds in the query
+            const existingRequest = await RawRequest.findOne({
+                orgId,
+                method: rawRequestData.method,
+                url: rawRequestData.url,
+                projectIds: ObjectId.createFromHexString(projectId)
+            });
 
-            if (originalRequest === null) {
-                const newRequest = await RawRequest.findOne({ orgId, method: rawRequestData.method, url: rawRequestData.url });
+            if (existingRequest) {
+                console.log(`[+] Duplicate request detected for project ${projectId}, skipping scan`);
+                res.sendApiResponse(ApiResponse.success('Request already exists in project', existingRequest));
+            } else {
+                // Create new request
+                const newRequest = await RawRequest.create(rawRequestData);
+
                 // Publish event to trigger scan
                 const eventPayload = {
                     projectId,
                     orgId,
-                    request: newRequest?.toJSON(),
+                    request: newRequest.toJSON(),
                     project: project,
                     source: 'request.created'
                 };
 
                 await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
-
                 console.log(`[+] Published request.created event for project ${projectId}`);
 
                 res.sendApiResponse(ApiResponse.created('Browser request created successfully', newRequest));
-            }
-            else {
-                const updatedRequest = await RawRequest.findById(originalRequest._id);
-                console.log(`[+] Updated existing request, no event published for project ${projectId}`);
-                res.sendApiResponse(ApiResponse.success('Browser request updated successfully', updatedRequest));
             }
         } catch (error) {
             next(error);
@@ -411,7 +408,6 @@ class ProjectsController {
 
     async bulkCreateBrowserRequests(req, res, next) {
         try {
-            // const { orgId } = req.authenticatedService;
             const { projectId, orgId } = req.params;
             const { requests } = req.body;
 
@@ -425,21 +421,33 @@ class ProjectsController {
             // Transform and create requests
             const results = {
                 success: [],
-                failed: []
+                failed: [],
+                skipped: []
             };
 
             for (const [index, browserData] of requests.entries()) {
                 try {
                     const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
-                    
-                    const originalRequest = await RawRequest.findOneAndUpdate(
-                        { orgId, method: rawRequestData.method, url: rawRequestData.url },
-                        { $set: rawRequestData },
-                        { upsert: true, new: false }
-                    );
 
-                    if (originalRequest === null) {
-                        const newRequest = await RawRequest.findOne({ orgId, method: rawRequestData.method, url: rawRequestData.url });
+                    // Check for duplicate within this project
+                    const existingRequest = await RawRequest.findOne({
+                        orgId,
+                        method: rawRequestData.method,
+                        url: rawRequestData.url,
+                        projectIds: ObjectId.createFromHexString(projectId)
+                    });
+
+                    if (existingRequest) {
+                        results.skipped.push({
+                            index,
+                            id: existingRequest._id,
+                            status: 'duplicate',
+                            message: 'Request already exists in project'
+                        });
+                        console.log(`[+] Skipped duplicate request for project ${projectId}`);
+                    } else {
+                        // Create new request
+                        const newRequest = await RawRequest.create(rawRequestData);
                         results.success.push({ index, id: newRequest._id, status: 'created' });
 
                         // Publish event to trigger scan
@@ -450,10 +458,9 @@ class ProjectsController {
                             project: project,
                             source: 'request.created'
                         };
+
                         await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
                         console.log(`[+] Published request.created event for project ${projectId}`);
-                    } else {
-                        results.success.push({ index, id: originalRequest._id, status: 'updated' });
                     }
 
                 } catch (error) {
@@ -466,10 +473,10 @@ class ProjectsController {
             }
 
             const createdCount = results.success.filter(r => r.status === 'created').length;
-            const updatedCount = results.success.filter(r => r.status === 'updated').length;
+            const skippedCount = results.skipped.length;
 
             res.sendApiResponse(ApiResponse.success(
-                `Processed ${requests.length} requests: ${createdCount} created, ${updatedCount} updated, ${results.failed.length} failed`,
+                `Processed ${requests.length} requests: ${createdCount} created, ${skippedCount} skipped (duplicates), ${results.failed.length} failed`,
                 results
             ));
         } catch (error) {

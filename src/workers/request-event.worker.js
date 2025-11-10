@@ -29,6 +29,30 @@ async function requestCreatedHandler(payload, msg, channel) {
             return channel.ack(msg);
         }
 
+        // Safety check: Verify request still exists and belongs to project
+        const requestExists = await Requests.findOne({
+            _id: request._id,
+            orgId: orgId,
+            projectIds: projectId
+        });
+
+        if (!requestExists) {
+            console.log(`[!] Request ${request._id} not found or doesn't belong to project ${projectId}, skipping scan`);
+            return channel.ack(msg);
+        }
+
+        // Check if transformations already exist for this request
+        const existingTransformations = await TransformedRequest.countDocuments({
+            requestId: request._id,
+            projectId: [projectId],
+            orgId: orgId
+        });
+
+        if (existingTransformations > 0) {
+            console.log(`[!] Transformations already exist for request ${request._id} in project ${projectId}, skipping`);
+            return channel.ack(msg);
+        }
+
         const scanData = {
             name: project.name,
             description: project.description,
@@ -43,7 +67,7 @@ async function requestCreatedHandler(payload, msg, channel) {
         console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
 
         if (["paused", "halted", "cancelled"].includes(scan.status)) {
-            return;
+            return channel.ack(msg);
         }
 
         const rules = await Rules.find({ _id: { $in: project.includedRuleIds } }).lean();
@@ -80,27 +104,29 @@ async function requestCreatedHandler(payload, msg, channel) {
                             orgId,
                             requestId,
                             ruleId: rule._id,
-                            projectId: [projectId], // Fix: Ensure projectId is properly set as array
+                            projectId: [projectId],
                             ...t,
                         },
                     },
                 });
             }
 
-            const created_requests = await TransformedRequest.bulkWrite(bulkOps);
-            const transformed_request_ids = Object.values(created_requests.insertedIds);
+            if (bulkOps.length > 0) {
+                const created_requests = await TransformedRequest.bulkWrite(bulkOps);
+                const transformed_request_ids = Object.values(created_requests.insertedIds);
 
-            await mqbroker.publish("apisec", "apisec.request.scan", {
-                transformed_request_ids,
-                orgId,
-                projectId,
-                request,
-                project,
-                scanId: scan._id,
-                scan,
-            });
+                await mqbroker.publish("apisec", "apisec.request.scan", {
+                    transformed_request_ids,
+                    orgId,
+                    projectId,
+                    request,
+                    project,
+                    scanId: scan._id,
+                    scan,
+                });
 
-            console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
+                console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
+            }
         }
     } catch (error) {
         console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
