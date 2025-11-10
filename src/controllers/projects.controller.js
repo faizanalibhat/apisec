@@ -381,7 +381,7 @@ class ProjectsController {
                 orgId,
                 method: rawRequestData.method,
                 url: rawRequestData.url,
-                projectIds: new mongoose.Types.ObjectId(projectId),
+                projectId: [projectId],
                 source: 'browser-extension'
             });
 
