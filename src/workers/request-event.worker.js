@@ -19,37 +19,40 @@ import mongoose from 'mongoose';
 const scanService = new ScanService();
 
 async function requestCreatedHandler(payload, msg, channel) {
-    const { projectId, orgId, request, project } = payload;
+    const { projectId, orgId, request, project, timestamp } = payload;
 
     try {
-        console.log(`[+] REQUEST SCAN INITIATED`);
+        console.log(`[+] REQUEST SCAN INITIATED for request ${request._id}`);
 
-        if (!projectId || !orgId) {
-            console.error('[!] Invalid payload received. Missing projectId or orgId.', payload);
+        if (!projectId || !orgId || !request._id) {
+            console.error('[!] Invalid payload received. Missing required fields.', payload);
             return channel.ack(msg);
         }
 
-        // Safety check: Verify request still exists and belongs to project
+        // Create a unique processing key for this request-project combination
+        const processingKey = `${projectId}:${request._id}`;
+
+        // Check if we've already processed this exact request for this project
+        const alreadyProcessed = await TransformedRequest.findOne({
+            requestId: request._id,
+            projectId: [new mongoose.Types.ObjectId(projectId)],
+            orgId: orgId
+        });
+
+        if (alreadyProcessed) {
+            console.log(`[!] Request ${request._id} already processed for project ${projectId}, skipping`);
+            return channel.ack(msg);
+        }
+
+        // Verify request still exists and belongs to project
         const requestExists = await Requests.findOne({
             _id: request._id,
             orgId: orgId,
-            projectIds: projectId
+            projectIds: new mongoose.Types.ObjectId(projectId)
         });
 
         if (!requestExists) {
             console.log(`[!] Request ${request._id} not found or doesn't belong to project ${projectId}, skipping scan`);
-            return channel.ack(msg);
-        }
-
-        // Check if transformations already exist for this request
-        const existingTransformations = await TransformedRequest.countDocuments({
-            requestId: request._id,
-            projectId: [projectId],
-            orgId: orgId
-        });
-
-        if (existingTransformations > 0) {
-            console.log(`[!] Transformations already exist for request ${request._id} in project ${projectId}, skipping`);
             return channel.ack(msg);
         }
 
@@ -63,40 +66,59 @@ async function requestCreatedHandler(payload, msg, channel) {
         };
 
         const scan = await scanService.createProjectScanInstance(scanData);
-
-        console.log("[+] GIVEN SCAN: ", scan.name, scan._id);
+        console.log("[+] SCAN INSTANCE: ", scan.name, scan._id);
 
         if (["paused", "halted", "cancelled"].includes(scan.status)) {
+            console.log(`[!] Scan ${scan._id} is in ${scan.status} state, skipping`);
             return channel.ack(msg);
         }
 
-        const rules = await Rules.find({ _id: { $in: project.includedRuleIds } }).lean();
+        // Get rules for the project
+        const rules = await Rules.find({
+            _id: { $in: project.includedRuleIds },
+            orgId: orgId
+        }).lean();
+
+        console.log(`[+] Found ${rules.length} rules for project ${projectId}`);
 
         const { _id: requestId } = request;
-
         let cleanRequest = { ...request };
-
         delete cleanRequest._id;
         delete cleanRequest.__v;
         delete cleanRequest.createdAt;
         delete cleanRequest.updatedAt;
 
+        let totalTransformationsCreated = 0;
+
         for (let rule of rules) {
-            console.log(cleanRequest.headers);
+            // Check if transformations already exist for this rule-request combination
+            const existingTransformation = await TransformedRequest.findOne({
+                scanId: scan._id,
+                requestId: requestId,
+                ruleId: rule._id,
+                projectId: [new mongoose.Types.ObjectId(projectId)]
+            });
+
+            if (existingTransformation) {
+                console.log(`[!] Transformation already exists for request ${requestId} with rule ${rule._id}, skipping`);
+                continue;
+            }
 
             const bulkOps = [];
-
             let transformed;
 
             try {
-                transformed = await EngineService.transform({ request: cleanRequest, rule: rule.parsed_yaml });
+                transformed = await EngineService.transform({
+                    request: cleanRequest,
+                    rule: rule.parsed_yaml
+                });
+                console.log(`[+] Rule ${rule.rule_name} generated ${transformed.length} transformations`);
             } catch (err) {
-                console.log(err);
+                console.log(`[!] Error transforming with rule ${rule._id}:`, err.message);
                 continue;
             }
 
             for (let t of transformed) {
-                console.log("[+] TRANSFORMED REQUESTS HEADER OUTSIDE : ", t.headers);
                 bulkOps.push({
                     insertOne: {
                         document: {
@@ -104,7 +126,7 @@ async function requestCreatedHandler(payload, msg, channel) {
                             orgId,
                             requestId,
                             ruleId: rule._id,
-                            projectId: [projectId],
+                            projectId: [new mongoose.Types.ObjectId(projectId)],
                             ...t,
                         },
                     },
@@ -112,24 +134,36 @@ async function requestCreatedHandler(payload, msg, channel) {
             }
 
             if (bulkOps.length > 0) {
-                const created_requests = await TransformedRequest.bulkWrite(bulkOps);
-                const transformed_request_ids = Object.values(created_requests.insertedIds);
+                try {
+                    const created_requests = await TransformedRequest.bulkWrite(bulkOps, { ordered: false });
+                    const transformed_request_ids = Object.values(created_requests.insertedIds);
+                    totalTransformationsCreated += created_requests.insertedCount;
 
-                await mqbroker.publish("apisec", "apisec.request.scan", {
-                    transformed_request_ids,
-                    orgId,
-                    projectId,
-                    request,
-                    project,
-                    scanId: scan._id,
-                    scan,
-                });
+                    await mqbroker.publish("apisec", "apisec.request.scan", {
+                        transformed_request_ids,
+                        orgId,
+                        projectId,
+                        request,
+                        project,
+                        scanId: scan._id,
+                        scan,
+                    });
 
-                console.log(`[+] CREATED ${created_requests.insertedCount} TRANSFORMED REQUESTS`);
+                    console.log(`[+] Created ${created_requests.insertedCount} transformed requests for rule ${rule.rule_name}`);
+                } catch (bulkErr) {
+                    if (bulkErr.code === 11000) {
+                        console.log(`[!] Duplicate key error for transformations, some may already exist`);
+                    } else {
+                        throw bulkErr;
+                    }
+                }
             }
         }
+
+        console.log(`[+] TOTAL TRANSFORMATIONS CREATED: ${totalTransformationsCreated} for request ${requestId}`);
+
     } catch (error) {
-        console.log(`[!] Error processing request.created event for project ${projectId}:`, error.message);
+        console.log(`[!] Error processing request.created event:`, error.message);
     } finally {
         channel.ack(msg);
     }

@@ -359,9 +359,9 @@ class ProjectsController {
             const { projectId, orgId } = req.params;
             const browserData = req.body;
 
-            console.log("[+] BROWSER REQUEST RECIEVED: ", browserData);
+            console.log("[+] BROWSER REQUEST RECEIVED: ", browserData.request?.request?.method, browserData.request?.request?.url?.raw);
 
-            // Verify project exists and get its name
+            // Verify project exists
             const project = await this.projectsService.findById(projectId, orgId);
 
             if (!project) {
@@ -372,35 +372,63 @@ class ProjectsController {
             // Transform browser extension data to raw request format
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
-            // Check for duplicate - include projectIds in the query
+            // Generate a unique identifier for this request within the project
+            const requestSignature = `${rawRequestData.method}:${rawRequestData.url}`;
+
+            // Check for existing request with same signature in this project
             const existingRequest = await RawRequest.findOne({
                 orgId,
                 method: rawRequestData.method,
                 url: rawRequestData.url,
-                projectIds: ObjectId.createFromHexString(projectId)
+                projectIds: new mongoose.Types.ObjectId(projectId),
+                source: 'browser-extension'
             });
 
             if (existingRequest) {
-                console.log(`[+] Duplicate request detected for project ${projectId}, skipping scan`);
-                res.sendApiResponse(ApiResponse.success('Request already exists in project', existingRequest));
-            } else {
-                // Create new request
-                const newRequest = await RawRequest.create(rawRequestData);
+                console.log(`[+] Duplicate request detected: ${requestSignature} for project ${projectId}`);
+                console.log(`[+] Existing request ID: ${existingRequest._id}, skipping scan trigger`);
 
-                // Publish event to trigger scan
-                const eventPayload = {
-                    projectId,
-                    orgId,
-                    request: newRequest.toJSON(),
-                    project: project,
-                    source: 'request.created'
-                };
-
-                await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
-                console.log(`[+] Published request.created event for project ${projectId}`);
-
-                res.sendApiResponse(ApiResponse.created('Browser request created successfully', newRequest));
+                res.sendApiResponse(ApiResponse.success('Request already exists in project (duplicate ignored)', {
+                    _id: existingRequest._id,
+                    status: 'duplicate',
+                    message: 'Request already exists, no new scan triggered'
+                }));
+                return;
             }
+
+            // Create new request
+            const newRequest = await RawRequest.create(rawRequestData);
+            console.log(`[+] Created new request: ${newRequest._id} for project ${projectId}`);
+
+            // Add a small delay to prevent race conditions
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Double-check that we haven't already triggered a scan for this request
+            const existingTransformations = await TransformedRequest.countDocuments({
+                requestId: newRequest._id,
+                projectId: [new mongoose.Types.ObjectId(projectId)]
+            });
+
+            if (existingTransformations > 0) {
+                console.log(`[!] Transformations already exist for request ${newRequest._id}, not publishing event`);
+                res.sendApiResponse(ApiResponse.created('Browser request created successfully (scan already in progress)', newRequest));
+                return;
+            }
+
+            // Publish event to trigger scan
+            const eventPayload = {
+                projectId,
+                orgId,
+                request: newRequest.toJSON(),
+                project: project,
+                source: 'request.created',
+                timestamp: Date.now() // Add timestamp for tracking
+            };
+
+            await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
+            console.log(`[+] Published request.created event for request ${newRequest._id} in project ${projectId}`);
+
+            res.sendApiResponse(ApiResponse.created('Browser request created successfully', newRequest));
         } catch (error) {
             next(error);
         }
