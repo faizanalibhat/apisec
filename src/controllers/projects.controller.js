@@ -407,7 +407,8 @@ class ProjectsController {
             // Double-check that we haven't already triggered a scan for this request
             const existingTransformations = await TransformedRequest.countDocuments({
                 requestId: newRequest._id,
-                projectId: [projectId],
+                // projectId: [projectId],
+                projectId: [new mongoose.Types.ObjectId(projectId)]
             });
 
             if (existingTransformations > 0) {
