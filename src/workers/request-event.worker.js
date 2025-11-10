@@ -118,6 +118,7 @@ async function runScan(payload, msg, channel) {
         }
 
         const requests = await TransformedRequest.find({ _id: { $in: transformed_request_ids } }).lean();
+        let anyVulnerabilityCreatedOrUpdated = false;
 
         for (let transformedRequest of requests) {
             try {
@@ -136,7 +137,7 @@ async function runScan(payload, msg, channel) {
                 // Check for request error
                 if (response.error) {
                     console.log("[!] Request errored out: ", response.message || response.error);
-                    
+
                     // Mark as failed
                     await TransformedRequest.updateOne(
                         { _id: transformedRequest._id },
@@ -249,42 +250,29 @@ async function runScan(payload, msg, channel) {
                     };
 
                     try {
-                        // DEDUPE LOGIC - Use a more unique identifier
-                        const vulnIdentifier = `${rule._id}-${originalRequest._id}-${transformedRequest.method}-${transformedRequest.url}`;
-                        
+                        // DEDUPE LOGIC - Include transformed request ID for more specific deduplication
                         const query = {
                             orgId: vulnerabilityData.orgId,
                             scanId: vulnerabilityData.scanId,
                             'ruleSnapshot._id': rule._id,
                             'requestSnapshot._id': originalRequest._id,
-                            'evidence.request.method': transformedRequest.method,
-                            'evidence.request.url': transformedRequest.url
+                            'transformedRequestSnapshot._id': transformedRequest._id
                         };
 
-                        // Check if vulnerability already exists
-                        const existingVuln = await Vulnerability.findOne(query);
-                        
-                        if (!existingVuln) {
-                            // Create new vulnerability
-                            await Vulnerability.create(vulnerabilityData);
+                        // upsert: true -> create if not exists, update otherwise
+                        const result = await Vulnerability.findOneAndUpdate(
+                            query,
+                            { $set: vulnerabilityData },
+                            { upsert: true, new: true, setDefaultsOnInsert: true, rawResult: true }
+                        );
+
+                        if (!result.lastErrorObject.updatedExisting) {
                             console.log(`[+] Created new vulnerability record - ${vulnerabilityData.title}`);
-                            
-                            // Increment vulnerability stats for new vulnerability
-                            await Scan.updateOne({ _id: scanId }, {
-                                $inc: { 
-                                    'stats.vulnerabilitiesFound': 1, 
-                                    [`vulnerabilitySummary.${vulnerabilityData.severity}`]: 1 
-                                },
-                            });
                         } else {
-                            // Update existing vulnerability
-                            await Vulnerability.findOneAndUpdate(
-                                query,
-                                { $set: vulnerabilityData },
-                                { new: true }
-                            );
                             console.log(`[+] Updated existing vulnerability record - ${vulnerabilityData.title}`);
                         }
+
+                        anyVulnerabilityCreatedOrUpdated = true;
 
                         // Update transformed request state to complete with vulnerability detected
                         await TransformedRequest.updateOne(
@@ -331,7 +319,7 @@ async function runScan(payload, msg, channel) {
 
                     } catch (vulnError) {
                         console.error("[!] Error creating/updating vulnerability:", vulnError.message);
-                        
+
                         // Even if vulnerability creation fails, mark request as complete
                         await TransformedRequest.updateOne(
                             { _id: transformedRequest._id },
@@ -398,9 +386,9 @@ async function runScan(payload, msg, channel) {
                     });
                 }
 
-            } catch(err) {
+            } catch (err) {
                 console.error(`[!] Error processing transformed request ${transformedRequest._id}:`, err);
-                
+
                 // Mark transformed request as failed
                 await TransformedRequest.updateOne(
                     { _id: transformedRequest._id },
@@ -429,23 +417,30 @@ async function runScan(payload, msg, channel) {
                 });
             }
         }
-        
-        // After processing all requests, recalculate vulnerability stats
-        await recalculateScanVulnerabilityStats(scanId);
-        
+
+        // After processing all requests, recalculate vulnerability stats if any vulnerabilities were created/updated
+        if (anyVulnerabilityCreatedOrUpdated) {
+            await recalculateScanVulnerabilityStats(scanId);
+        }
+
     } catch (error) {
         console.error(`[!] Error processing request.scan event for project ${projectId}:`, error);
     } finally {
         channel.ack(msg);
     }
 }
-
-// Add this helper function to recalculate vulnerability stats
+// Helper function to recalculate vulnerability stats from actual data
 async function recalculateScanVulnerabilityStats(scanId) {
     try {
         // Get actual vulnerability counts from the database
         const vulnStats = await Vulnerability.aggregate([
-            { $match: { scanId: mongoose.Types.ObjectId(scanId) } },
+            {
+                $match: {
+                    scanId: mongoose.Types.ObjectId.isValid(scanId)
+                        ? mongoose.Types.ObjectId.createFromHexString(scanId.toString())
+                        : scanId
+                }
+            },
             {
                 $group: {
                     _id: "$severity",
@@ -484,8 +479,11 @@ async function recalculateScanVulnerabilityStats(scanId) {
         );
 
         console.log(`[+] Updated scan ${scanId} vulnerability stats: Total=${totalVulns}, Critical=${summary.critical}, High=${summary.high}, Medium=${summary.medium}, Low=${summary.low}`);
+
+        return { summary, totalVulns };
     } catch (error) {
         console.error(`[!] Error recalculating vulnerability stats for scan ${scanId}:`, error);
+        return null;
     }
 }
 

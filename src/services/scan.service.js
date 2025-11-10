@@ -23,8 +23,8 @@ export class ScanService {
             const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
 
             // Check if this is a project-based scan (only projectId provided)
-            const isProjectBasedScan = projectIds && projectIds.length === 1 && 
-                                     !requestIds && !collectionIds && !ruleIds;
+            const isProjectBasedScan = projectIds && projectIds.length === 1 &&
+                !requestIds && !collectionIds && !ruleIds;
 
             let rules;
             let requests;
@@ -33,13 +33,13 @@ export class ScanService {
             if (isProjectBasedScan) {
                 // Project-based scan flow
                 const projectId = projectIds[0];
-                
+
                 // Get project and verify it exists
                 const project = await this.projectsService.findById(projectId, orgId);
-                
+
                 // Get effective rules for the project
                 rules = await this.projectsService.getEffectiveRules(projectId, orgId, 'system');
-                
+
                 if (rules.length === 0) {
                     throw ApiError.badRequest('No rules are configured for this project. Please configure rules before scanning.');
                 }
@@ -61,7 +61,7 @@ export class ScanService {
                 }
             } else {
                 // Traditional scan flow (existing logic)
-                
+
                 // Validate environment if provided
                 if (environmentId && environmentId?.length) {
                     const environment = await RawEnvironment.findOne({
@@ -165,10 +165,10 @@ export class ScanService {
 
             // Send to VM notification
             try {
-                const scanTypeDescription = isProjectBasedScan ? 
-                    "project-based security testing" : 
+                const scanTypeDescription = isProjectBasedScan ?
+                    "project-based security testing" :
                     "security testing";
-                    
+
                 const sendToVMNotification = {
                     store: true,
                     orgId: orgId,
@@ -224,13 +224,13 @@ export class ScanService {
 
             // Project-based scan flow
             const projectId = projectIds[0];
-            
+
             // Get project and verify it exists
             const project = await this.projectsService.findById(projectId, orgId);
-            
+
             // Get effective rules for the project
             rules = await this.projectsService.getEffectiveRules(projectId, orgId, 'system');
-            
+
             if (rules.length === 0) {
                 throw ApiError.badRequest('No rules are configured for this project. Please configure rules before scanning.');
             }
@@ -285,12 +285,12 @@ export class ScanService {
             else {
                 // Update existing scan - properly handle stats
                 const currentScan = exists;
-                
+
                 // Add new request IDs without duplicates
                 const updatedRequestIds = [...new Set([...currentScan.requestIds.map(id => id.toString()), ...requests.map(r => r._id.toString())])];
                 const newTotalRequests = updatedRequestIds.length;
                 const newTransformedRequests = requests.length * rules.length;
-                
+
                 const scan = await Scan.findOneAndUpdate(
                     { orgId, name },
                     {
@@ -385,7 +385,7 @@ export class ScanService {
                     }
                 },
                 { $unwind: { path: "$environment", preserveNullAndEmptyArrays: true } },
-                
+
                 // 3. Lookup project details for project-based scans
                 {
                     $lookup: {
@@ -395,77 +395,92 @@ export class ScanService {
                         as: "projects"
                     }
                 },
-                
-                // 4. Optimized lookup for transformed requests counts
+
+                // 4. Lookup transformed requests for each scan
                 {
                     $lookup: {
                         from: "transformedrequests",
-                        let: { scanId: "$_id" },
-                        pipeline: [
-                            { $match: { $expr: { $eq: ["$scanId", "$$scanId"] } } },
-                            {
-                                $group: {
-                                    _id: null,
-                                    processedRequests: {
-                                        $sum: {
-                                            $cond: [{ $in: ["$state", ["complete", "failed"]] }, 1, 0]
-                                        }
-                                    },
-                                    completedRequests: {
-                                        $sum: {
-                                            $cond: [{ $eq: ["$state", "complete"] }, 1, 0]
-                                        }
-                                    },
-                                    failedRequests: {
-                                        $sum: {
-                                            $cond: [{ $eq: ["$state", "failed"] }, 1, 0]
-                                        }
-                                    },
-                                    totalTransformed: { $sum: 1 }
-                                }
-                            }
-                        ],
-                        as: "transformedReqCounts"
+                        localField: "_id",
+                        foreignField: "scanId",
+                        as: "transformedRequests"
                     }
                 },
 
-                // Unwind the results from the lookup
+                // 5. Lookup vulnerabilities for accurate counts - CRITICAL FIX
                 {
-                    $unwind: {
-                        path: "$transformedReqCounts",
-                        preserveNullAndEmptyArrays: true
+                    $lookup: {
+                        from: "vulnerabilities",
+                        let: { scanId: "$_id" },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: { $eq: ["$scanId", "$$scanId"] }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: "$severity",
+                                    count: { $sum: 1 }
+                                }
+                            }
+                        ],
+                        as: "actualVulnStats"
                     }
                 },
-                
-                // 5. Lookup raw requests based on requestIds
+
+                // 6. Lookup raw requests based on requestIds
                 {
                     $lookup: {
                         from: "raw_requests",
                         localField: "requestIds",
                         foreignField: "_id",
-                        pipeline: [{ $project: { "_id": 1 }}],
+                        pipeline: [{ $project: { "_id": 1 } }],
                         as: "rawRequests"
                     }
                 },
 
-                // 6. Lookup rules based on ruleIds
+                // 7. Lookup rules based on ruleIds
                 {
                     $lookup: {
                         from: "rules",
                         localField: "ruleIds",
                         foreignField: "_id",
-                        pipeline: [{ $project: { "_id": 1 }}],
+                        pipeline: [{ $project: { "_id": 1 } }],
                         as: "rules"
                     }
                 },
 
-                // 7. Compute counts and override stats
+                // 8. Compute counts and build vulnerability summary from ACTUAL vulnerability data
                 {
                     $addFields: {
-                        processedRequests: { $ifNull: ["$transformedReqCounts.processedRequests", 0] },
-                        completedRequests: { $ifNull: ["$transformedReqCounts.completedRequests", 0] },
-                        failedRequests: { $ifNull: ["$transformedReqCounts.failedRequests", 0] },
-                        totalRequests: { $ifNull: ["$transformedReqCounts.totalTransformed", 0] },
+                        processedRequests: {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
+                                }
+                            }
+                        },
+                        completedRequests: {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "complete"] }
+                                }
+                            }
+                        },
+                        failedRequests: {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "failed"] }
+                                }
+                            }
+                        },
+                        totalRequests: { $size: "$transformedRequests" },
                         environmentId: "$environment._id",
                         environmentName: "$environment.name",
                         projectNames: {
@@ -475,35 +490,136 @@ export class ScanService {
                                 in: "$$project.name"
                             }
                         },
+
+                        // CRITICAL FIX: Calculate vulnerability summary from actual vulnerability documents
+                        vulnerabilitySummary: {
+                            critical: {
+                                $ifNull: [
+                                    {
+                                        $arrayElemAt: [
+                                            {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input: "$actualVulnStats",
+                                                            cond: { $eq: ["$$this._id", "critical"] }
+                                                        }
+                                                    },
+                                                    in: "$$this.count"
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    },
+                                    0
+                                ]
+                            },
+                            high: {
+                                $ifNull: [
+                                    {
+                                        $arrayElemAt: [
+                                            {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input: "$actualVulnStats",
+                                                            cond: { $eq: ["$$this._id", "high"] }
+                                                        }
+                                                    },
+                                                    in: "$$this.count"
+                                                }
+
+                                            },
+                                            0
+                                        ]
+                                    },
+                                    0
+                                ]
+                            },
+                            medium: {
+                                $ifNull: [
+                                    {
+                                        $arrayElemAt: [
+                                            {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input: "$actualVulnStats",
+                                                            cond: { $eq: ["$$this._id", "medium"] }
+                                                        }
+                                                    },
+                                                    in: "$$this.count"
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    },
+                                    0
+                                ]
+                            },
+                            low: {
+                                $ifNull: [
+                                    {
+                                        $arrayElemAt: [
+                                            {
+                                                $map: {
+                                                    input: {
+                                                        $filter: {
+                                                            input: "$actualVulnStats",
+                                                            cond: { $eq: ["$$this._id", "low"] }
+                                                        }
+                                                    },
+                                                    in: "$$this.count"
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    },
+                                    0
+                                ]
+                            },
+                            total: { $sum: "$actualVulnStats.count" }
+                        },
+
                         // Override stats values with actual counts
                         "stats.totalRequests": { $size: "$rawRequests" },
                         "stats.totalRules": { $size: "$rules" },
-                        "stats.totalTransformedRequests": { $ifNull: ["$transformedReqCounts.totalTransformed", 0] },
-                        "stats.processedRequests": { $ifNull: ["$transformedReqCounts.processedRequests", 0] },
-                        "stats.failedRequests": { $ifNull: ["$transformedReqCounts.failedRequests", 0] },
-                        "vulnerabilitySummary.total": {
-                            $add: [
-                                { $ifNull: ["$vulnerabilitySummary.critical", 0] },
-                                { $ifNull: ["$vulnerabilitySummary.high", 0] },
-                                { $ifNull: ["$vulnerabilitySummary.medium", 0] },
-                                { $ifNull: ["$vulnerabilitySummary.low", 0] }
-                            ]
-                        }
+                        "stats.totalTransformedRequests": { $size: "$transformedRequests" },
+                        "stats.processedRequests": {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $in: ["$$req.state", ["complete", "failed"]] }
+                                }
+                            }
+                        },
+                        "stats.failedRequests": {
+                            $size: {
+                                $filter: {
+                                    input: "$transformedRequests",
+                                    as: "req",
+                                    cond: { $eq: ["$$req.state", "failed"] }
+                                }
+                            }
+                        },
+                        "stats.vulnerabilitiesFound": { $sum: "$actualVulnStats.count" }
                     }
                 },
 
-                // 8. Remove the lookup arrays to avoid large payloads
+                // 9. Remove the lookup arrays to avoid large payloads
                 {
                     $project: {
-                        transformedReqCounts: 0,
+                        transformedRequests: 0,
                         rawRequests: 0,
                         rules: 0,
                         findings: 0,
-                        projects: 0
+                        projects: 0,
+                        actualVulnStats: 0
                     }
                 },
 
-                // 9. Sort, skip, limit
+                // 10. Sort, skip, limit
                 { $sort: sort },
                 { $skip: skip },
                 { $limit: limit }
