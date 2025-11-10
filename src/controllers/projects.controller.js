@@ -376,24 +376,34 @@ class ProjectsController {
             // Transform browser extension data to raw request format
             const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
 
-            const rawRequest = await RawRequest.findOneAndUpdate({ orgId, method: rawRequestData.method, url: rawRequestData.url }, { $set: rawRequestData }, { new: true, upsert: true });
+            const originalRequest = await RawRequest.findOneAndUpdate(
+                { orgId, method: rawRequestData.method, url: rawRequestData.url },
+                { $set: rawRequestData },
+                { upsert: true, new: false }
+            );
 
-            // Publish event to trigger scan
-            const eventPayload = {
-                projectId,
-                orgId,
-                request: rawRequest?.toJSON(),
-                project: project,
-                source: 'request.created'
-            };
+            if (originalRequest === null) {
+                const newRequest = await RawRequest.findOne({ orgId, method: rawRequestData.method, url: rawRequestData.url });
+                // Publish event to trigger scan
+                const eventPayload = {
+                    projectId,
+                    orgId,
+                    request: newRequest?.toJSON(),
+                    project: project,
+                    source: 'request.created'
+                };
 
+                await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
 
-            await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
+                console.log(`[+] Published request.created event for project ${projectId}`);
 
-
-            console.log(`[+] Published request.created event for project ${projectId}`);
-
-            res.sendApiResponse(ApiResponse.created('Browser request created successfully', rawRequest));
+                res.sendApiResponse(ApiResponse.created('Browser request created successfully', newRequest));
+            }
+            else {
+                const updatedRequest = await RawRequest.findById(originalRequest._id);
+                console.log(`[+] Updated existing request, no event published for project ${projectId}`);
+                res.sendApiResponse(ApiResponse.success('Browser request updated successfully', updatedRequest));
+            }
         } catch (error) {
             next(error);
         }
@@ -421,18 +431,30 @@ class ProjectsController {
             for (const [index, browserData] of requests.entries()) {
                 try {
                     const rawRequestData = this.transformBrowserRequest(browserData, project, orgId, projectId);
-                    const created = await this.rawRequestService.create(rawRequestData);
-                    results.success.push({ index, id: created._id });
+                    
+                    const originalRequest = await RawRequest.findOneAndUpdate(
+                        { orgId, method: rawRequestData.method, url: rawRequestData.url },
+                        { $set: rawRequestData },
+                        { upsert: true, new: false }
+                    );
 
-                    // Publish event to trigger scan
-                    const eventPayload = {
-                        projectId,
-                        orgId,
-                        rawRequestId: created._id,
-                        source: 'request.created'
-                    };
-                    await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
-                    console.log(`[+] Published request.created event for project ${projectId}`);
+                    if (originalRequest === null) {
+                        const newRequest = await RawRequest.findOne({ orgId, method: rawRequestData.method, url: rawRequestData.url });
+                        results.success.push({ index, id: newRequest._id, status: 'created' });
+
+                        // Publish event to trigger scan
+                        const eventPayload = {
+                            projectId,
+                            orgId,
+                            request: newRequest.toJSON(),
+                            project: project,
+                            source: 'request.created'
+                        };
+                        await mqbroker.publish('apisec', 'apisec.request.created', eventPayload);
+                        console.log(`[+] Published request.created event for project ${projectId}`);
+                    } else {
+                        results.success.push({ index, id: originalRequest._id, status: 'updated' });
+                    }
 
                 } catch (error) {
                     results.failed.push({
@@ -443,8 +465,11 @@ class ProjectsController {
                 }
             }
 
+            const createdCount = results.success.filter(r => r.status === 'created').length;
+            const updatedCount = results.success.filter(r => r.status === 'updated').length;
+
             res.sendApiResponse(ApiResponse.success(
-                `Created ${results.success.length} requests, ${results.failed.length} failed`,
+                `Processed ${requests.length} requests: ${createdCount} created, ${updatedCount} updated, ${results.failed.length} failed`,
                 results
             ));
         } catch (error) {
