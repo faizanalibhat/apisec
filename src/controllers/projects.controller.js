@@ -581,7 +581,8 @@ class ProjectsController {
         // Build the full URL
         const url = requestDetails.url?.raw || '';
 
-        return {
+        // Prepare the request data object
+        const requestData = {
             orgId,
             projectIds: [ObjectId.createFromHexString(projectId)],
             source: 'browser-extension',
@@ -603,6 +604,16 @@ class ProjectsController {
                 extensionTimestamp: new Date(timestamp).getTime()
             }
         };
+
+        // Generate and add rawHttp field
+        requestData.rawHttp = this.rawRequestService.generateRawHttp({
+            method: requestData.method,
+            url: requestData.url,
+            headers: requestData.headers,
+            body: requestData.body
+        });
+
+        return requestData;
     }
 }
 
