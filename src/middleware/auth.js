@@ -47,21 +47,6 @@ export const authenticateService = () => async (req, res, next) => {
                 return res.status(401).json({ error: "You do not have access to SnapSec ASM" });
             }
             
-            const requestData = {
-                method: req.method,
-                path: req.path,
-                headers: req.headers,
-                query: req.query,
-                params: req.params,
-                body: req.body, // make sure to use body-parser middleware
-                ip: req.ip,
-                originalUrl: req.originalUrl,
-                authContext: decodedToken,
-                origin: "apisec"
-            };
-
-            await mqbroker.publish("activitylogs", "activitylogs.all", requestData);
-
             req.authenticatedService = decodedToken;
             return next();
         }

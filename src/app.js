@@ -5,6 +5,7 @@ import morgan from "morgan";
 import env from './env.js';
 import apiV1Routes from './routes/index.routes.js';
 import { apiResponseMiddleware } from './middleware/apiResponse.middleware.js';
+import { activityLogger } from './middleware/activity.middleware.js';
 import './crons/scan-progress.cron.js';
 
 // Database connection
@@ -31,6 +32,9 @@ app.use(express.text({ type: ['application/x-yaml', 'text/yaml'] }))
 
 // API Response middleware
 app.use(apiResponseMiddleware);
+
+// Activity logger middleware
+app.use(activityLogger);
 
 app.use('/apisec/api/v1', apiV1Routes);
 
