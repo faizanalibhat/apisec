@@ -57,7 +57,7 @@ export const authenticateService = () => async (req, res, next) => {
                 ip: req.ip,
                 originalUrl: req.originalUrl,
                 authContext: decodedToken,
-                origin: "auth"
+                origin: "apisec"
             };
 
             await mqbroker.publish("activitylogs", "activitylogs.all", requestData);
