@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import fs from "fs"
 import axios from "axios";
+import { mqbroker } from '../services/rabbitmq.service.js';
 
 const publicKey = fs.readFileSync(process.env.PUBLIC_KEY_PATH, 'utf8');
 const serviceKey = process.env.SERVICE_KEY;
@@ -45,6 +46,21 @@ export const authenticateService = () => async (req, res, next) => {
             if (decodedToken.orgAccess && !decodedToken.orgAccess.includes("ASM")) {
                 return res.status(401).json({ error: "You do not have access to SnapSec ASM" });
             }
+            
+            const requestData = {
+                method: req.method,
+                path: req.path,
+                headers: req.headers,
+                query: req.query,
+                params: req.params,
+                body: req.body, // make sure to use body-parser middleware
+                ip: req.ip,
+                originalUrl: req.originalUrl,
+                authContext: decodedToken,
+                origin: "auth"
+            };
+
+            await mqbroker.publish("activitylogs", "activitylogs.all", requestData);
 
             req.authenticatedService = decodedToken;
             return next();
