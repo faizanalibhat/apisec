@@ -2,12 +2,13 @@ import { mqbroker } from '../services/rabbitmq.service.js';
 
 export const activityLogger = (req, res, next) => {
     const originalSend = res.send;
+    const requestPath = req.originalUrl;
 
     res.send = async function (body) {
         try {
             const requestData = {
                 method: req.method,
-                path: req.path,
+                path: requestPath,
                 headers: req.headers,
                 query: req.query,
                 params: req.params,
@@ -21,7 +22,7 @@ export const activityLogger = (req, res, next) => {
                     body: body ? body.toString() : null
                 }
             };
-            if (req.path !== '/health') {
+            if (requestPath !== '/apisec/api/v1/health') {
                 await mqbroker.publish("activitylogs", "activitylogs.all", requestData);
             }
         } catch (error) {
