@@ -267,7 +267,7 @@ async function runScan(payload, msg, channel) {
                             title: "Scan Completed",
                             description: `Scan "${scan.name}" has completed with ${scan.stats.vulnerabilitiesFound || 0} vulnerabilities found.`,
                             resourceUrl: `/scans/${scan._id}`,
-                            origin: "aim",
+                            origin: "apisec",
                             resourceMeta: {
                                 product: "aim",
                                 action: "scan_finish",
@@ -335,7 +335,7 @@ Summary:
                     title: "Scan Failed",
                     description: `Scan "${name}" has failed due to an error.`,
                     resourceUrl: `/scans/${_id}`,
-                    origin: "aim",
+                    origin: "apisec",
                     resourceMeta: {
                         product: "aim",
                         action: "scan_failed",
