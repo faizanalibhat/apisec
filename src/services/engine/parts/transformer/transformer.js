@@ -21,6 +21,20 @@ export const transformer = {
       });
     }
 
+    if (transformRules.override_host) {
+      try {
+          requests = requests.map(req => {
+            let url = new URL(req.url);
+            url.host = transformRules.override_host;
+            req.url = url.toString();
+            return req;
+          });
+      }
+      catch(err) {
+        console.log(err);
+      }
+    }
+
     if (transformRules.method) {
       requests = this._applyMethod(requests, transformRules.method);
     }
