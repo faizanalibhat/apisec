@@ -143,7 +143,7 @@ export class ScanService {
                         title: "Scan Started",
                         description: `Scan "${scan.name}" has been initiated with ${requests.length} requests and ${rules.length} rules.`,
                         resourceUrl: `/scans/${scan._id}`,
-                        origin: "aim",
+                        origin: "apisec",
                         resourceMeta: {
                             product: "aim",
                             action: "scan_start",
@@ -177,7 +177,7 @@ export class ScanService {
                         title: "Scan Queued for Processing",
                         description: `Scan "${scan.name}" has been queued for ${scanTypeDescription}.`,
                         resourceUrl: `/scans/${scan._id}`,
-                        origin: "aim",
+                        origin: "apisec",
                         resourceMeta: {
                             product: "aim",
                             action: "scan_queued",
