@@ -9,7 +9,7 @@ export class TransformedRequestsController {
 
     static getRequests = async (req, res, next) => {
         const { orgId } = req.authenticatedService;
-        const { scanId, search, method, statusCode, ruleId, hasVulns } = req.query;
+        const { scanId, search, method, statusCode, ruleId, hasVulns, projectId } = req.query;
 
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
@@ -41,9 +41,14 @@ export class TransformedRequestsController {
             filters.vulnerabilityDetected = hasVulns === 'true';
         }
 
+        if (projectId) filters.projectId = projectId;
+
         console.log("JSON FILTERS: ", JSON.stringify(filters));
 
         const pipeline = [
+
+            // --- Match ---
+            { $match: { orgId: orgId, ...filters } },
 
             // --- Pagination ---
             { $sort: { createdAt: -1 } },

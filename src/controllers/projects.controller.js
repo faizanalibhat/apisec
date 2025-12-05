@@ -376,15 +376,6 @@ class ProjectsController {
             // Generate a unique identifier for this request within the project
             const requestSignature = `${rawRequestData.method}:${rawRequestData.url}`;
 
-            console.log("[+] requestdfvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
-
-            console.log("[+] orgID ", orgId);
-            console.log("[+] projectID ", rawRequestData.method);
-            console.log("[+] requestSignature ", rawRequestData.url);
-            console.log("[+] rawRequestData ", rawRequestData);
-            console.log("[+] project ", projectId);
-
-
             // Check for existing request with same signature in this project
             const existingRequest = await RawRequest.findOne({
                 orgId,
@@ -394,19 +385,13 @@ class ProjectsController {
                 source: 'browser-extension'
             });
 
-            console.log("[++++++++++++++++++++++++++] EXISTING REQUEST: ", existingRequest);
-
-
             if (existingRequest) {
-                console.log(`[+] Duplicate request detected: ${requestSignature} for project ${projectId}`);
-                console.log(`[+] Existing request ID: ${existingRequest._id}, skipping scan trigger`);
 
-                res.sendApiResponse(ApiResponse.success('Request already exists in project (duplicate ignored)', {
+                return res.sendApiResponse(ApiResponse.success('Request already exists in project (duplicate ignored)', {
                     _id: existingRequest._id,
                     status: 'duplicate',
                     message: 'Request already exists, no new scan triggered'
                 }));
-                return;
             }
 
             // Create new request
