@@ -41,7 +41,7 @@ export class TransformedRequestsController {
             filters.vulnerabilityDetected = hasVulns === 'true';
         }
 
-        if (projectId) filters.projectId = ObjectId.createFromHexString(projectId);
+        if (projectId) filters.projectId = { $in: [ObjectId.createFromHexString(projectId)] };
 
         console.log("JSON FILTERS: ", JSON.stringify(filters));
 
