@@ -123,7 +123,6 @@ export class TransformedRequestsController {
                     }
                 }
             },
-            { $match: filters },
             // --- Lookup Rule ---
             {
                 $lookup: {
