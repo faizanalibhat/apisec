@@ -55,102 +55,102 @@ export class TransformedRequestsController {
             { $skip: Math.max((page - 1) * limit, 0) },
             { $limit: limit },
 
-            // --- Lookup Vulnerability ---
-            {
-                $lookup: {
-                    from: "vulnerabilities",
-                    let: { request_id: "$_id" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$orgId", orgId] },
-                                        { $ne: ["$$request_id", null] },
-                                        { $eq: [{ $toObjectId: "$transformedRequestSnapshot._id" }, "$$request_id"] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: "vulnerability"
-                }
-            },
-            {
-                $addFields: {
-                    vulnerability: {
-                        $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null]
-                    },
-                }
-            },
-            {
-                $addFields: {
-                    vulnerabilityDetected: {
-                        $cond: {
-                            if: { $eq: ["$vulnerability", null] },
-                            then: false,
-                            else: true
-                        }
-                    }
-                }
-            },
+            // // --- Lookup Vulnerability ---
+            // {
+            //     $lookup: {
+            //         from: "vulnerabilities",
+            //         let: { request_id: "$_id" },
+            //         pipeline: [
+            //             {
+            //                 $match: {
+            //                     $expr: {
+            //                         $and: [
+            //                             { $eq: ["$orgId", orgId] },
+            //                             { $ne: ["$$request_id", null] },
+            //                             { $eq: [{ $toObjectId: "$transformedRequestSnapshot._id" }, "$$request_id"] }
+            //                         ]
+            //                     }
+            //                 }
+            //             }
+            //         ],
+            //         as: "vulnerability"
+            //     }
+            // },
+            // {
+            //     $addFields: {
+            //         vulnerability: {
+            //             $ifNull: [{ $arrayElemAt: ["$vulnerability", 0] }, null]
+            //         },
+            //     }
+            // },
+            // {
+            //     $addFields: {
+            //         vulnerabilityDetected: {
+            //             $cond: {
+            //                 if: { $eq: ["$vulnerability", null] },
+            //                 then: false,
+            //                 else: true
+            //             }
+            //         }
+            //     }
+            // },
 
-            // --- Lookup Raw Request ---
-            {
-                $lookup: {
-                    from: "raw_requests",
-                    let: { request_id: "$requestId" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$orgId", orgId] },
-                                        { $ne: ["$$request_id", null] },
-                                        { $eq: ["$_id", "$$request_id"] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: "rawRequest"
-                }
-            },
-            {
-                $addFields: {
-                    rawRequest: {
-                        $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}]
-                    }
-                }
-            },
-            // --- Lookup Rule ---
-            {
-                $lookup: {
-                    from: "rules",
-                    let: { rule_id: "$ruleId" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$orgId", orgId] },
-                                        { $ne: ["$$rule_id", null] },
-                                        { $eq: ["$_id", "$$rule_id"] }
-                                    ]
-                                }
-                            }
-                        }
-                    ],
-                    as: "rule"
-                }
-            },
-            {
-                $addFields: {
-                    rule: {
-                        $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}]
-                    }
-                }
-            }
+            // // --- Lookup Raw Request ---
+            // {
+            //     $lookup: {
+            //         from: "raw_requests",
+            //         let: { request_id: "$requestId" },
+            //         pipeline: [
+            //             {
+            //                 $match: {
+            //                     $expr: {
+            //                         $and: [
+            //                             { $eq: ["$orgId", orgId] },
+            //                             { $ne: ["$$request_id", null] },
+            //                             { $eq: ["$_id", "$$request_id"] }
+            //                         ]
+            //                     }
+            //                 }
+            //             }
+            //         ],
+            //         as: "rawRequest"
+            //     }
+            // },
+            // {
+            //     $addFields: {
+            //         rawRequest: {
+            //             $ifNull: [{ $arrayElemAt: ["$rawRequest", 0] }, {}]
+            //         }
+            //     }
+            // },
+            // // --- Lookup Rule ---
+            // {
+            //     $lookup: {
+            //         from: "rules",
+            //         let: { rule_id: "$ruleId" },
+            //         pipeline: [
+            //             {
+            //                 $match: {
+            //                     $expr: {
+            //                         $and: [
+            //                             { $eq: ["$orgId", orgId] },
+            //                             { $ne: ["$$rule_id", null] },
+            //                             { $eq: ["$_id", "$$rule_id"] }
+            //                         ]
+            //                     }
+            //                 }
+            //             }
+            //         ],
+            //         as: "rule"
+            //     }
+            // },
+            // {
+            //     $addFields: {
+            //         rule: {
+            //             $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}]
+            //         }
+            //     }
+            // }
         ];
 
         const requests = await TransformedRequest.aggregate(pipeline);
