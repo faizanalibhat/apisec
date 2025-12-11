@@ -71,6 +71,10 @@ export const transformer = {
 
     allRequests = allRequests.map(req => this._rebuildUrl(req));
 
+    if (allRequests.length === 0) {
+      allRequests.push(request);
+    }
+
     return allRequests;
   },
 
