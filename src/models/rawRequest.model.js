@@ -46,7 +46,7 @@ const rawRequestSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
-    format: { type: String },
+    mode: { type: String },
     language: { type: String },
     body_format: { type: String },
     rawHttp: {

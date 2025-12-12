@@ -44,6 +44,8 @@ const transformedRequestSchema = new mongoose.Schema({
     type: Object,
     default: {}
   },
+  mode: { type: String },
+  language: { type: String },
   version: String,
 
 
