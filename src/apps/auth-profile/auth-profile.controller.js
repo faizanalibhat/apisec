@@ -7,12 +7,27 @@ export class AuthProfileController {
 
     static getAuthProfiles = async (req, res, next) => {
         const { orgId } = req.authenticatedService;
+        
+        const queryParamsWithOrgId = {
+            ...req.query,
+            orgId: orgId.toString()
+        };
 
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const stages = QueryBuilder.buildStages(filter_config, queryParamsWithOrgId);
 
-        const authProfiles = await AuthProfile.find({ orgId }).skip((page - 1) * limit).limit(limit).lean();
-        const total = await AuthProfile.countDocuments({ orgId });
+        const filterQuery = stages.preLookupMatch ? stages.preLookupMatch : {};
+        
+        const paginationStages = stages.pagination;
+        
+        const sortOptions = stages.sort ? stages.sort : {};
+        
+        const authProfiles = await AuthProfile.find(filterQuery)
+            .skip(paginationStages.skip)
+            .limit(paginationStages.limit)
+            .sort(sortOptions)
+            .lean();
+        
+        const total = await AuthProfile.countDocuments(filterQuery);
 
         return res.json({ data: authProfiles, total });
     }
