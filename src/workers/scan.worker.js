@@ -48,7 +48,7 @@ async function transformationHandler(payload, msg, channel) {
 
         // Fetch environment variables if environmentId is provided
         let environmentVariables = {};
-        
+
         if (environmentId) {
             const environment = await RawEnvironment.findById(environmentId).lean();
             if (environment) {
@@ -296,7 +296,8 @@ Summary:
                             subject: `Scan Completed - ${scan.stats.vulnerabilitiesFound || 0} Vulnerabilities Found - Snapsec`
                         },
                         orgCoverage: { roles: ["Member"] },
-                        authContext: 'system'
+                        authContext: 'system',
+                        title_html: `<span class=" !text-secondary-foreground !font-medium">Scan "${scan.name}" has completed </span> <a class="font-medium text-primary" href="/scans/${scan._id}/results">View Results</a>`
                     };
 
                     await mqbroker.publish("notification", "notification", scanFinishNotification);
@@ -354,7 +355,8 @@ Summary:
                     subject: "Scan Failed - Snapsec"
                 },
                 orgCoverage: { roles: ["Member"] },
-                authContext: 'system'
+                authContext: 'system',
+                title_html: `<span class=" !text-secondary-foreground !font-medium">Scan "${name}" has failed </span> <a class="font-medium text-primary" href="/scans/${_id}">View Details</a>`
             };
 
             await mqbroker.publish("notification", "notification", scanFailureNotification);
@@ -435,7 +437,7 @@ async function runAndMatchRequests(payload, msg, channel) {
 
         // Send the request
         // console.log(`[+] Sending request to: ${transformedRequest.url}`);
-        
+
         const response = await EngineService.sendRequest({ request: transformedRequest, rule: rule.parsed_yaml });
 
         if (response.error) {
@@ -448,13 +450,13 @@ async function runAndMatchRequests(payload, msg, channel) {
         // if (transformedRequest.url?.match(/\/xss/g))
         //     console.log(`[+] Match result:`, matchResult);
 
-            // console.log("[+] FOUND VULN : ", {
-            //     ruleId: rule._id,
-            //     requestId: originalRequest._id,
-            //     projectId: originalRequest.projectId,
-            //     transformedRequestId: transformedRequest._id,
-            // })
-        
+        // console.log("[+] FOUND VULN : ", {
+        //     ruleId: rule._id,
+        //     requestId: originalRequest._id,
+        //     projectId: originalRequest.projectId,
+        //     transformedRequestId: transformedRequest._id,
+        // })
+
 
         if (matchResult.match) {
             // CREATE TEMPLATE CONTEXT FOR DYNAMIC PLACEHOLDERS
@@ -485,15 +487,15 @@ async function runAndMatchRequests(payload, msg, channel) {
                 orgId,
                 scanName: name,
                 scanId: _id,
-            // Deprecated
-            // ruleId: rule._id,
-            // requestId: originalRequest._id,
-            // transformedRequestId: transformedRequest._id,
+                // Deprecated
+                // ruleId: rule._id,
+                // requestId: originalRequest._id,
+                // transformedRequestId: transformedRequest._id,
 
-            ruleSnapshot: rule,
-            requestSnapshot: originalRequest,
-            transformedRequestSnapshot: transformedRequest,
-            projectId: originalRequest.projectIds, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
+                ruleSnapshot: rule,
+                requestSnapshot: originalRequest,
+                transformedRequestSnapshot: transformedRequest,
+                projectId: originalRequest.projectIds, // althugh I am sending this in 'requestSnapshot' but I am keeping this to keep the original structure intact
                 // ruleId: templateContext.ruleId,
                 // requestId: templateContext.requestId,
                 // transformedRequestId: templateContext.transformedRequestId,
