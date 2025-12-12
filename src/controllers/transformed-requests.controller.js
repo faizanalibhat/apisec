@@ -48,7 +48,7 @@ export class TransformedRequestsController {
         const pipeline = [
 
             // --- Match ---
-            { $match: { orgId: orgId, ...filters } },
+            { $match: { ...filters } },
 
             // --- Pagination ---
             { $sort: { createdAt: -1 } },
@@ -123,7 +123,6 @@ export class TransformedRequestsController {
                     }
                 }
             },
-            { $match: filters },
             // --- Lookup Rule ---
             {
                 $lookup: {
