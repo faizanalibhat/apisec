@@ -1,6 +1,6 @@
 import { STAGE } from '../../../utils/query-builder/query-builder.js'; 
 
-const filter_config = [
+export const filter_config = [
     // ----------------------------------------------------------------------
     // 1. Mandatory Filter (orgId)
     // ----------------------------------------------------------------------
