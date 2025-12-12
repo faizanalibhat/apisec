@@ -1,4 +1,6 @@
-import { AuthProfile } from "../models/auth-profile.model.js";
+import { AuthProfile } from "../../models/auth-profile.model.js"
+import { filter_config } from "./config/filter-config.js"
+import { QueryBuilder } from "../../utils/query-builder/query-builder.js"
 
 
 export class AuthProfileController {
