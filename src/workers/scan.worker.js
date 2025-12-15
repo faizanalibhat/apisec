@@ -12,6 +12,7 @@ import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js";
 import { AuthProfile } from "../models/auth-profile.model.js";
 import { Projects } from "../models/projects.model.js";
+import { NotificationTemplates } from '../utils/notification-templates.js';
 import "../db/mongoose.js";
 
 import { syncRulesFromGithub } from "./sync-rules.worker.js";
@@ -297,7 +298,7 @@ Summary:
                         },
                         orgCoverage: { roles: ["Member"] },
                         authContext: 'system',
-                        title_html: `<span class=" !text-secondary-foreground !font-medium">Scan "${scan.name}" has completed </span> <a class="font-medium text-primary" href="/scans/${scan._id}/results">View Results</a>`
+                        title_html: NotificationTemplates.scanCompleted(scan.name, scan._id)
                     };
 
                     await mqbroker.publish("notification", "notification", scanFinishNotification);
@@ -356,7 +357,7 @@ Summary:
                 },
                 orgCoverage: { roles: ["Member"] },
                 authContext: 'system',
-                title_html: `<span class=" !text-secondary-foreground !font-medium">Scan "${name}" has failed </span> <a class="font-medium text-primary" href="/scans/${_id}">View Details</a>`
+                title_html: NotificationTemplates.scanFailed(name, _id)
             };
 
             await mqbroker.publish("notification", "notification", scanFailureNotification);
