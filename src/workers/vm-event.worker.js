@@ -1,6 +1,5 @@
 import { mqbroker } from "../services/rabbitmq.service.js";
 import { VulnerabilityService } from "../services/vulnerability.service.js";
-import "../db/mongoose.js";
 
 const vulnerabilityService = new VulnerabilityService();
 
