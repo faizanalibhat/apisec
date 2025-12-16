@@ -1,7 +1,9 @@
 import cron from "node-cron";
-import  "../db/mongoose.js";
 import Scan from "../models/scan.model.js";
 import TransformedRequest from "../models/transformedRequest.model.js";
+import { connectDB } from "../db/connect-db.js";
+
+connectDB();
 
 
 cron.schedule("*/1 * * * *", async () => {
