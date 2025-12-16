@@ -13,11 +13,9 @@ import TemplateEngine from "../utils/template.js";
 import { AuthProfile } from "../models/auth-profile.model.js";
 import { Projects } from "../models/projects.model.js";
 import { NotificationTemplates } from '../utils/notification-templates.js';
-import "../db/mongoose.js";
-
-import { syncRulesFromGithub } from "./sync-rules.worker.js";
-
 import { SwaggerIntegrationService } from "../services/swagger-integration.service.js";
+
+
 const swaggerIntegrationService = new SwaggerIntegrationService();
 
 
@@ -679,7 +677,7 @@ async function syncIntegration(payload, msg, channel) {
 }
 
 
-async function scanWorker() {
+export async function scanWorker() {
 
     console.log('[+] SCAN WORKER IS UP...')
 
@@ -692,7 +690,3 @@ async function scanWorker() {
 
     await mqbroker.consume("apisec", "apisec.integration.sync", syncIntegration, 'SyncIntegrationEventsQueue');
 }
-
-
-scanWorker();
-syncRulesFromGithub();

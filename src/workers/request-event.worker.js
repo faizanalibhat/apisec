@@ -13,7 +13,6 @@ import { IntegrationService } from "../services/integration.service.js";
 import TemplateEngine from "../utils/template.js";
 import { AuthProfile } from "../models/auth-profile.model.js";
 import { Projects } from '../models/projects.model.js';
-import "../db/mongoose.js";
 import mongoose from 'mongoose';
 
 const scanService = new ScanService();
@@ -547,16 +546,10 @@ async function recalculateScanVulnerabilityStats(scanId) {
     }
 }
 
-/**
- * Initializes the worker to consume request-related events.
- */
-async function requestEventWorker() {
+export async function requestEventWorker() {
     console.log('[+] REQUEST EVENT WORKER IS UP...');
 
     // Consume events where a new request is created in a project
     await mqbroker.consume("apisec", "apisec.request.created", requestCreatedHandler, 'requestCreatedEventsQueue2');
     await mqbroker.consume("apisec", "apisec.request.scan", runScan, 'requestScanEventsQueue2');
 }
-
-// Start the worker
-requestEventWorker();

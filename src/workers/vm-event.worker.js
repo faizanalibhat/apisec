@@ -27,13 +27,8 @@ async function vulnerabilityUpdatedHandler(payload, msg, channel) {
   }
 }
 
-/**
- * Initializes the worker to consume vulnerability update events from VM.
- */
-async function vmEventWorker() {
+
+export async function vmEventWorker() {
     console.log('[+] VM EVENT WORKER IS UP...');
     await mqbroker.consume("vm", "vm.vuln.update", vulnerabilityUpdatedHandler, 'vmVulnUpdateQueue');
 }
-
-// Start the worker
-vmEventWorker();

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const uri = process.env.APISEC_MONGODB_URL;
 
 // Connect to MongoDB
-const connectDB = async () => {
+export const connectDB = async () => {
     try {
         await mongoose.connect(uri, {
             // Modern Mongoose doesn't need useNewUrlParser, useUnifiedTopology etc.
@@ -31,8 +31,3 @@ mongoose.connection.on('error', err => {
 mongoose.connection.once('open', () => {
     console.log('Connected to MongoDB successfully!');
 });
-
-// Initiate connection
-connectDB();
-
-export default mongoose;
