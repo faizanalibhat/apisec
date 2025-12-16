@@ -1,5 +1,5 @@
 import express from 'express';
-import { healthCheck, notFoundHandler, globalErrorHandler } from '../middleware/routeHandlers.js';
+import { healthCheck } from '../../middleware/routeHandlers.js';
 
 const router = express.Router();
 
