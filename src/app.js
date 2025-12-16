@@ -10,7 +10,9 @@ import { healthCheck, notFoundHandler, globalErrorHandler } from './middleware/r
 import './crons/scan-progress.cron.js';
 
 // Database connection
-import './db/mongoose.js';
+import { connectDB } from "./db/connect-db.js"
+
+connectDB();
 
 // Initialize app
 const app = express();
