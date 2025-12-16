@@ -1,7 +1,7 @@
-import TransformedRequest from "../models/transformedRequest.model.js"
+import TransformedRequest from "../../models/transformedRequest.model.js"
 import mongoose from "mongoose";
 const { ObjectId } = mongoose.Types;
-import { escapeRegex } from "../utils/utils.js";
+import { escapeRegex } from "../../utils/utils.js";
 
 
 

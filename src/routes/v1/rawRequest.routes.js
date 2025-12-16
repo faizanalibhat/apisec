@@ -1,6 +1,6 @@
 import express from 'express';
 import * as rawRequestController from '../controllers/rawRequest.controller.js';
-import * as validation from '../middleware/validation/rawRequest.validation.js';
+import * as validation from '../../middleware/validation/rawRequest.validation.js';
 
 const router = express.Router();
 

@@ -1,4 +1,4 @@
-import { Config } from "../models/config.model.js"
+import { Config } from "../../models/config.model.js"
 
 
 export class ConfigController {

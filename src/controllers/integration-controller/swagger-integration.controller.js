@@ -1,6 +1,6 @@
-import { SwaggerIntegrationService } from '../services/swagger-integration.service.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
-import { ApiError } from '../utils/ApiError.js';
+import { SwaggerIntegrationService } from '../../services/swagger-integration.service.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
+import { ApiError } from '../../utils/ApiError.js';
 
 class SwaggerIntegrationController {
     constructor() {

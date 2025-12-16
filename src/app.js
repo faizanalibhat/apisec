@@ -6,6 +6,7 @@ import env from './env.js';
 import apiV1Routes from './routes/index.routes.js';
 import { apiResponseMiddleware } from './middleware/apiResponse.middleware.js';
 import { activityLogger } from './middleware/activity.middleware.js';
+import { healthCheck, notFoundHandler, globalErrorHandler } from './middleware/routeHandlers.js';
 import './crons/scan-progress.cron.js';
 
 // Database connection
@@ -36,7 +37,13 @@ app.use(apiResponseMiddleware);
 // Activity logger middleware
 app.use(activityLogger);
 
-app.use('/apisec/api/v1', apiV1Routes);
+app.use('/apisec/api', apiV1Routes);
+
+// 404 handler - catches all unmatched routes
+app.use(notFoundHandler);
+
+// Global error handler - must be last
+app.use(globalErrorHandler);
 
 // Start server
 app.listen(port, () => {

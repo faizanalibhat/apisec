@@ -1,6 +1,6 @@
-import RawEnvironmentService from '../services/rawEnvironment.service.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
-import { ApiError } from '../utils/ApiError.js';
+import RawEnvironmentService from '../../services/rawEnvironment.service.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
+import { ApiError } from '../../utils/ApiError.js';
 
 class RawEnvironmentController {
     constructor() {
