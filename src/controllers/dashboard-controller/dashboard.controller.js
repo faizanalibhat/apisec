@@ -1,6 +1,6 @@
-import { DashboardService } from '../services/dashboard.service.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
-import { ApiError } from '../utils/ApiError.js';
+import { DashboardService } from '../../services/dashboard.service.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
+import { ApiError } from '../../utils/ApiError.js';
 
 class DashboardController {
     constructor() {

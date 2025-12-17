@@ -1,4 +1,4 @@
-import { PostmanCollections } from "../models/postman-collections.model.js"
+import { PostmanCollections } from "../../models/postman-collections.model.js"
 
 
 export class CollectionsController {

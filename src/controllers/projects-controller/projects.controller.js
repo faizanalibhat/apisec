@@ -1,12 +1,12 @@
-import ProjectsService from '../services/projects.service.js';
-import RawRequestService from '../services/rawRequest.service.js';
-import RawRequest from '../models/rawRequest.model.js';
-import TransformedRequest from '../models/transformedRequest.model.js';
-import { RuleService } from '../services/rule.service.js';
-import { ApiResponse } from '../utils/ApiResponse.js';
-import { ApiError } from '../utils/ApiError.js';
+import ProjectsService from '../../services/projects.service.js';
+import RawRequestService from '../../services/rawRequest.service.js';
+import RawRequest from '../../models/rawRequest.model.js';
+import TransformedRequest from '../../models/transformedRequest.model.js';
+import { RuleService } from '../../services/rule.service.js';
+import { ApiResponse } from '../../utils/ApiResponse.js';
+import { ApiError } from '../../utils/ApiError.js';
 import mongoose from 'mongoose';
-import { mqbroker } from '../services/rabbitmq.service.js';
+import { mqbroker } from '../../services/rabbitmq.service.js';
 const { ObjectId } = mongoose.Types;
 
 class ProjectsController {
