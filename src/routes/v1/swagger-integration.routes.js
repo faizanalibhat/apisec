@@ -1,5 +1,5 @@
 import express from 'express';
-import * as controller from '../../controllers/swagger-integration.controller.js';
+import * as controller from '../../controllers/integration-controller/swagger-integration.controller.js';
 import SwaggerIntegrationValidator from '../../middleware/swaggerIntegrationValidator.js';
 
 const router = express.Router();

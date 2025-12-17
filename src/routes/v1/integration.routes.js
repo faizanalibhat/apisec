@@ -1,5 +1,5 @@
 import express from 'express';
-import * as controller from '../../auth-profile-controller';
+import * as controller from '../../controllers/auth-profile-controller/auth-profile.controller.js';
 import IntegrationValidator from '../../middleware/integrationValidator.js';
 
 const router = express.Router();

@@ -1,5 +1,5 @@
 import express from 'express';
-import * as rawEnvironmentController from '../../controllers/rawEnvironment.controller.js';
+import * as rawEnvironmentController from '../../controllers/environments-controller/rawEnvironment.controller.js';
 
 const router = express.Router();
 
