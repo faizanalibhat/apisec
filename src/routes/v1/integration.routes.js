@@ -1,6 +1,6 @@
 import express from 'express';
-import * as controller from '../controllers/integration.controller.js';
-import IntegrationValidator from '../middleware/integrationValidator.js';
+import * as controller from '../../auth-profile-controller';
+import IntegrationValidator from '../../middleware/integrationValidator.js';
 
 const router = express.Router();
 

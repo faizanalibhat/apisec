@@ -1,5 +1,5 @@
 import express from 'express';
-import * as projectsController from '../controllers/projects.controller.js';
+import * as projectsController from '../../controllers/projects.controller.js';
 import * as validation from '../../middleware/validation/projects.validation.js';
 import { authenticateService } from '../../middleware/auth.js';
 

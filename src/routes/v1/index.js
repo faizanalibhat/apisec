@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Route imports
 import ruleRoutes from './rule.routes.js';
-import integrationRoutes from '../integration.routes.js';
+import integrationRoutes from './integration.routes.js';
 import rawRequestRoutes from './rawRequest.routes.js';
 import scanRoutes from "./scan.routes.js";
 import vulnerabilityRoutes from './vulnerability.routes.js';
@@ -16,9 +16,9 @@ import collectionsRoutes from "./collections.routes.js";
 import configRoutes from "./config.routes.js";
 import projectRoutes from "./projects.routes.js";
 import authProfileRoute from "./auth-profile.routes.js";
-import swaggerIntegrationRoutes from '../swagger-integration.routes.js';
+import swaggerIntegrationRoutes from './swagger-integration.routes.js';
 
-import { authenticateService } from '../middleware/auth.js';
+import { authenticateService } from '../../middleware/auth.js';
 
 
 // Health check endpoint

@@ -1,5 +1,5 @@
 import express from 'express';
-import * as scanController from '../controllers/scan.controller.js';
+import * as scanController from '../../controllers/scan.controller.js';
 // import { 
 //   validateCreateScan, 
 //   validateGetScans, 
