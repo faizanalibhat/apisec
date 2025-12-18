@@ -17,6 +17,16 @@ export const activityLogger = (req, res, next) => {
                 originalUrl: req.originalUrl,
                 authContext: req.authenticatedService,
                 origin: "apisec",
+                resourceMeta: {
+                    actionType: req.actionType || {
+                        'GET': 'read',
+                        'POST': 'create',
+                        'PUT': 'update',
+                        'PATCH': 'update',
+                        'DELETE': 'delete'
+                    }[req.method] || 'read',
+                    ...req.resourceMeta
+                },
                 response: {
                     statusCode: res.statusCode,
                     body: body ? body.toString() : null
