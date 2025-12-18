@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APISEC Notification Preview</title>
+    <title>APISec Notification Preview</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -24,15 +24,8 @@
 
     <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
         <div class="p-6 border-b">
-            <h1 class="text-2xl font-bold text-gray-800">APISEC Notification Templates Preview</h1>
+            <h1 class="text-2xl font-bold text-gray-800">APISec Notification Templates Preview</h1>
             <p class="text-gray-500 text-sm mt-1">Previewing how notifications look with Tailwind classes.</p>
-        </div>
-
-        <div
-            class="max-w-4xl mx-auto mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 ml-6 mr-6">
-            <strong>Note:</strong> Since this uses ES Modules for <code>notification-templates.js</code>, you must serve
-            this file via a local server (e.g., <code>npx serve</code>, VS Code Live Server) to see the content. Opening
-            via <code>file://</code> will block imports.
         </div>
 
         <div id="preview-container" class="p-6 space-y-6">
@@ -40,42 +33,67 @@
         </div>
     </div>
 
-    <script type="module">
-        import { NotificationTemplates } from './notification-templates.js';
+    <script>
+        // Mock NotificationTemplates for browser preview (copy-pasted from utils/notification-templates.js)
+        const NotificationTemplates = {
+            suppressionRuleCreated: (userName) => {
+                return `<a target="_blank" href="auth.user.id"><span class="font-bold">${userName}</span></a> <span class=" !text-secondary-foreground !font-medium"> created a suppression rule triggered by </span> <span class="font-medium text-primary" href="apisec.vulnerabilities">vulnerability</span>`;
+            },
+            vulnerabilityFalsePositive: (userName, vulnerabilityId) => {
+                return `<a target="_blank" href="auth.user.id"><span class="font-bold">${userName}</span></a> <span class=" !text-secondary-foreground !font-medium"> marked a </span> <a class="font-medium text-primary" href="apisec.vulnerabilities">vulnerability</a> <span class=" !text-secondary-foreground !font-medium"> as false positive </span>`;
+            },
+            scanCompleted: (scanName, scanId) => {
+                return `<a class="font-medium text-primary" href="apisec.scans">${scanName}</a> <span class=" !text-secondary-foreground !font-medium"> completed </span>`;
+            },
+            scanFailed: (scanName, scanId) => {
+                return `<a class="font-medium text-primary" href="apisec.scans">${scanName}</a> <span class=" !text-secondary-foreground !font-medium"> failed </span>`;
+            }
+        };
 
-        // Dummy Data for Preview
         const scenarios = [
             {
                 label: "Suppression Rule Created",
-                html: NotificationTemplates.suppressionRuleCreated("Harvey Specter")
+                html: NotificationTemplates.suppressionRuleCreated("Harvey Specter"),
+                resourceKey: "apisec.vulnerabilities",
+                actionType: "create"
             },
             {
                 label: "Vulnerability Marked False Positive",
-                html: NotificationTemplates.vulnerabilityFalsePositive("Mike Ross", "vuln-123")
+                html: NotificationTemplates.vulnerabilityFalsePositive("Mike Ross", "vuln-123"),
+                resourceKey: "apisec.vulnerabilities",
+                actionType: "update"
             },
             {
                 label: "Scan Completed",
-                html: NotificationTemplates.scanCompleted("Daily API Scan", "scan-456")
+                html: NotificationTemplates.scanCompleted("Daily API Scan", "scan-456"),
+                resourceKey: "apisec.scans",
+                actionType: "update"
             },
             {
                 label: "Scan Failed",
-                html: NotificationTemplates.scanFailed("Weekly Security Check", "scan-789")
+                html: NotificationTemplates.scanFailed("Weekly Security Check", "scan-789"),
+                resourceKey: "apisec.scans",
+                actionType: "update"
             }
         ];
 
-        // Render to DOM
         const container = document.getElementById('preview-container');
 
         scenarios.forEach(scenario => {
             const item = document.createElement('div');
             item.className = "p-4 border rounded-md bg-gray-50";
+
             item.innerHTML = `
-                <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">${scenario.label}</div>
+                <div class="flex justify-between items-center mb-2">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${scenario.label}</div>
+                    <div class="text-xs text-gray-500 font-mono bg-gray-200 px-2 py-1 rounded">
+                        Key: ${scenario.resourceKey} | Type: ${scenario.actionType}
+                    </div>
+                </div>
                 <div class="text-gray-900 text-base border p-3 bg-white rounded">${scenario.html}</div>
             `;
             container.appendChild(item);
         });
-
     </script>
 </body>
 

@@ -12,7 +12,7 @@ export const NotificationTemplates = {
      * @param {string} vulnerabilityId
      */
     vulnerabilityFalsePositive: (userName, vulnerabilityId) => {
-        return `<a target="_blank" href="auth.user.id"><span class="font-bold">${userName}</span></a> <span class=" !text-secondary-foreground !font-medium"> marked a vulnerability as false positive </span> <a class="font-medium text-primary" href="apisec.vulnerabilities">View Details</a>`;
+        return `<a target="_blank" href="auth.user.id"><span class="font-bold">${userName}</span></a> <span class=" !text-secondary-foreground !font-medium"> marked a </span> <a class="font-medium text-primary" href="apisec.vulnerabilities">vulnerability</a> <span class=" !text-secondary-foreground !font-medium"> as false positive </span>`;
     },
 
     /**
@@ -20,7 +20,7 @@ export const NotificationTemplates = {
      * @param {string} scanId
      */
     scanCompleted: (scanName, scanId) => {
-        return `<span class=" !text-secondary-foreground !font-medium"> Scan </span> <a class="font-medium text-primary" href="apisec.scans">${scanName}</a> <span class=" !text-secondary-foreground !font-medium"> completed </span>`;
+        return `<a class="font-medium text-primary" href="apisec.scans">${scanName}</a> <span class=" !text-secondary-foreground !font-medium"> completed </span>`;
     },
 
     /**
@@ -28,6 +28,6 @@ export const NotificationTemplates = {
      * @param {string} scanId
      */
     scanFailed: (scanName, scanId) => {
-        return `<span class=" !text-secondary-foreground !font-medium"> Scan </span> <a class="font-medium text-primary" href="apisec.scans">${scanName}</a> <span class=" !text-secondary-foreground !font-medium"> failed </span>`;
+        return `<a class="font-medium text-primary" href="apisec.scans">${scanName}</a> <span class=" !text-secondary-foreground !font-medium"> failed </span>`;
     }
 }
