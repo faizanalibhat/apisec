@@ -239,6 +239,31 @@ class PostmanParser {
                 paramsMap[p.key] = p.value;
             });
 
+            // Also extract path variables from the URL (colon-style :param)
+            if (typeof fullUrl === 'string') {
+                const pathParamMatches = fullUrl.match(/:([A-Za-z0-9_\-]+)/g);
+                if (pathParamMatches) {
+                    pathParamMatches.forEach(match => {
+                        const key = match.replace(/^:/, '');
+                        if (!Object.prototype.hasOwnProperty.call(paramsMap, key)) {
+                            paramsMap[key] = '';
+                        }
+                    });
+                }
+            }
+
+            // Also include Postman URL variables if present (request.url.variable)
+            if (request.url && Array.isArray(request.url.variable)) {
+                request.url.variable.forEach(v => {
+                    if (v && v.key) {
+                        // Only set if not already present
+                        if (!Object.prototype.hasOwnProperty.call(paramsMap, v.key)) {
+                            paramsMap[v.key] = v.value || '';
+                        }
+                    }
+                });
+            }
+
             // Extract body content based on mode
             let bodyContent = null;
             if (body && body?.content) {
@@ -277,7 +302,8 @@ class PostmanParser {
                 body: bodyContent,
                 body_format: body_format,
                 folderName: folderPath || null,
-                postmanId: item._postman_id || request._postman_id || null,
+                // Robustly pick a postman id from multiple possible fields
+                postmanId: item._postman_id || request._postman_id || item.id || request.id || null,
                 description: request.description || item.description || null,
 
                 // These will be set by Mongoose defaults
