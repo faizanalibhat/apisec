@@ -655,7 +655,7 @@ class ProjectsController {
             const { orgId } = req.authenticatedService;
             const { projectId } = req.params;
 
-            const { collectionUids, ...configuration } = req.body;
+            const { collectionUids, owner, ...configuration } = req.body;
 
             const project = await Projects.findOne({ _id: projectId, orgId });
 
@@ -665,6 +665,8 @@ class ProjectsController {
 
             project.configuration = configuration;
             project.collectionUids = collectionUids;
+            project.owner = owner;
+
             await project.save();
 
             res.sendApiResponse(ApiResponse.success('Project updated successfully', updated));
