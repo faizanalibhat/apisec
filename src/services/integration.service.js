@@ -332,13 +332,15 @@ class IntegrationService {
                         integration,
                         workspace.name,
                         workspace.id,
-                        collection.uid
+                        collection.id // use short numeric collection id for collection-level URL
                     );
 
                     // Add to workspace collections
                     workspaceCollections.push({
                         id: collection.id,
                         uid: collection.uid,
+                        collectionId: collection.id,
+                        collectionUid: collection.uid,
                         name: collection.name,
                         postmanUrl: postmanUrl
                     });
@@ -351,6 +353,7 @@ class IntegrationService {
                                     orgId: integration.orgId,
                                     name: collection.name,
                                     collectionUid: collection.uid,
+                                    collectionId: collection.id,
                                     postmanUrl: postmanUrl,
                                     workspaceId: workspace.id
                                 }
@@ -367,7 +370,8 @@ class IntegrationService {
                             integrationId: integration._id,
                             workspaceName: workspace.name,
                             collectionName: collection.name,
-                            collectionId: collection.uid,
+                            collectionId: collection.id,
+                            collectionUid: collection.uid,
                             workspaceId: workspace.id,
                             envs: environment
                         }
