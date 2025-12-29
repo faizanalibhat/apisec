@@ -83,18 +83,26 @@ class RawEnvironmentService {
                 return keyMatch || valueMatch;
             });
 
-            // If no matches found, return all variables
+            // If no matches found, return all variables with consistent metadata
             if (matchingVariables.length === 0) {
-                return environment;
+                return {
+                    ...environment,
+                    _searchResultCount: 0,
+                    totalItems: environment.values ? environment.values.length : 0,
+                    pagination: {
+                        totalItems: environment.values ? environment.values.length : 0
+                    }
+                };
             }
 
-            // Return environment with only matching variables
+            // Return environment with only matching variables and correct counts
             return {
                 ...environment,
                 values: matchingVariables,
                 _searchResultCount: matchingVariables.length,
+                totalItems: matchingVariables.length,
                 pagination: {
-                    totalItems: await RawEnvironment.countDocuments(filters)
+                    totalItems: matchingVariables.length
                 }
             };
         } catch (error) {
