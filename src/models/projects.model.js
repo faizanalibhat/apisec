@@ -1,11 +1,35 @@
 import mongoose from "mongoose";
 
+const SCOPE_TYPE = ["url", "regex"];
+const CRAWLER_SCANS = ["aggressive", "intelligent"];
+
+
 const ownerSchema = new mongoose.Schema({
     name: String,
     email: String,
     userId: String,
     role: { type: String, enum: ["member", "admin", "owner"], default: "member" },
 }, { _id: false });
+
+
+
+const scopeSchema = new mongoose.Schema({
+    type: { type: String, enum: SCOPE_TYPE, default: "url" },
+    value: { type: String, required: true },
+}, { _id: false })
+
+
+
+const configurationSchema = new mongoose.Schema({
+    target_url: { type: String, required: true },
+    application_name: { type: String },
+    owner: { type: ownerSchema },
+    tags: { type: [String], default: [] },
+    scope: { type: [scopeSchema] },
+    scan_type: { type: String, enum: CRAWLER_SCANS, default: "aggressive" }, 
+})
+
+
 
 const schema = new mongoose.Schema({
     orgId: { type: String, required: true },
@@ -16,6 +40,10 @@ const schema = new mongoose.Schema({
     isCollecting: { type: Boolean, default: true },
 
     collaborators: { type: [ownerSchema], default: [] },
+
+    owner: { type: ownerSchema },
+
+    configuration: { type: configurationSchema },
 
     collectionUids: { type: [String], default: [] },
 

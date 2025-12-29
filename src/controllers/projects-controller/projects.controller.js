@@ -1,4 +1,5 @@
 import ProjectsService from '../../services/projects.service.js';
+import { Projects } from '../../models/projects.model.js';
 import RawRequestService from '../../services/rawRequest.service.js';
 import RawRequest from '../../models/rawRequest.model.js';
 import TransformedRequest from '../../models/transformedRequest.model.js';
@@ -7,7 +8,10 @@ import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
 import mongoose from 'mongoose';
 import { mqbroker } from '../../services/rabbitmq.service.js';
+
+
 const { ObjectId } = mongoose.Types;
+
 
 class ProjectsController {
     constructor() {
@@ -34,6 +38,7 @@ class ProjectsController {
         this.deleteBrowserRequest = this.deleteBrowserRequest.bind(this);
         this.getProjectDashboard = this.getProjectDashboard.bind(this);
         this.toggleCollectionStatus = this.toggleCollectionStatus.bind(this);
+        this.configureProject = this.configureProject.bind(this);
     }
 
     async getProjects(req, res, next) {
@@ -642,6 +647,36 @@ class ProjectsController {
 
         return requestData;
     }
+
+
+    // setup controller
+    async configureProject(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
+
+            const configuration = req.body;
+
+            const project = await Projects.findOne({ _id: projectId, orgId });
+
+            if (!project) {
+                throw ApiError.notFound('Project not found');
+            }
+
+            project.configuration = configuration;
+            await project.save();
+
+            res.sendApiResponse(ApiResponse.success('Project updated successfully', updated));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+
+
+
+
+
 }
 
 const controller = new ProjectsController();
@@ -664,5 +699,6 @@ export const {
     updateBrowserRequest,
     deleteBrowserRequest,
     getProjectDashboard,
-    toggleCollectionStatus
+    toggleCollectionStatus,
+    configureProject
 } = controller;
