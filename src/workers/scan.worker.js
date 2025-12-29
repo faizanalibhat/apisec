@@ -334,13 +334,15 @@ Summary:
                 notification: {
                     title: "Scan Failed",
                     description: `Scan "${name}" has failed due to an error.`,
-                    resourceUrl: `/scans/${_id}`,
+                    resourceUrl: `/scans/${_id}/results`,
+                    resourceKey: "apisec.scans",
                     origin: "apisec",
                     resourceMeta: {
                         product: "aim",
-                        action: "scan_failed",
-                        resource: "scan"
-                    }
+                        actionType: "update",
+                        action: "scan_completed",
+                        resource: "scan",
+                    },
                 },
                 context: {
                     name: "User",
