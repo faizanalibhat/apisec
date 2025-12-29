@@ -251,7 +251,7 @@ class RawRequestService {
                                         in: {
                                             $cond: {
                                                 if: { $and: [ { $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] } ] },
-                                                then: { $concat: ["$$collectionData.postmanUrl", "/request/", "$postmanId"] },
+                                                then: { $concat: [ { $arrayElemAt: [ { $split: ["$$collectionData.postmanUrl", "/collection/"] }, 0 ] }, "/request/", "$collectionUid", "-", "$postmanId" ] },
                                                 else: "$$collectionData.postmanUrl"
                                             }
                                         }
@@ -476,7 +476,7 @@ class RawRequestService {
                                         in: {
                                             $cond: {
                                                 if: { $and: [ { $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] } ] },
-                                                then: { $concat: ["$$collectionData.postmanUrl", "/request/", "$postmanId"] },
+                                                then: { $concat: [ { $arrayElemAt: [ { $split: ["$$collectionData.postmanUrl", "/collection/"] }, 0 ] }, "/request/", "$collectionUid", "-", "$postmanId" ] },
                                                 else: "$$collectionData.postmanUrl"
                                             }
                                         }
@@ -590,8 +590,9 @@ class RawRequestService {
                 );
 
                 if (collectionData) {
+                    const workspaceBase = collectionData.postmanUrl ? collectionData.postmanUrl.split('/collection/')[0] : null;
                     rawRequest.postmanUrl = (rawRequest.postmanId && collectionData.postmanUrl)
-                        ? `${collectionData.postmanUrl.replace(/\/$/, '')}/request/${rawRequest.postmanId}`
+                        ? `${workspaceBase}/request/${rawRequest.collectionUid || ''}-${rawRequest.postmanId}`
                         : collectionData.postmanUrl;
                 }
 
