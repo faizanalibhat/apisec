@@ -19,16 +19,15 @@ const scopeSchema = new mongoose.Schema({
 }, { _id: false })
 
 
-
 const configurationSchema = new mongoose.Schema({
     target_url: { type: String, required: true },
     application_name: { type: String },
     owner: { type: ownerSchema },
     tags: { type: [String], default: [] },
     scope: { type: [scopeSchema] },
-    scan_type: { type: String, enum: CRAWLER_SCANS, default: "aggressive" }, 
-})
-
+    scan_type: { type: String, enum: CRAWLER_SCANS, default: "aggressive" },
+    auth_success_string: { type: String },
+});
 
 
 const schema = new mongoose.Schema({
