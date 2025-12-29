@@ -46,6 +46,18 @@ export class AuthProfileController {
 
         const profile = { ...(req.body || {}) };
 
+        // Normalize overrideHost if provided
+        if (profile.overrideHost) {
+            try {
+                let rawOverrideHost = profile.overrideHost;
+                if (!/^https?:\/\//i.test(rawOverrideHost)) rawOverrideHost = 'http://' + rawOverrideHost;
+                const parsed = new URL(rawOverrideHost);
+                profile.overrideHost = parsed.origin;
+            } catch (err) {
+                // keep original if invalid
+            }
+        }
+
         const authProfile = await AuthProfile.create({ orgId, ...profile });
 
         return res.json(authProfile);
@@ -56,6 +68,17 @@ export class AuthProfileController {
         const { id } = req.params;
 
         const updates = req.body;
+
+        if (updates && updates.overrideHost) {
+            try {
+                let rawOverrideHost = updates.overrideHost;
+                if (!/^https?:\/\//i.test(rawOverrideHost)) rawOverrideHost = 'http://' + rawOverrideHost;
+                const parsed = new URL(rawOverrideHost);
+                updates.overrideHost = parsed.origin;
+            } catch (err) {
+                // ignore invalid
+            }
+        }
 
         const authProfile = await AuthProfile.findOneAndUpdate({ orgId, _id: id }, { $set: updates }, { new: true });
 
