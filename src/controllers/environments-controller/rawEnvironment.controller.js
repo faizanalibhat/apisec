@@ -60,11 +60,18 @@ class RawEnvironmentController {
                     search,
                     orgId
                 );
+
+                const pagination = {
+                    currentPage: parseInt(page, 10) || 1,
+                    totalItems: Number(result.totalItems) || 0,
+                };
+
                 return res.sendApiResponse(
-                    ApiResponse.success('Environment search results retrieved successfully', [result], {
-                        currentPage: page,
-                        totalItems: result.totalItems,
-                    })
+                    ApiResponse.paginated(
+                        'Environment search results retrieved successfully',
+                        [result],
+                        pagination
+                    )
                 );
             }
 
