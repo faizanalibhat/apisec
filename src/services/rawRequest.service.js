@@ -248,7 +248,13 @@ class RawRequestService {
                                                 ]
                                             }
                                         },
-                                        in: "$$collectionData.postmanUrl"
+                                        in: {
+                                            $cond: {
+                                                if: { $and: [ { $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] } ] },
+                                                then: { $concat: ["$$collectionData.postmanUrl", "/request/", "$postmanId"] },
+                                                else: "$$collectionData.postmanUrl"
+                                            }
+                                        }
                                     }
                                 },
                                 else: null
@@ -256,6 +262,7 @@ class RawRequestService {
                         }
                     }
                 },
+
                 // Clean up integration field to only include necessary data
                 {
                     $addFields: {
@@ -466,7 +473,13 @@ class RawRequestService {
                                                 ]
                                             }
                                         },
-                                        in: "$$collectionData.postmanUrl"
+                                        in: {
+                                            $cond: {
+                                                if: { $and: [ { $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] } ] },
+                                                then: { $concat: ["$$collectionData.postmanUrl", "/request/", "$postmanId"] },
+                                                else: "$$collectionData.postmanUrl"
+                                            }
+                                        }
                                     }
                                 },
                                 else: null
@@ -474,6 +487,7 @@ class RawRequestService {
                         }
                     }
                 },
+
                 {
                     $addFields: {
                         integrationId: {
@@ -576,7 +590,9 @@ class RawRequestService {
                 );
 
                 if (collectionData) {
-                    rawRequest.postmanUrl = collectionData.postmanUrl;
+                    rawRequest.postmanUrl = (rawRequest.postmanId && collectionData.postmanUrl)
+                        ? `${collectionData.postmanUrl.replace(/\/$/, '')}/request/${rawRequest.postmanId}`
+                        : collectionData.postmanUrl;
                 }
 
                 // Clean up integration data

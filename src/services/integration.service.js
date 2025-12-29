@@ -329,6 +329,7 @@ class IntegrationService {
 
                     // Generate Postman URL for this collection
                     const postmanUrl = this.generatePostmanUrl(
+                        integration,
                         workspace.name,
                         workspace.id,
                         collection.uid
@@ -450,12 +451,15 @@ class IntegrationService {
     }
 
     generatePostmanUrl(integration, workspaceName, workspaceId, collectionUid) {
-        if (!integration.postmanTeamDomain || !integration.postmanUserId) {
+        // Safe guard - require team domain and user id to build URLs
+        if (!integration || !integration.postmanTeamDomain || !integration.postmanUserId) {
             return null;
         }
 
-        return `https://${integration.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspaceName)}~${workspaceId}/collection/${this.postmanUserId}-${collectionUid}`;
-};
+        // Collection-level URL (can be extended to request-level later)
+        return `https://${integration.postmanTeamDomain}.postman.co/workspace/${encodeURIComponent(workspaceName)}~${workspaceId}/collection/${integration.postmanUserId}-${collectionUid}`;
+    }
 }
+
 
 export { IntegrationService };
