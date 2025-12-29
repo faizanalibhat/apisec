@@ -1,11 +1,13 @@
 import { IntegrationService } from '../../services/integration.service.js';
+import { SwaggerIntegrationService } from '../../services/swagger-integration.service.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
 
 class IntegrationController {
     constructor() {
         this.service = new IntegrationService();
-        
+        this.swaggerService = new SwaggerIntegrationService();
+
         // Bind all methods
         this.createIntegration = this.createIntegration.bind(this);
         this.getIntegrations = this.getIntegrations.bind(this);
@@ -19,6 +21,20 @@ class IntegrationController {
     async createIntegration(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
+            const { type } = req.body;
+
+            if (type === 'swagger') {
+                const { domain, name, description } = req.body;
+                const result = await this.swaggerService.createIntegration({
+                    sourceUrl: domain, // Map domain to sourceUrl
+                    name,
+                    description,
+                    orgId
+                });
+                return res.sendApiResponse(ApiResponse.created('Swagger integration created successfully', result));
+            }
+
+            // Default to Postman logic
             const { apiKey, name, description, workspaceIds, environment } = req.body;
 
             const result = await this.service.createIntegration({
