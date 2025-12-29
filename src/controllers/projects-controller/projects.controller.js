@@ -669,7 +669,7 @@ class ProjectsController {
 
             await project.save();
 
-            res.sendApiResponse(ApiResponse.success('Project updated successfully', updated));
+            res.sendApiResponse(ApiResponse.success('Project updated successfully', project));
         } catch (error) {
             next(error);
         }
