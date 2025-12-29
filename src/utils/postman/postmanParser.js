@@ -293,6 +293,7 @@ class PostmanParser {
                 rawHttp: rawRequest,
                 collectionName: context.collectionName,
                 workspaceName: context.workspaceName,
+                collectionId: context.collectionId,
                 collectionUid: context.collectionUid,
                 workspaceId: context.workspaceId,
 
