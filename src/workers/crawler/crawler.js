@@ -1,17 +1,18 @@
 import { canonicalizeRequest } from './canonicalize-requests.js';
+import RawRequest from '../../models/rawRequest.model.js';
+import { mqbroker } from "../../services/rabbitmq.service.js";
+
 
 export async function crawlAndCapture({
   page,
   target_url,
   scope,
-  maxClicks = 200
+  maxClicks = 30,
+  context
 }) {
   const requests = new Map();
   const visitedUrls = new Set();
 
-  /**
-   * 1️⃣ Network-level scope enforcement
-   */
   const normalizedScope = (scope || []).map(s => {
     if (s.type === 'url') {
       try {
@@ -28,14 +29,10 @@ export async function crawlAndCapture({
     normalizedScope.push({ type: 'url', value: new URL('/', target_url).href });
   }
 
-  /**
-   * 1️⃣ Network-level scope enforcement
-   */
   await page.route('**/*', route => {
     const url = route.request().url();
     const resourceType = route.request().resourceType();
 
-    // Allow essential assets from the same origin even if not strictly in scope
     if (['stylesheet', 'script', 'image', 'font'].includes(resourceType)) {
       const u = new URL(url);
       const t = new URL(target_url);
@@ -51,14 +48,33 @@ export async function crawlAndCapture({
     return route.continue();
   });
 
-  /**
-   * 2️⃣ Capture requests (only in-scope will reach here)
-   */
-  page.on('request', req => {
+  page.on('request', async (req) => {
     // if (!['xhr', 'fetch'].includes(req.resourceType())) return;
 
     const canon = canonicalizeRequest(req);
-    requests.set(canon.signature, canon);
+    canon.orgId = context?.project?.orgId;
+
+    console.log("[+] CREATED REQUEST: ", canon);
+
+    const request = await RawRequest.findOneAndUpdate(
+      {
+        method: canon.method,
+        url: canon.url,
+        source: canon.source,
+        orgId: canon.orgId
+      },
+      {
+        $set: canon,
+        // $addToSet: { projectIds: context?.project?._id }
+      },
+      {
+        upsert: true,
+        new: true
+      }
+    );
+
+    // flow execute
+    await mqbroker.publish('apisec', "apisec.scanflow.initiate", { request, ...context });
   });
 
   /**

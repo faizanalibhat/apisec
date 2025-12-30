@@ -3,6 +3,7 @@ import { scanWorker } from "./scan.worker.js";
 import { requestEventWorker } from "./request-event.worker.js";
 import { vmEventWorker } from "./vm-event.worker.js";
 import { crawler } from "./crawler/main.js";
+import { handleScanFlow } from "./scan-flow/main.js";
 import { connectDB } from "../db/connect-db.js";
 
 
@@ -13,3 +14,4 @@ requestEventWorker();
 scanWorker();
 syncRulesFromGithub();
 crawler();
+handleScanFlow();

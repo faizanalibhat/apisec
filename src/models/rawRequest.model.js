@@ -22,12 +22,14 @@ const rawRequestSchema = new mongoose.Schema(
       required: false,
       trim: true,
     },
+
     method: {
       type: String,
       required: true,
       enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
       uppercase: true,
     },
+
     url: {
       type: String,
       required: false,
@@ -42,13 +44,18 @@ const rawRequestSchema = new mongoose.Schema(
       of: String,
       default: {},
     },
+
     body: {
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
+
     mode: { type: String },
+
     language: { type: String },
+
     body_format: { type: String },
+
     rawHttp: {
       type: String,
       required: true,
@@ -69,7 +76,7 @@ const rawRequestSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['postman', 'browser-extension', 'swagger'],
+      enum: ['postman', 'browser-extension', 'swagger', 'crawler'],
       default: 'postman',
       index: true,
     },

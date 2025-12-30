@@ -25,7 +25,7 @@ app.use(helmet());
 
 app.use(traceContext);
 
-app.use(morgan('tiny'));
+// app.use(morgan('tiny'));
 
 // CORS configuration
 app.use(cors());
