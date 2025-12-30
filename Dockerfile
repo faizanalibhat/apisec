@@ -1,25 +1,34 @@
 FROM mcr.microsoft.com/playwright:v1.42.0-jammy
 
-RUN apk add --no-cache python3 make g++ git
+# Install build tools (Ubuntu-based image → use apt)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    git \
+ && rm -rf /var/lib/apt/lists/*
 
-RUN npm install pm2 -g
+# Install pm2 globally
+RUN npm install -g pm2
 
 WORKDIR /app
 
-# Copy ecosystem file first (explicit)
+# Copy ecosystem file first (better cache usage)
 COPY ecosystem.config.cjs .
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install node dependencies
 RUN npm install
 
-# Now copy everything else
+# Copy rest of the app
 COPY . .
 
-# Create a directory for keys
+# Create directory for keys
 RUN mkdir -p keys
 
-# Start command
+ENV NODE_ENV=production
+
+# Start with PM2
 CMD ["pm2-runtime", "ecosystem.config.cjs"]
