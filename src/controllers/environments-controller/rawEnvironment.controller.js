@@ -17,6 +17,7 @@ class RawEnvironmentController {
         this.addVariable = this.addVariable.bind(this);
         this.updateVariable = this.updateVariable.bind(this);
         this.deleteVariable = this.deleteVariable.bind(this);
+        this.fixIndexes = this.fixIndexes.bind(this);
     }
 
     async create(req, res, next) {
@@ -238,6 +239,15 @@ class RawEnvironmentController {
             next(error);
         }
     }
+
+    async fixIndexes(req, res, next) {
+        try {
+            const result = await this.service.fixIndexes();
+            res.sendApiResponse(ApiResponse.success('Refreshed DB indexes', result));
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 const controller = new RawEnvironmentController();
@@ -253,4 +263,5 @@ export const {
     addVariable,
     updateVariable,
     deleteVariable,
+    fixIndexes,
 } = controller;

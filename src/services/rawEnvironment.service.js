@@ -458,6 +458,31 @@ class RawEnvironmentService {
         }
     }
 
+    async fixIndexes() {
+        try {
+            const collection = RawEnvironment.collection;
+            const indexes = await collection.indexes();
+            const indexName = 'postmanEnvironmentId_1_orgId_1';
+            const indexExists = indexes.find(i => i.name === indexName);
+
+            let message = '';
+            if (indexExists) {
+                await collection.dropIndex(indexName);
+                message += `Dropped existing index '${indexName}'. `;
+            } else {
+                message += `Index '${indexName}' not found. `;
+            }
+
+            // Force rebuild of indexes according to the current schema
+            await RawEnvironment.syncIndexes();
+            message += 'Synced indexes with current schema.';
+
+            return { message };
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
     handleError(error) {
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => ({
