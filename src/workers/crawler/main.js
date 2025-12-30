@@ -17,7 +17,7 @@ async function crawlerWorker(payload, msg, channel) {
 
 
 
-export async function main() {
+export async function crawler() {
 
     await mqbroker.consume("apisec", "apisec.project.scan.launched", crawlerWorker);
 }

@@ -13,18 +13,18 @@ const STAGE = {
 export { STAGE }; // Export stages for use in configuration
 
 
-export class FilterBuilder {
+export class QueryBuilder {
 
     static handlers = [
         // NEW HANDLERS for non-$match stages MUST run first
-        FilterBuilder.handleSort,
-        FilterBuilder.handlePagination,
+        QueryBuilder.handleSort,
+        QueryBuilder.handlePagination,
         
         // Existing handlers adapted for staged $match
-        FilterBuilder.handleRegex,
-        FilterBuilder.handleMultiple,
-        FilterBuilder.handleCompare,
-        FilterBuilder.handleDefaultMatch, // Renamed handler
+        QueryBuilder.handleRegex,
+        QueryBuilder.handleMultiple,
+        QueryBuilder.handleCompare,
+        QueryBuilder.handleDefaultMatch, // Renamed handler
     ];
 
     static buildStages(config = [], queryParams) {
@@ -58,7 +58,7 @@ export class FilterBuilder {
             // Combine per-config handlers + global static handlers
             const handlers = [
                 ...(conf.handlers || []),
-                ...FilterBuilder.handlers
+                ...QueryBuilder.handlers
             ];
 
             for (const handler of handlers) {
@@ -69,7 +69,7 @@ export class FilterBuilder {
         }
 
         // 2. Compile raw conditions into final MongoDB stage objects
-        return FilterBuilder._compileStages(stagedConditions);
+        return QueryBuilder._compileStages(stagedConditions);
     }
 
     static _compileStages(conditions) {
@@ -211,6 +211,6 @@ export class FilterBuilder {
 
     static addHandler(handlerFn) {
         // Custom global handlers take priority over built-in handlers
-        FilterBuilder.handlers.unshift(handlerFn); 
+        QueryBuilder.handlers.unshift(handlerFn); 
     }
 }
