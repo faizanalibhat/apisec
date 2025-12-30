@@ -6,6 +6,8 @@ import { crawlAndCapture } from './crawler.js';
 
 
 export async function browserWorker(payload, msg, channel) {
+    let browser;
+
     try {
         const { project, scan } = payload;
 
@@ -13,9 +15,13 @@ export async function browserWorker(payload, msg, channel) {
 
         const auth_script = project.authScript;
 
-        const auth_script_content = await fs.readFile(auth_script.path, "utf-8");
+        if (!auth_script) {
+          throw Error("Auth Script not provided");
+        }
 
-        const browser = await chromium.launch({ headless: true, args: [
+        const auth_script_content = await fs.readFile(auth_script?.path, "utf-8");
+
+        browser = await chromium.launch({ headless: true, args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
