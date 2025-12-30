@@ -11,7 +11,7 @@ export async function browserWorker(payload, msg, channel) {
   try {
     const { project, scan } = payload;
 
-    console.log("[+] BROWSER SCAN LAUNCHED : ", project, scan);
+    console.log("[+] BROWSER SCAN LAUNCHED : ", scan?.name);
 
     const { target_url, scope } = project?.configuration || {};
 
@@ -69,15 +69,16 @@ export async function browserWorker(payload, msg, channel) {
     //   ...authContext
     // });
 
-    console.log("Auth Context: ", authContext);
+    // console.log("Auth Context: ", authContext);
 
     const capturedRequests = await crawlAndCapture({
       page,
+      context: { project, scan },
       target_url,
       scope
     });
 
-    console.log("[+] capturedRequests ", capturedRequests);
+    // console.log("[+] capturedRequests ", capturedRequests);
   }
   catch (err) {
     console.log(err);
