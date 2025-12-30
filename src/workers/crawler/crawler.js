@@ -69,6 +69,14 @@ export async function crawlAndCapture({
 }
 
 
+async function safeGoto(page, url, scope, visitedUrls) {
+  if (!isInScope(url, scope)) return;
+  if (visitedUrls.has(url)) return;
+
+  visitedUrls.add(url);
+  await page.goto(url, { waitUntil: 'networkidle' });
+}
+
 
 async function captureSpaNavigation(page, visitedUrls) {
   const currentUrl = page.url();

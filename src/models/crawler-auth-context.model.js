@@ -26,6 +26,12 @@ const CookieSchema = new mongoose.Schema(
 
 const CrawlerAuthContextSchema = new mongoose.Schema(
   {
+    orgId: {
+      type: String,
+      required: true,
+      index: true
+    },
+
     scanId: {
       type: String,
       required: true,

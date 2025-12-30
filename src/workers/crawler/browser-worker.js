@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import vm from "vm";
 import fs from "fs/promises";
 import { crawlAndCapture } from './crawler.js';
-
+import { CrawlerAuthContext } from '../../models/crawler-auth-context.model.js';
 
 
 export async function browserWorker(payload, msg, channel) {
@@ -62,6 +62,12 @@ export async function browserWorker(payload, msg, channel) {
     // extract auth context
     const authContext = await extractAuthContext(page);
 
+    // save the auth context inside mongodb for this scan.
+    await CrawlerAuthContext.create({
+      scanId: scan._id,
+      orgId: project.orgId,
+      ...authContext
+    });
 
     console.log("Auth Context: ", authContext);
 
