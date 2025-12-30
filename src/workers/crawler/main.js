@@ -1,23 +1,8 @@
+import fs from "fs/promises";
 import { mqbroker } from "../../services/rabbitmq.service.js";
-
-
-async function crawlerWorker(payload, msg, channel) {
-    try {
-        const { project, scan } = payload;
-
-        
-    }
-    catch(err) {
-        console.log(err);
-    } 
-    finally {
-        channel.ack(msg);
-    }
-}
-
+import { browserWorker } from "./browser-worker.js";
 
 
 export async function crawler() {
-
-    await mqbroker.consume("apisec", "apisec.project.scan.launched", crawlerWorker);
+    await mqbroker.consume("apisec", "apisec.project.scan.launched", browserWorker, "crawlingScansOnProject", { prefetchCount: 1 });
 }

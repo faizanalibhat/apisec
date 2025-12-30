@@ -65,10 +65,10 @@ class RabbitMQ {
         await this.reconnect();
     }
 
-    async createConsumerChannel(consumerTag) {
+    async createConsumerChannel(consumerTag, options) {
         try {
             const channel = await this.connection.createChannel();
-            await channel.prefetch(10); // Limit to 10 unacknowledged messages per consumer
+            await channel.prefetch(options.prefetchCount || 10); // Limit to 10 unacknowledged messages per consumer
 
             channel.on('error', (err) => {
                 console.error(`Consumer channel error (${consumerTag}):`, err.message);
@@ -160,11 +160,11 @@ class RabbitMQ {
     }
 
     // Consume messages for a topic exchange
-    async consume(exchange, bindingKey, callback, queueName = '') {
+    async consume(exchange, bindingKey, callback, queueName = '', options = { prefetchCount: 10 }) {
         if (!this.connection) {
             await this.reconnect();
         }
-        const channel = await this.createConsumerChannel(`consume-${exchange}-${queueName}`);
+        const channel = await this.createConsumerChannel(`consume-${exchange}-${queueName}`, options);
         await this._assertExchange(exchange, this.exchangeTypes.topic, { durable: true }, channel);
         const queue = await channel.assertQueue(queueName, { durable: true, arguments: { 'x-queue-mode': 'lazy' } });
         await channel.bindQueue(queue.queue, exchange, bindingKey);

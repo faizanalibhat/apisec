@@ -10,7 +10,7 @@ const STAGE = {
 };
 
 
-export { STAGE }; // Export stages for use in configuration
+export { STAGE };
 
 
 export class QueryBuilder {
