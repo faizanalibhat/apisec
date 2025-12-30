@@ -12,10 +12,39 @@ export async function crawlAndCapture({
   /**
    * 1️⃣ Network-level scope enforcement
    */
+  const normalizedScope = (scope || []).map(s => {
+    if (s.type === 'url') {
+      try {
+        return { ...s, value: new URL(s.value, target_url).href };
+      } catch {
+        return s;
+      }
+    }
+    return s;
+  });
+
+  // Always include target_url in scope
+  if (!normalizedScope.some(s => s.type === 'url' && target_url.startsWith(s.value))) {
+    normalizedScope.push({ type: 'url', value: new URL('/', target_url).href });
+  }
+
+  /**
+   * 1️⃣ Network-level scope enforcement
+   */
   await page.route('**/*', route => {
     const url = route.request().url();
+    const resourceType = route.request().resourceType();
 
-    if (!isInScope(url, scope)) {
+    // Allow essential assets from the same origin even if not strictly in scope
+    if (['stylesheet', 'script', 'image', 'font'].includes(resourceType)) {
+      const u = new URL(url);
+      const t = new URL(target_url);
+      if (u.origin === t.origin) {
+        return route.continue();
+      }
+    }
+
+    if (!isInScope(url, normalizedScope)) {
       return route.abort();
     }
 
@@ -35,7 +64,7 @@ export async function crawlAndCapture({
   /**
    * 3️⃣ Initial navigation
    */
-  await safeGoto(page, target_url, scope, visitedUrls);
+  await safeGoto(page, target_url, normalizedScope, visitedUrls);
 
   /**
    * 4️⃣ Controlled crawling loop
@@ -45,7 +74,7 @@ export async function crawlAndCapture({
   while (clicks < maxClicks) {
     console.log("[+] VISITED URLS : ", visitedUrls);
 
-    const clickables = await getInScopeClickables(page, scope);
+    const clickables = await getInScopeClickables(page, normalizedScope);
 
     console.log("[+] FOUND ", clickables.length, " clickables");
 
@@ -114,9 +143,24 @@ async function getInScopeClickables(page, scope) {
 
 
 function isInScope(url, scope) {
+  if (!scope || !scope.length) return true; // Default to in-scope if no scope defined
+
   try {
-    const u = new URL(url);
-    return scope.some(s => u.href.startsWith(s));
+    const u = new URL(url).href;
+    return scope.some(s => {
+      if (s.type === 'url') {
+        return u.startsWith(s.value);
+      }
+      if (s.type === 'regex') {
+        try {
+          const re = new RegExp(s.value);
+          return re.test(u);
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    });
   } catch {
     return false;
   }
