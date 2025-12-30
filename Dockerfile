@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM mcr.microsoft.com/playwright:v1.42.0-jammy
 
 RUN apk add --no-cache python3 make g++ git
 

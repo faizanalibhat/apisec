@@ -15,7 +15,13 @@ export async function browserWorker(payload, msg, channel) {
 
         const auth_script_content = await fs.readFile(auth_script.path, "utf-8");
 
-        const browser = await chromium.launch({ headless: true });
+        const browser = await chromium.launch({ headless: true, args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu"
+        ] });
+
         const context = await browser.newContext();
         const page = await context.newPage();
 
