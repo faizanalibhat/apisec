@@ -22,6 +22,8 @@ export class ScanService {
         try {
             const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
 
+            console.log("given project ids: ", projectIds);
+
             // Check if this is a project-based scan (only projectId provided)
             const isProjectBasedScan = projectIds && projectIds.length > 0;
 
@@ -163,10 +165,14 @@ export class ScanService {
             }
 
             // Publish scan to queue
-            await mqbroker.publish("apisec", "apisec.scan.create", scan);
+            if (!isProjectBasedScan) {
+                await mqbroker.publish("apisec", "apisec.scan.create", scan);
+            }
 
             // publish scan projects event
-            await mqbroker.publish("apisec", "apisec.project.scan.launched", { project, scan });
+            if (isProjectBasedScan) {
+                await mqbroker.publish("apisec", "apisec.project.scan.launched", { project, scan });
+            }
 
             // Send to VM notification
             try {

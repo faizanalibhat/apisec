@@ -11,9 +11,11 @@ export async function browserWorker(payload, msg, channel) {
     try {
         const { project, scan } = payload;
 
-        const { target_url, scope } = project.configuration;
+        console.log("[+] BROWSER SCAN LAUNCHED : ", project, scan);
 
-        const auth_script = project.authScript;
+        const { target_url, scope } = project?.configuration || {};
+
+        const auth_script = project?.authScript;
 
         if (!auth_script) {
           throw Error("Auth Script not provided");
@@ -65,7 +67,9 @@ export async function browserWorker(payload, msg, channel) {
     }
     finally {
         channel.ack(msg);
-        await browser.close();
+        if (browser) {
+            await browser.close();
+        }
     }
 }
 
