@@ -63,11 +63,11 @@ export async function browserWorker(payload, msg, channel) {
     const authContext = await extractAuthContext(page);
 
     // save the auth context inside mongodb for this scan.
-    await CrawlerAuthContext.create({
-      scanId: scan._id,
-      orgId: project.orgId,
-      ...authContext
-    });
+    // await CrawlerAuthContext.create({
+    //   scanId: scan._id,
+    //   orgId: project.orgId,
+    //   ...authContext
+    // });
 
     console.log("Auth Context: ", authContext);
 
