@@ -23,13 +23,14 @@ export class ScanService {
             const { name, description, ruleIds, requestIds, environmentId, collectionIds, orgId, projectIds, scope, authProfileId } = scanData;
 
             // Check if this is a project-based scan (only projectId provided)
-            const isProjectBasedScan = projectIds && projectIds.length === 1 &&
-                !requestIds && !collectionIds && !ruleIds;
+            const isProjectBasedScan = projectIds && projectIds.length > 0;
 
             let rules;
             let requests;
             let actualProjectIds = projectIds;
             let project;
+
+            console.log("[+] PROJECT BASED SCAN : ", isProjectBasedScan);
 
             if (isProjectBasedScan) {
                 // Project-based scan flow
