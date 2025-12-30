@@ -5,6 +5,7 @@ module.exports = {
             script: "src/app.js",
             instances: 1,
             exec_mode: "cluster",
+            node_args: "--import ./instrumentation.js",
             autorestart: true,
             max_memory_restart: "2G",
             watch: false,
@@ -15,6 +16,7 @@ module.exports = {
         {
             name: "workers",
             script: "src/workers/main.js",
+            node_args: "--import ./instrumentation.js",
             instances: 1,
             exec_mode: "fork",
             autorestart: true,

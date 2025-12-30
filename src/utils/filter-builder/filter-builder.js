@@ -13,18 +13,18 @@ const STAGE = {
 export { STAGE }; // Export stages for use in configuration
 
 
-export class QueryBuilder {
+export class FilterBuilder {
 
     static handlers = [
         // NEW HANDLERS for non-$match stages MUST run first
-        QueryBuilder.handleSort,
-        QueryBuilder.handlePagination,
+        FilterBuilder.handleSort,
+        FilterBuilder.handlePagination,
         
         // Existing handlers adapted for staged $match
-        QueryBuilder.handleRegex,
-        QueryBuilder.handleMultiple,
-        QueryBuilder.handleCompare,
-        QueryBuilder.handleDefaultMatch, // Renamed handler
+        FilterBuilder.handleRegex,
+        FilterBuilder.handleMultiple,
+        FilterBuilder.handleCompare,
+        FilterBuilder.handleDefaultMatch, // Renamed handler
     ];
 
     static buildStages(config = [], queryParams) {
@@ -58,7 +58,7 @@ export class QueryBuilder {
             // Combine per-config handlers + global static handlers
             const handlers = [
                 ...(conf.handlers || []),
-                ...QueryBuilder.handlers
+                ...FilterBuilder.handlers
             ];
 
             for (const handler of handlers) {
@@ -69,7 +69,7 @@ export class QueryBuilder {
         }
 
         // 2. Compile raw conditions into final MongoDB stage objects
-        return QueryBuilder._compileStages(stagedConditions);
+        return FilterBuilder._compileStages(stagedConditions);
     }
 
     static _compileStages(conditions) {
@@ -105,11 +105,22 @@ export class QueryBuilder {
     static handleSort(conditions, key, value, conf) {
         if (conf.stage !== STAGE.SORT) return false;
 
-        const direction = value.startsWith('-') ? -1 : 1;
-        const field = value.replace(/^-/, ''); // Remove the leading dash if it exists
+        if (!conditions[STAGE.SORT]) {
+            conditions[STAGE.SORT] = {};
+        }
 
-        // Target the special 'sort' storage bucket
-        conditions[STAGE.SORT] = { [field]: direction };
+        if (key == "sortBy") {
+            conditions[STAGE.SORT].sortBy = value; 
+        }
+
+        if (key == "sortAs") {
+
+            if (sortAs == "asc") conditions[STAGE.SORT].sortAs = 1;
+            if (sortAs == "desc") conditions[STAGE.SORT].sortAs = -1;
+            if (parseInt(sortAs) == 1) conditions[STAGE.SORT].sortAs = 1;
+            if (parseInt(sortAs) == -1) conditions[STAGE.SORT].sortAs = -1;
+        }
+
         return true;
     }
 
@@ -200,6 +211,6 @@ export class QueryBuilder {
 
     static addHandler(handlerFn) {
         // Custom global handlers take priority over built-in handlers
-        QueryBuilder.handlers.unshift(handlerFn); 
+        FilterBuilder.handlers.unshift(handlerFn); 
     }
 }
