@@ -57,7 +57,7 @@ export async function browserWorker(payload, msg, channel) {
       throw Error("Auth script must provide an 'authenticate' function");
     }
 
-    await authenticate({ page });
+    await authenticate({ page, target_url, scope });
 
     // extract auth context
     const authContext = await extractAuthContext(page);
