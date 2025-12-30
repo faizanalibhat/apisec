@@ -64,7 +64,7 @@ class RuleController {
     async getRules(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
-            const { page = 1, limit = 20, isActive, search, projectId, withVulnCount } = req.query;
+            const { page = 1, limit = 20, isActive, search, projectId, withVulnCount, severity } = req.query;
 
             const filters = {};
             if (search) {
@@ -77,6 +77,13 @@ class RuleController {
                 ];
             }
 
+            if (severity) {
+                const severities = severity.split(',').map(s => s.toLowerCase());
+                if (severities.length > 0) {
+                    filters['report.severity'] = { $in: severities };
+                }
+            }
+
             const result = await this.ruleService.getRules({
                 orgId,
                 filters,
@@ -87,11 +94,16 @@ class RuleController {
                 withVulnCount: withVulnCount === 'true'
             });
 
+            const supportedFilters = {
+                severity: ['critical', 'high', 'medium', 'low']
+            };
+
             res.sendApiResponse(
                 ApiResponse.paginated(
                     'Rules fetched successfully',
                     result.data,
-                    result.pagination
+                    result.pagination,
+                    supportedFilters
                 )
             );
         } catch (error) {
