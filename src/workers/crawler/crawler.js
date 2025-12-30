@@ -1,4 +1,4 @@
-import { canonicalizeRequest } from './canonicalize.js';
+import { canonicalizeRequest } from './canonicalize-requests.js';
 
 export async function crawlAndCapture({
   page,
