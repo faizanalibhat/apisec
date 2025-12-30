@@ -64,7 +64,7 @@ class RuleController {
     async getRules(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
-            const { page = 1, limit = 20, isActive, search, projectId, withVulnCount, severity } = req.query;
+            const { page = 1, limit = 20, isActive, search, projectId, withVulnCount } = req.query;
 
             const filters = {};
             if (search) {
@@ -75,9 +75,6 @@ class RuleController {
                         ]
                     }
                 ];
-            }
-            if (severity) {
-                filters.severity = severity;
             }
 
             const result = await this.ruleService.getRules({
@@ -94,8 +91,7 @@ class RuleController {
                 ApiResponse.paginated(
                     'Rules fetched successfully',
                     result.data,
-                    result.pagination,
-                    result.filters // Pass filters here
+                    result.pagination
                 )
             );
         } catch (error) {
