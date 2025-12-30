@@ -8,7 +8,7 @@ import yaml from "js-yaml";
 class RuleController {
     constructor() {
         this.ruleService = new RuleService();
-        
+
         // Bind methods to maintain context
         this.createRule = this.createRule.bind(this);
         this.getRules = this.getRules.bind(this);
@@ -64,7 +64,7 @@ class RuleController {
     async getRules(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
-            const { page = 1, limit = 20, isActive, search, projectId, withVulnCount } = req.query;
+            const { page = 1, limit = 20, isActive, search, projectId, withVulnCount, severity } = req.query;
 
             const filters = {};
             if (search) {
@@ -75,6 +75,9 @@ class RuleController {
                         ]
                     }
                 ];
+            }
+            if (severity) {
+                filters.severity = severity;
             }
 
             const result = await this.ruleService.getRules({
@@ -91,7 +94,8 @@ class RuleController {
                 ApiResponse.paginated(
                     'Rules fetched successfully',
                     result.data,
-                    result.pagination
+                    result.pagination,
+                    result.filters // Pass filters here
                 )
             );
         } catch (error) {

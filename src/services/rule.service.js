@@ -40,6 +40,16 @@ class RuleService {
                 query.isActive = isActive === 'true';
             }
 
+            // Handle severity filter
+            if (filters.severity) {
+                const severities = Array.isArray(filters.severity)
+                    ? filters.severity
+                    : filters.severity.split(',').map(s => s.trim().toLowerCase());
+
+                query['report.severity'] = { $in: severities };
+                delete query.severity;
+            }
+
             const skip = (page - 1) * limit;
 
             let project = null;
@@ -50,6 +60,11 @@ class RuleService {
 
             let rules;
             const total = await Rule.countDocuments(query);
+
+            // Get available filters stats
+            const [distinctSeverities] = await Promise.all([
+                Rule.distinct('report.severity', { orgId })
+            ]);
 
             if (withVulnCount) {
                 const pipeline = [
@@ -99,6 +114,9 @@ class RuleService {
                     pages: Math.ceil(total / limit),
                     hasNextPage: page < Math.ceil(total / limit),
                     hasPrevPage: page > 1
+                },
+                filters: {
+                    severity: distinctSeverities || []
                 }
             };
         } catch (error) {
