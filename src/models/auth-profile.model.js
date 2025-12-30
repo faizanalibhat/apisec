@@ -14,6 +14,7 @@ const schema = new mongoose.Schema({
     name: { type: String, required: true },
     authType: { type: String, enum: AUTH_TYPES, required: false },
     authValue: { type: String, required: false },
+    overrideHost: { type: String, required: false },
     customHeaders: { type: [customHeadersSchema], default: [] },
 }, { timestamps: true });
 

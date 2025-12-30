@@ -21,14 +21,28 @@ export const transformer = {
       });
     }
 
-    if (transformRules.override_host) {
+    // Support override host from transform rules OR from the auth profile (profile-level override)
+    const overrideCandidate = transformRules.override_host || (authProfile && authProfile.overrideHost);
+    if (overrideCandidate) {
       try {
-          requests = requests.map(req => {
+        let override = overrideCandidate;
+        if (!/^https?:\/\//i.test(override)) override = 'http://' + override;
+        const parsedOverride = new URL(override);
+        const newProtocol = parsedOverride.protocol; // includes ':'
+        const newHost = parsedOverride.host; // host + optional port
+
+        requests = requests.map(req => {
+          try {
             let url = new URL(req.url);
-            url.host = transformRules.override_host;
+            url.protocol = newProtocol;
+            url.host = newHost;
             req.url = url.toString();
             return req;
-          });
+          } catch (err) {
+            // If a request URL is invalid, skip replacing for that request
+            return req;
+          }
+        });
       }
       catch(err) {
         console.log(err);
