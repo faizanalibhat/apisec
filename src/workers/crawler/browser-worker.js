@@ -6,71 +6,73 @@ import { crawlAndCapture } from './crawler.js';
 
 
 export async function browserWorker(payload, msg, channel) {
-    let browser;
+  let browser;
 
-    try {
-        const { project, scan } = payload;
+  try {
+    const { project, scan } = payload;
 
-        console.log("[+] BROWSER SCAN LAUNCHED : ", project, scan);
+    console.log("[+] BROWSER SCAN LAUNCHED : ", project, scan);
 
-        const { target_url, scope } = project?.configuration || {};
+    const { target_url, scope } = project?.configuration || {};
 
-        const auth_script = project?.authScript;
+    const auth_script = project?.authScript;
 
-        if (!auth_script) {
-          throw Error("Auth Script not provided");
-        }
-
-        const auth_script_content = await fs.readFile(auth_script?.path, "utf-8");
-
-        browser = await chromium.launch({ headless: true, args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu"
-        ] });
-
-        const context = await browser.newContext();
-        const page = await context.newPage();
-
-        const sandbox = {
-            target_url: target_url,
-            scope: scope,
-            page: page,
-            browser: null,
-            context: null,
-            exports: {}
-        }
-
-        vm.createContext(sandbox);
-        vm.runInContext(auth_script_content, sandbox);
-
-        // auth function from user
-        await sandbox.exports.authenticate({ page });
-
-        // extract auth context
-        const authContext = await extractAuthContext(page);
-
-
-        console.log("Auth Context: ", authContext);
-
-        const capturedRequests = await crawlAndCapture({
-            page,
-            target_url,
-            scope
-        });
-
-        console.log("[+] capturedRequests ", capturedRequests);
+    if (!auth_script) {
+      throw Error("Auth Script not provided");
     }
-    catch(err) {
-        console.log(err);
+
+    const auth_script_content = await fs.readFile(auth_script?.path, "utf-8");
+
+    browser = await chromium.launch({
+      headless: true, args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu"
+      ]
+    });
+
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    const sandbox = {
+      target_url: target_url,
+      scope: scope,
+      page: page,
+      browser: null,
+      context: null,
+      exports: {}
     }
-    finally {
-        channel.ack(msg);
-        if (browser) {
-            await browser.close();
-        }
+
+    vm.createContext(sandbox);
+    vm.runInContext(auth_script_content, sandbox);
+
+    // auth function from user
+    await sandbox.exports.authenticate({ page });
+
+    // extract auth context
+    const authContext = await extractAuthContext(page);
+
+
+    console.log("Auth Context: ", authContext);
+
+    const capturedRequests = await crawlAndCapture({
+      page,
+      target_url,
+      scope
+    });
+
+    console.log("[+] capturedRequests ", capturedRequests);
+  }
+  catch (err) {
+    console.log(err);
+  }
+  finally {
+    channel.ack(msg);
+    if (browser) {
+      await browser.close();
     }
+  }
 }
 
 async function extractAuthContext(page) {

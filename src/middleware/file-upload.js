@@ -3,7 +3,7 @@ import path from "path";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 
-const UPLOAD_DIR = "/app/uploads/auth-scripts";
+const UPLOAD_DIR = path.join(process.cwd(), "uploads", "auth-scripts");
 
 /**
  * Ensure upload directory exists
