@@ -52,9 +52,9 @@ export class ScanService {
                     source: 'browser-extension'
                 }).lean();
 
-                if (requests.length === 0) {
-                    throw ApiError.badRequest('No browser requests found for this project. Please import requests first.');
-                }
+                // if (requests.length === 0) {
+                //     throw ApiError.badRequest('No browser requests found for this project. Please import requests first.');
+                // }
 
                 // Update scan name if not provided
                 if (!scanData.name) {
