@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:v1.42.0-jammy
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy
 
 # Install build tools (Ubuntu-based image → use apt)
 RUN apt-get update && apt-get install -y \
