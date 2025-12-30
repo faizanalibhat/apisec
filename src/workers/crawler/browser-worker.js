@@ -35,20 +35,29 @@ export async function browserWorker(payload, msg, channel) {
     const context = await browser.newContext();
     const page = await context.newPage();
 
+    const exports = {};
     const sandbox = {
       target_url: target_url,
       scope: scope,
       page: page,
       browser: null,
       context: null,
-      exports: {}
+      console: console, // Added console for debugging in scripts
+      exports: exports,
+      module: { exports: exports }
     }
 
     vm.createContext(sandbox);
     vm.runInContext(auth_script_content, sandbox);
 
     // auth function from user
-    await sandbox.exports.authenticate({ page });
+    const authenticate = sandbox.module.exports.authenticate || sandbox.exports.authenticate || sandbox.authenticate;
+
+    if (typeof authenticate !== 'function') {
+      throw Error("Auth script must provide an 'authenticate' function");
+    }
+
+    await authenticate({ page });
 
     // extract auth context
     const authContext = await extractAuthContext(page);
