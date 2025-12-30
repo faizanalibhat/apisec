@@ -5,7 +5,6 @@ const router = express.Router();
 
 // Bulk operations
 router.post('/bulk/delete', rawEnvironmentController.bulkDelete);
-router.post('/fix-indexes', rawEnvironmentController.fixIndexes);
 
 // Get environments by workspace
 router.get('/workspace/:workspaceId', rawEnvironmentController.getByWorkspace);
