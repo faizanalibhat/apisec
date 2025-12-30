@@ -43,7 +43,11 @@ export async function crawlAndCapture({
   let clicks = 0;
 
   while (clicks < maxClicks) {
+    console.log("[+] VISITED URLS : ", visitedUrls);
+
     const clickables = await getInScopeClickables(page, scope);
+
+    console.log("[+] FOUND ", clickables.length, " clickables");
 
     if (!clickables.length) break;
 
