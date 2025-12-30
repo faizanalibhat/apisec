@@ -26,7 +26,7 @@ export async function crawlAndCapture({
    * 2️⃣ Capture requests (only in-scope will reach here)
    */
   page.on('request', req => {
-    if (!['xhr', 'fetch'].includes(req.resourceType())) return;
+    // if (!['xhr', 'fetch'].includes(req.resourceType())) return;
 
     const canon = canonicalizeRequest(req);
     requests.set(canon.signature, canon);

@@ -29,13 +29,14 @@ export class ScanService {
             let rules;
             let requests;
             let actualProjectIds = projectIds;
+            let project;
 
             if (isProjectBasedScan) {
                 // Project-based scan flow
                 const projectId = projectIds[0];
 
                 // Get project and verify it exists
-                const project = await this.projectsService.findById(projectId, orgId);
+                project = await this.projectsService.findById(projectId, orgId);
 
                 // Get effective rules for the project
                 rules = await this.projectsService.getEffectiveRules(projectId, orgId, 'system');
@@ -162,6 +163,9 @@ export class ScanService {
 
             // Publish scan to queue
             await mqbroker.publish("apisec", "apisec.scan.create", scan);
+
+            // publish scan projects event
+            await mqbroker.publish("apisec", "apisec.project.scan.launched", { project, scan });
 
             // Send to VM notification
             try {
