@@ -52,8 +52,24 @@ export async function crawlAndCapture({
     // if (!['xhr', 'fetch'].includes(req.resourceType())) return;
 
     const canon = canonicalizeRequest(req);
+    canon.orgId = context?.project?.orgId;
 
-    const request = await RawRequest.findOneAndUpdate({ method: canon.method, url: canon.url, source: canon.source, projectIds: { $in: [context?.project?._id] } }, { $set: canon, $push: { projectIds: context?.project?._id } }, { upsert: true, new: true });
+    const request = await RawRequest.findOneAndUpdate(
+      {
+        method: canon.method,
+        url: canon.url,
+        source: canon.source,
+        orgId: canon.orgId
+      },
+      {
+        $set: canon,
+        $addToSet: { projectIds: context?.project?._id }
+      },
+      {
+        upsert: true,
+        new: true
+      }
+    );
 
     // flow execute
     await mqbroker.publish('apisec', "apisec.scanflow.initiate", { request, ...context });
