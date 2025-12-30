@@ -53,7 +53,7 @@ export async function crawlAndCapture({
 
     const canon = canonicalizeRequest(req);
 
-    const request = await RawRequest.findOneAndUpdate({ method: canon.method, url: canon.url, source: canon.source, projectIds: context?.project?._id }, { $set: canon, $push: { projectIds: context?.project?._id } }, { upsert: true, new: true });
+    const request = await RawRequest.findOneAndUpdate({ method: canon.method, url: canon.url, source: canon.source, projectIds: { $in: [context?.project?._id] } }, { $set: canon, $push: { projectIds: context?.project?._id } }, { upsert: true, new: true });
 
     // flow execute
     await mqbroker.publish('apisec', "apisec.scanflow.initiate", { request, ...context });
