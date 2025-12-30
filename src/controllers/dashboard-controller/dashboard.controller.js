@@ -1,6 +1,7 @@
 import { DashboardService } from '../../services/dashboard.service.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { logger } from '../../utils/logger.js';
 
 class DashboardController {
     constructor() {
@@ -11,8 +12,9 @@ class DashboardController {
     }
 
     async getDashboardStats(req, res, next) {
+        const { orgId, firstName, lastName, email, _id } = req.authenticatedService;
+        const { trace_id } = req.context;
         try {
-            const { orgId } = req.authenticatedService;
             const { period = '7d' } = req.query;
 
             // Validate period format
@@ -27,10 +29,45 @@ class DashboardController {
                 period
             );
 
+            logger.info(`WAS Dashboard Controller Success`, {
+                actor: {
+                    name: firstName + " " + lastName,
+                    email,
+                    user_id: _id,
+                },
+                request: {
+                    trace_id: trace_id,
+                    method: req.method,
+                    url: req.url,
+                    query: req.query,
+                    body: req.body,
+                },
+                event: {
+                    action: "was.dashboard.fetch",
+                }
+            });
+
             res.sendApiResponse(
                 ApiResponse.success('Dashboard statistics fetched successfully', dashboardData)
             );
         } catch (error) {
+            logger.error(`WAS Dashboard Controller Error : ${error.message}`, {
+                actor: {
+                    name: firstName + " " + lastName,
+                    email,
+                    user_id: _id,
+                },
+                request: {
+                    trace_id: trace_id,
+                    method: req.method,
+                    url: req.url,
+                    query: req.query,
+                    body: req.body,
+                },
+                event: {
+                    action: "was.dashboard.fetch",
+                }
+            })
             next(error);
         }
     }
