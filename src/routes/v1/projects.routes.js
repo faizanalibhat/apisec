@@ -3,6 +3,8 @@ import * as projectsController from '../../controllers/projects-controller/proje
 import * as validation from '../../middleware/validation/projects.validation.js';
 import { authenticateService } from '../../middleware/auth.js';
 
+import { uploadSingle } from '../../middleware/file-upload.js';
+
 const router = express.Router();
 
 // Project routes
@@ -17,6 +19,7 @@ router.patch('/:projectId/collection', authenticateService(), projectsController
 
 // application setup
 router.patch("/:projectId/configure", authenticateService(), projectsController.configureProject);
+router.post("/:projectId/configure/upload", authenticateService(), uploadSingle("file"), projectsController.uploadAuthScript);
 
 // Collection management routes
 router.post('/:projectId/collections/add', authenticateService(), projectsController.addCollection);

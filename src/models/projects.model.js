@@ -29,6 +29,14 @@ const configurationSchema = new mongoose.Schema({
     auth_success_string: { type: String },
 });
 
+const fileSchema = new mongoose.Schema({
+    filename: { type: String, required: true },
+    original_name: { type: String, required: true },
+    file_type: { type: String, required: true },
+    file_size: { type: Number, required: true },
+    storage: { type: String },
+    path: { type: String, required: true }
+});
 
 const schema = new mongoose.Schema({
     orgId: { type: String, required: true },
@@ -43,6 +51,9 @@ const schema = new mongoose.Schema({
     owner: { type: ownerSchema },
 
     configuration: { type: configurationSchema },
+
+
+    authScript: { type: fileSchema },
 
     collectionUids: { type: [String], default: [] },
 

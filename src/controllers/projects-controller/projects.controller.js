@@ -39,6 +39,7 @@ class ProjectsController {
         this.getProjectDashboard = this.getProjectDashboard.bind(this);
         this.toggleCollectionStatus = this.toggleCollectionStatus.bind(this);
         this.configureProject = this.configureProject.bind(this);
+        this.uploadAuthScript = this.uploadAuthScript.bind(this);
     }
 
     async getProjects(req, res, next) {
@@ -676,7 +677,31 @@ class ProjectsController {
     }
 
 
+    async uploadAuthScript(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
 
+            const project = await Projects.findOne({ _id: projectId, orgId });
+
+            if (!project) {
+                throw ApiError.notFound('Project not found');
+            }
+
+            const file = req.uploadedFiles[0];
+
+            if (!file) {
+                throw ApiError.badRequest('No file uploaded');
+            }
+
+            project.authScript = file;
+            await project.save();
+
+            res.sendApiResponse(ApiResponse.success('Auth script uploaded successfully', project));
+        } catch (error) {
+            next(error);
+        }
+    }
 
 
 
@@ -703,5 +728,6 @@ export const {
     deleteBrowserRequest,
     getProjectDashboard,
     toggleCollectionStatus,
-    configureProject
+    configureProject,
+    uploadAuthScript
 } = controller;
