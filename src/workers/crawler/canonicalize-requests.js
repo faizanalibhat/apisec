@@ -42,11 +42,13 @@ export function canonicalizeRequest(req) {
   // 2. Filter headers (remove sensitive or transient ones)
   const filteredHeaders = filterHeaders(headers);
 
+  const cleanUrl = `${url.origin}${url.pathname}`;
+
   // 3. Construct the canonical object matching RawRequest model
   const canonical = {
     name: `${method} ${url.pathname}`,
     method: method,
-    url: req.url(),
+    url: cleanUrl,
     headers: filteredHeaders,
     params: Object.fromEntries(url.searchParams),
     body: body,

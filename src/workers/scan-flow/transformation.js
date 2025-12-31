@@ -49,7 +49,7 @@ export async function transformation({ request, project, scan }) {
         }
     }
 
-    console.log("[+] TOTAL TRANSFORMED REQUESTS : ", transformed_requests);
+    console.log("[+] TOTAL TRANSFORMED REQUESTS : ", transformed_requests.length);
 
     // store transformed requests
     const created_requests = await TransformedRequest.bulkWrite(bulkOps, { ordered: false });
