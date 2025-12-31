@@ -17,11 +17,15 @@ export async function transformation({ request, project, scan }) {
     let transformed_requests = [];
     let transformed = [];
 
+
+    let { _id, __v, createdAt, updatedAt, ...clean_request } = request;
+
+
     for(let rule of rules) {
         
         try {
             transformed = await EngineService.transform({
-                request,
+                request: clean_request,
                 rule: rule.parsed_yaml
             });
 
