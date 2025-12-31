@@ -44,6 +44,7 @@ export function canonicalizeRequest(req) {
 
   // 3. Construct the canonical object matching RawRequest model
   const canonical = {
+    name: `${method} ${url.pathname}`,
     method: method,
     url: req.url(),
     headers: filteredHeaders,
