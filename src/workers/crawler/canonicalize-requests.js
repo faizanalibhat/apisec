@@ -50,7 +50,7 @@ export function canonicalizeRequest(req) {
     params: Object.fromEntries(url.searchParams),
     body: body,
     body_format: body_format,
-    language: language,
+    // language: language,
     mode: body_format === 'json' ? 'raw' : body_format,
     rawHttp: generateRawHttp(method, url, headers, postData),
     source: 'crawler',
