@@ -9,11 +9,12 @@ export async function crawlAndCapture({
   scope,
   context
 }) {
-  const visitedUrls = new Set();
   const exploredUrls = new Set();
   const clickedSignatures = new Set();
-  const discoveredUrls = new Set([target_url]);
-  const queue = [target_url];
+  const canonicalTarget = canonicalizeUrl(target_url);
+  const discoveredUrls = new Set([canonicalTarget]);
+  const queue = [canonicalTarget];
+  const visitedUrls = new Set();
 
   const normalizedScope = (scope || []).map(s => {
     if (s.type === 'url') {
@@ -92,30 +93,34 @@ export async function crawlAndCapture({
    * 4️⃣ Crawling loop
    */
   while (queue.length > 0) {
-    const url = queue.shift();
-    if (exploredUrls.has(url)) continue;
+    const rawUrl = queue.shift();
+    const url = canonicalizeUrl(rawUrl);
+
+    if (exploredUrls.has(url)) {
+      console.log(`[CRAWLER][${url}] Already explored, skipping.`);
+      continue;
+    }
 
     console.log(`\n[CRAWLER][${url}] >>> Exploring: ${url}`);
 
     try {
-      if (page.url() !== url) {
+      if (canonicalizeUrl(page.url()) !== url) {
         await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
       }
       visitedUrls.add(url);
     } catch (e) {
-      console.log(`[CRAWLER][${page.url()}] !!! Failed to navigate to ${url}: ${e.message}`);
+      console.log(`[CRAWLER][${url}] !!! Failed to navigate: ${e.message}`);
       exploredUrls.add(url);
       continue;
     }
 
     let hasNewItems = true;
     while (hasNewItems) {
-      const currentUrl = page.url();
+      const currentUrl = canonicalizeUrl(page.url());
 
-      // If we've navigated to a page already fully explored, stop discovery here
+      // If we've navigated to a DIFFERENT page that is already fully explored, stop here
       if (exploredUrls.has(currentUrl) && currentUrl !== url) {
-        console.log(`[CRAWLER][${currentUrl}] Page already explored, skipping discovery.`);
-        hasNewItems = false;
+        console.log(`[CRAWLER][${currentUrl}] Navigated to explored page, returning to ${url}`);
         break;
       }
 
@@ -133,25 +138,15 @@ export async function crawlAndCapture({
         clickedAny = true;
 
         try {
-          const href = await el.getAttribute('href');
-          if (href) {
-            const resolved = new URL(href, page.url()).href;
-            if (isInScope(resolved, normalizedScope) && !discoveredUrls.has(resolved)) {
-              discoveredUrls.add(resolved);
-              queue.push(resolved);
-            }
-          }
-          const currentUrl = page.url();
-
-          // Log interaction details cleanly
           const elInfo = await el.evaluate(node => ({
             tag: node.tagName,
             text: (node.innerText || node.value || "").trim().substring(0, 30),
             type: node.type || ""
           }));
+
           console.log(`[CRAWLER][${currentUrl}] Interacting with [${elInfo.tag}${elInfo.type ? ':' + elInfo.type : ''}] "${elInfo.text}"`);
 
-          // Fill all visible inputs on the page before clicking to ensure data is present
+          // Fill all visible inputs on the page before clicking
           await fillAllVisibleInputs(page);
 
           // Perform the click
@@ -162,14 +157,25 @@ export async function crawlAndCapture({
           await page.waitForTimeout(800);
           await captureSpaNavigation(page, visitedUrls);
 
-          const postClickUrl = page.url();
+          const postClickUrl = canonicalizeUrl(page.url());
+
+          // If we navigated away, record it and decide whether to go back
           if (isInScope(postClickUrl, normalizedScope) && !discoveredUrls.has(postClickUrl)) {
             console.log(`[CRAWLER][${postClickUrl}] + Found new page: ${postClickUrl}`);
             discoveredUrls.add(postClickUrl);
             queue.push(postClickUrl);
           }
 
-          break; // Re-scan DOM after interaction to find new elements (e.g. in modals)
+          if (postClickUrl !== currentUrl) {
+            // If we navigated to a new URL, we should go back to finish the current page
+            // unless the new URL is just a canonical variation
+            if (postClickUrl !== url) {
+              console.log(`[CRAWLER][${postClickUrl}] Navigated away, returning to ${url} to finish scan...`);
+              await page.goto(url, { waitUntil: 'networkidle' });
+            }
+          }
+
+          break; // Re-scan DOM after interaction
         } catch {
           continue;
         }
@@ -190,6 +196,8 @@ export async function crawlAndCapture({
       }
     }
   }
+
+  console.log("[CRAWLER] SCAN COMPLETED >>> Explored: ", exploredUrls.size);
 }
 
 
@@ -223,7 +231,7 @@ async function getInScopeClickables(page, scope) {
           el.offsetHeight > 0;
       };
 
-      const tags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'DETAILS', 'SUMMARY'];
+      const tags = ['A', 'BUTTON', 'DETAILS', 'SUMMARY'];
       const roles = ['button', 'link', 'menuitem', 'option', 'tab', 'checkbox', 'radio', 'switch'];
 
       const all = document.querySelectorAll('a, button, input, select, textarea, [role], [onclick], div, span, li, svg');
@@ -236,9 +244,8 @@ async function getInScopeClickables(page, scope) {
         const tagName = el.tagName;
 
         if (tags.includes(tagName)) {
-          // Exclude hidden inputs or disabled elements
-          if (tagName === 'INPUT' && el.type === 'hidden') continue;
-          if (el.disabled) continue;
+          isClickable = true;
+        } else if (tagName === 'INPUT' && (el.type === 'submit' || el.type === 'button')) {
           isClickable = true;
         } else if (roles.includes(el.getAttribute('role'))) {
           isClickable = true;
@@ -273,9 +280,9 @@ async function getInScopeClickables(page, scope) {
         // Clean up the attribute
         await el.evaluate(node => node.removeAttribute('data-crawl-id'));
 
-        const href = await el.getAttribute('href');
-        if (href) {
-          const resolved = new URL(href, page.url()).href;
+        const rawHref = await el.getAttribute('href');
+        if (rawHref) {
+          const resolved = new URL(rawHref, page.url()).href;
           if (!isInScope(resolved, scope)) continue;
         }
 
@@ -353,6 +360,7 @@ async function fillSingleInput(input) {
 
 async function getElementSignature(el, currentUrl) {
   try {
+    const canonical = canonicalizeUrl(currentUrl);
     return await el.evaluate((node, url) => {
       const tag = node.tagName;
       const text = (node.innerText || node.value || "").trim().substring(0, 50);
@@ -363,28 +371,53 @@ async function getElementSignature(el, currentUrl) {
 
       if (href) {
         try {
-          return new URL(href, url).href;
+          const resolved = new URL(href, url).href;
+          // We don't canonicalize here to keep hrefs precise, 
+          // but the base URL is already canonicalized.
+          return resolved;
         } catch {
           return href;
         }
       }
 
       return `${url}|${tag}|${text}|${id}|${className}|${role}`;
-    }, currentUrl);
+    }, canonical);
   } catch {
     return null;
   }
 }
 
 
+function canonicalizeUrl(urlStr) {
+  try {
+    const u = new URL(urlStr);
+    // Keep hash routes (e.g. /#/dashboard), remove anchors (e.g. #how-it-works)
+    u.hash = u.hash && u.hash.includes('/') ? u.hash : '';
+
+    // Remove empty query
+    if (u.search === '?') u.search = '';
+
+    // Remove trailing slash from pathname
+    let path = u.pathname;
+    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    u.pathname = path;
+
+    // Return consistent format
+    return u.origin + u.pathname + u.search + u.hash;
+  } catch {
+    return urlStr;
+  }
+}
+
+
 function isInScope(url, scope) {
-  if (!scope || !scope.length) return true; // Default to in-scope if no scope defined
+  if (!scope || !scope.length) return true;
 
   try {
-    const u = new URL(url).href;
+    const u = canonicalizeUrl(url);
     return scope.some(s => {
       if (s.type === 'url') {
-        return u.startsWith(s.value);
+        return u.startsWith(canonicalizeUrl(s.value));
       }
       if (s.type === 'regex') {
         try {
