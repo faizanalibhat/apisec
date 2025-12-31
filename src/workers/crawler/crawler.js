@@ -95,7 +95,7 @@ export async function crawlAndCapture({
     const url = queue.shift();
     if (exploredUrls.has(url)) continue;
 
-    console.log(`\n[CRAWLER] >>> Exploring: ${url}`);
+    console.log(`\n[CRAWLER][${url}] >>> Exploring: ${url}`);
 
     try {
       if (page.url() !== url) {
@@ -103,15 +103,26 @@ export async function crawlAndCapture({
       }
       visitedUrls.add(url);
     } catch (e) {
-      console.log(`[CRAWLER] !!! Failed to navigate to ${url}: ${e.message}`);
+      console.log(`[CRAWLER][${page.url()}] !!! Failed to navigate to ${url}: ${e.message}`);
       exploredUrls.add(url);
       continue;
     }
 
     let hasNewItems = true;
     while (hasNewItems) {
+      const currentUrl = page.url();
+
+      // If we've navigated to a page already fully explored, stop discovery here
+      if (exploredUrls.has(currentUrl) && currentUrl !== url) {
+        console.log(`[CRAWLER][${currentUrl}] Page already explored, skipping discovery.`);
+        hasNewItems = false;
+        break;
+      }
+
       const clickables = await getInScopeClickables(page, normalizedScope);
-      console.log(`[CRAWLER] Found ${clickables.length} interactive elements on current view`);
+      if (clickables.length > 0) {
+        console.log(`[CRAWLER][${currentUrl}] Found ${clickables.length} interactive elements`);
+      }
       let clickedAny = false;
 
       for (const el of clickables) {
@@ -130,6 +141,7 @@ export async function crawlAndCapture({
               queue.push(resolved);
             }
           }
+          const currentUrl = page.url();
 
           // Log interaction details cleanly
           const elInfo = await el.evaluate(node => ({
@@ -137,7 +149,7 @@ export async function crawlAndCapture({
             text: (node.innerText || node.value || "").trim().substring(0, 30),
             type: node.type || ""
           }));
-          console.log(`[CRAWLER] Interacting with [${elInfo.tag}${elInfo.type ? ':' + elInfo.type : ''}] "${elInfo.text}"`);
+          console.log(`[CRAWLER][${currentUrl}] Interacting with [${elInfo.tag}${elInfo.type ? ':' + elInfo.type : ''}] "${elInfo.text}"`);
 
           // Fill all visible inputs on the page before clicking to ensure data is present
           await fillAllVisibleInputs(page);
@@ -150,11 +162,11 @@ export async function crawlAndCapture({
           await page.waitForTimeout(800);
           await captureSpaNavigation(page, visitedUrls);
 
-          const currentUrl = page.url();
-          if (isInScope(currentUrl, normalizedScope) && !discoveredUrls.has(currentUrl)) {
-            console.log(`[CRAWLER] + Found new page: ${currentUrl}`);
-            discoveredUrls.add(currentUrl);
-            queue.push(currentUrl);
+          const postClickUrl = page.url();
+          if (isInScope(postClickUrl, normalizedScope) && !discoveredUrls.has(postClickUrl)) {
+            console.log(`[CRAWLER][${postClickUrl}] + Found new page: ${postClickUrl}`);
+            discoveredUrls.add(postClickUrl);
+            queue.push(postClickUrl);
           }
 
           break; // Re-scan DOM after interaction to find new elements (e.g. in modals)
@@ -283,9 +295,10 @@ async function getInScopeClickables(page, scope) {
 
 async function fillAllVisibleInputs(page) {
   try {
+    const currentUrl = page.url();
     const inputs = await page.$$('input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea');
     if (inputs.length > 0) {
-      console.log(`[CRAWLER] Filling ${inputs.length} visible inputs...`);
+      console.log(`[CRAWLER][${currentUrl}] Filling ${inputs.length} visible inputs...`);
     }
     for (const input of inputs) {
       try {
