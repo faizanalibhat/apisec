@@ -1,6 +1,6 @@
 import Rules from "../../models/rule.model.js";
 import TransformedRequest from "../../models/transformedRequest.model.js";
-import EngineService from "../../services/engine/engine.service.js";
+import { EngineService } from "../../services/engine/engine.service.js";
 
 
 export async function transformation({ request, project, scan }) {
