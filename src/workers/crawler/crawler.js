@@ -30,7 +30,6 @@ export async function crawlAndCapture({
   });
 
   // Always include target_url in scope
-  const canonicalTarget = canonicalizeUrl(target_url);
   if (!normalizedScope.some(s => s.type === 'url' && canonicalTarget.startsWith(s.value))) {
     normalizedScope.push({ type: 'url', value: canonicalTarget });
   }
