@@ -59,7 +59,6 @@ export async function crawlAndCapture({
       await newPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { });
       const newUrl = canonicalizeUrl(newPage.url());
       if (isInScope(newUrl, normalizedScope) && !discoveredUrls.has(newUrl)) {
-        console.log(`[CRAWLER][${newUrl}] + Found new page in new tab: ${newUrl}`);
         discoveredUrls.add(newUrl);
         queue.push(newUrl);
       }
@@ -143,16 +142,12 @@ export async function crawlAndCapture({
       }
 
       const clickables = await getInScopeClickables(page, normalizedScope);
-      if (clickables.length > 0) {
-        console.log(`[CRAWLER][${currentUrl}] Found ${clickables.length} interactive elements`);
-      }
       let clickedAny = false;
 
       for (const el of clickables) {
         // CRITICAL: Ensure we are still on the correct page before interacting
         const nowUrl = canonicalizeUrl(page.url());
         if (nowUrl !== url) {
-          console.log(`[CRAWLER][${nowUrl}] Off-track, returning to ${url} before next interaction`);
           await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
         }
 
@@ -163,14 +158,6 @@ export async function crawlAndCapture({
         clickedAny = true;
 
         try {
-          const elInfo = await el.evaluate(node => ({
-            tag: node.tagName,
-            text: (node.innerText || node.value || "").trim().substring(0, 30),
-            type: node.type || ""
-          }));
-
-          console.log(`[CRAWLER][${currentUrl}] Interacting with [${elInfo.tag}] "${elInfo.text}"`);
-
           // Fill all visible inputs on the page before clicking
           await fillAllVisibleInputs(page);
 
@@ -185,13 +172,8 @@ export async function crawlAndCapture({
 
           const postClickUrl = canonicalizeUrl(page.url());
 
-          if (postClickUrl !== currentUrl) {
-            console.log(`[CRAWLER][${currentUrl}] Navigated to ${postClickUrl}`);
-          }
-
           // If we navigated away, record it
           if (isInScope(postClickUrl, normalizedScope) && !discoveredUrls.has(postClickUrl)) {
-            console.log(`[CRAWLER][${postClickUrl}] + Found new page: ${postClickUrl}`);
             discoveredUrls.add(postClickUrl);
             queue.push(postClickUrl);
           }
@@ -205,7 +187,6 @@ export async function crawlAndCapture({
 
             // If we are not on the original URL anymore, go back to finish the scan
             if (postClickUrl !== url) {
-              console.log(`[CRAWLER][${postClickUrl}] Returning to ${url} to finish remaining elements...`);
               await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
             }
           }
@@ -337,11 +318,7 @@ async function getInScopeClickables(page, scope) {
 
 async function fillAllVisibleInputs(page) {
   try {
-    const currentUrl = page.url();
     const inputs = await page.$$('input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea');
-    if (inputs.length > 0) {
-      console.log(`[CRAWLER][${currentUrl}] Filling ${inputs.length} visible inputs...`);
-    }
     for (const input of inputs) {
       try {
         const isVisible = await input.isVisible();
