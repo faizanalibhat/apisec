@@ -59,10 +59,10 @@ export async function crawlAndCapture({
     // console.log("[+] CREATED REQUEST: ", canon);
 
     const exists = await RawRequest.findOne({
-        method: canon.method,
-        url: canon.url,
-        source: canon.source,
-        orgId: canon.orgId
+      method: canon.method,
+      url: canon.url,
+      source: canon.source,
+      orgId: canon.orgId
     });
 
     if (exists) return;
@@ -130,15 +130,17 @@ export async function crawlAndCapture({
             }
           }
 
-          console.log("[+] Clicking: ", signature);
+          console.log("[+] Interacting with: ", signature);
 
-          // Check if element is a submit button or inside a form
-          await handleFormInteractions(page, el);
+          // Fill all visible inputs on the page before clicking to ensure data is present
+          await fillAllVisibleInputs(page);
 
+          // Perform the click
           await el.click({ timeout: 3000, trial: true });
           await el.click({ timeout: 3000 });
 
-          await page.waitForTimeout(500);
+          // Wait for potential DOM changes/animations
+          await page.waitForTimeout(800);
           await captureSpaNavigation(page, visitedUrls);
 
           const currentUrl = page.url();
@@ -147,7 +149,7 @@ export async function crawlAndCapture({
             queue.push(currentUrl);
           }
 
-          break; // Re-scan DOM after click
+          break; // Re-scan DOM after interaction to find new elements (e.g. in modals)
         } catch {
           continue;
         }
@@ -190,20 +192,68 @@ async function captureSpaNavigation(page, visitedUrls) {
 
 async function getInScopeClickables(page, scope) {
   try {
-    // Expanded selector to include inputs that might trigger actions
-    const elements = await page.$$('a, button, [role="button"], [onclick], input[type="submit"], input[type="button"]');
+    // Use a script to find all potentially clickable elements, including those with JS handlers
+    const clickableSelectors = await page.evaluate(() => {
+      const isVisible = (el) => {
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          style.opacity !== '0' &&
+          el.offsetWidth > 0 &&
+          el.offsetHeight > 0;
+      };
+
+      const tags = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'DETAILS', 'SUMMARY'];
+      const roles = ['button', 'link', 'menuitem', 'option', 'tab', 'checkbox', 'radio', 'switch'];
+
+      const all = document.querySelectorAll('a, button, input, select, textarea, [role], [onclick], div, span, li, svg');
+      const foundIds = [];
+
+      for (const el of all) {
+        if (!isVisible(el)) continue;
+
+        let isClickable = false;
+        const tagName = el.tagName;
+
+        if (tags.includes(tagName)) {
+          // Exclude hidden inputs or disabled elements
+          if (tagName === 'INPUT' && el.type === 'hidden') continue;
+          if (el.disabled) continue;
+          isClickable = true;
+        } else if (roles.includes(el.getAttribute('role'))) {
+          isClickable = true;
+        } else if (el.hasAttribute('onclick')) {
+          isClickable = true;
+        } else {
+          // Heuristic for React/SPA: cursor pointer usually means a JS handler is attached
+          const style = window.getComputedStyle(el);
+          if (style.cursor === 'pointer') {
+            // Avoid large containers that just inherit pointer; check if it's a leaf-ish node
+            if (el.children.length < 5) isClickable = true;
+          }
+        }
+
+        if (isClickable) {
+          // Mark element so we can find it with Playwright
+          const id = 'crawl-' + Math.random().toString(36).substr(2, 9);
+          el.setAttribute('data-crawl-id', id);
+          foundIds.push(id);
+        }
+      }
+      return foundIds;
+    });
+
     const inScope = [];
-
-    for (const el of elements) {
+    for (const id of clickableSelectors) {
       try {
-        const isVisible = await el.isVisible();
-        if (!isVisible) continue;
+        const selector = `[data-crawl-id="${id}"]`;
+        const el = await page.$(selector);
+        if (!el) continue;
 
-        const isDisabled = await el.isDisabled();
-        if (isDisabled) continue;
+        // Clean up the attribute
+        await el.evaluate(node => node.removeAttribute('data-crawl-id'));
 
         const href = await el.getAttribute('href');
-
         if (href) {
           const resolved = new URL(href, page.url()).href;
           if (!isInScope(resolved, scope)) continue;
@@ -216,37 +266,25 @@ async function getInScopeClickables(page, scope) {
     }
 
     return inScope;
-  } catch {
+  } catch (e) {
+    console.error("[-] Error finding clickables: ", e.message);
     return [];
   }
 }
 
 
-async function handleFormInteractions(page, element) {
+async function fillAllVisibleInputs(page) {
   try {
-    // Check if the element is a submit button or inside a form
-    const form = await element.evaluateHandle(el => el.closest('form'));
-
-    if (form.asElement()) {
-      console.log("[+] Filling form before submission...");
-      await fillFormInputs(page, form);
-    } else {
-      // If not in a form, check if it's a standalone interactive element (like a toggle/switch)
-      const isInput = await element.evaluate(el => ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName));
-      if (isInput) {
-        await fillSingleInput(element);
-      }
-    }
-  } catch (e) {
-    // console.log("[-] Form interaction failed: ", e.message);
-  }
-}
-
-async function fillFormInputs(page, formHandle) {
-  try {
-    const inputs = await formHandle.$$('input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea');
+    const inputs = await page.$$('input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea');
     for (const input of inputs) {
-      await fillSingleInput(input);
+      try {
+        const isVisible = await input.isVisible();
+        if (isVisible) {
+          await fillSingleInput(input);
+        }
+      } catch {
+        /* ignore */
+      }
     }
   } catch (e) {
     /* ignore */
