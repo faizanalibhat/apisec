@@ -19,7 +19,9 @@ export async function crawlAndCapture({
   const normalizedScope = (scope || []).map(s => {
     if (s.type === 'url') {
       try {
-        return { ...s, value: new URL(s.value, target_url).href };
+        // Use target_url as base for relative paths, then canonicalize
+        const absolute = new URL(s.value, target_url).href;
+        return { ...s, value: canonicalizeUrl(absolute) };
       } catch {
         return s;
       }
@@ -28,8 +30,9 @@ export async function crawlAndCapture({
   });
 
   // Always include target_url in scope
-  if (!normalizedScope.some(s => s.type === 'url' && target_url.startsWith(s.value))) {
-    normalizedScope.push({ type: 'url', value: new URL('/', target_url).href });
+  const canonicalTarget = canonicalizeUrl(target_url);
+  if (!normalizedScope.some(s => s.type === 'url' && canonicalTarget.startsWith(s.value))) {
+    normalizedScope.push({ type: 'url', value: canonicalTarget });
   }
 
   await page.route('**/*', route => {
@@ -144,7 +147,7 @@ export async function crawlAndCapture({
             type: node.type || ""
           }));
 
-          console.log(`[CRAWLER][${currentUrl}] Interacting with [${elInfo.tag}${elInfo.type ? ':' + elInfo.type : ''}] "${elInfo.text}"`);
+          console.log(`[CRAWLER][${currentUrl}] Interacting with [${elInfo.tag}] "${elInfo.text}"`);
 
           // Fill all visible inputs on the page before clicking
           await fillAllVisibleInputs(page);
@@ -157,7 +160,10 @@ export async function crawlAndCapture({
           await page.waitForTimeout(800);
           await captureSpaNavigation(page, visitedUrls);
 
-          const postClickUrl = canonicalizeUrl(page.url());
+          console.log(`[CRAWLER][${currentUrl}] Navigated to ${postClickUrl}`);
+
+          // print scope currently
+          console.log(`[CRAWLER][${currentUrl}] Scope: ${normalizedScope.map(s => s.value).join(', ')}`);
 
           // If we navigated away, record it and decide whether to go back
           if (isInScope(postClickUrl, normalizedScope) && !discoveredUrls.has(postClickUrl)) {
@@ -417,7 +423,8 @@ function isInScope(url, scope) {
     const u = canonicalizeUrl(url);
     return scope.some(s => {
       if (s.type === 'url') {
-        return u.startsWith(canonicalizeUrl(s.value));
+        // Scope values are already canonicalized in normalizedScope
+        return u.startsWith(s.value);
       }
       if (s.type === 'regex') {
         try {
