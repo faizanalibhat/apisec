@@ -58,6 +58,15 @@ export async function crawlAndCapture({
 
     // console.log("[+] CREATED REQUEST: ", canon);
 
+    const exists = await RawRequest.findOne({
+        method: canon.method,
+        url: canon.url,
+        source: canon.source,
+        orgId: canon.orgId
+    });
+
+    if (exists) return;
+
     const request = await RawRequest.findOneAndUpdate(
       {
         method: canon.method,

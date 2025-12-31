@@ -132,8 +132,6 @@ export default {
 
     const transformedHeaders = applyRules(targetHeaders, headerRules);
 
-    console.log("[+] TRANSFORMED HEADERS : ", transformedHeaders);
-
     requests = transformedHeaders.map(headers => {
       const newRequest = _.cloneDeep(request);
 
