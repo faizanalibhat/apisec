@@ -20,7 +20,7 @@ export async function requestReplay({ requestIds = [], scan, project }) {
 
         const rule = await Rule.findOne({ _id: transformed_request.ruleId });
 
-        const response = await EngineService.replay({
+        const response = await EngineService.sendRequest({
             request: transformed_request,
             rule: rule.parsed_yaml
         });
