@@ -122,6 +122,10 @@ export async function crawlAndCapture({
           }
 
           console.log("[+] Clicking: ", signature);
+
+          // Check if element is a submit button or inside a form
+          await handleFormInteractions(page, el);
+
           await el.click({ timeout: 3000, trial: true });
           await el.click({ timeout: 3000 });
 
@@ -177,13 +181,17 @@ async function captureSpaNavigation(page, visitedUrls) {
 
 async function getInScopeClickables(page, scope) {
   try {
-    const elements = await page.$$('a, button, [role="button"], [onclick]');
+    // Expanded selector to include inputs that might trigger actions
+    const elements = await page.$$('a, button, [role="button"], [onclick], input[type="submit"], input[type="button"]');
     const inScope = [];
 
     for (const el of elements) {
       try {
         const isVisible = await el.isVisible();
         if (!isVisible) continue;
+
+        const isDisabled = await el.isDisabled();
+        if (isDisabled) continue;
 
         const href = await el.getAttribute('href');
 
@@ -201,6 +209,73 @@ async function getInScopeClickables(page, scope) {
     return inScope;
   } catch {
     return [];
+  }
+}
+
+
+async function handleFormInteractions(page, element) {
+  try {
+    // Check if the element is a submit button or inside a form
+    const form = await element.evaluateHandle(el => el.closest('form'));
+
+    if (form.asElement()) {
+      console.log("[+] Filling form before submission...");
+      await fillFormInputs(page, form);
+    } else {
+      // If not in a form, check if it's a standalone interactive element (like a toggle/switch)
+      const isInput = await element.evaluate(el => ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName));
+      if (isInput) {
+        await fillSingleInput(element);
+      }
+    }
+  } catch (e) {
+    // console.log("[-] Form interaction failed: ", e.message);
+  }
+}
+
+async function fillFormInputs(page, formHandle) {
+  try {
+    const inputs = await formHandle.$$('input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea');
+    for (const input of inputs) {
+      await fillSingleInput(input);
+    }
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+async function fillSingleInput(input) {
+  try {
+    const info = await input.evaluate(el => {
+      return {
+        tagName: el.tagName,
+        type: el.type,
+        name: el.name,
+        id: el.id,
+        placeholder: el.placeholder,
+        role: el.getAttribute('role')
+      };
+    });
+
+    if (info.tagName === 'SELECT') {
+      const options = await input.$$('option');
+      if (options.length > 1) {
+        await input.selectOption({ index: 1 });
+      }
+    } else if (info.type === 'checkbox' || info.type === 'radio' || info.role === 'switch') {
+      const isChecked = await input.isChecked();
+      if (!isChecked) await input.check();
+    } else if (['text', 'email', 'password', 'tel', 'url', 'number', 'search'].includes(info.type) || info.tagName === 'TEXTAREA') {
+      let value = "test_data";
+      if (info.type === 'email') value = "test@example.com";
+      if (info.type === 'number') value = "123";
+      if (info.type === 'tel') value = "1234567890";
+      if (info.type === 'url') value = "https://example.com";
+
+      await input.fill(value);
+    }
+  } catch (e) {
+    /* ignore */
   }
 }
 
