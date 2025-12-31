@@ -7,11 +7,13 @@ export async function crawlAndCapture({
   page,
   target_url,
   scope,
-  maxClicks = 30,
   context
 }) {
-  const requests = new Map();
   const visitedUrls = new Set();
+  const exploredUrls = new Set();
+  const clickedSignatures = new Set();
+  const discoveredUrls = new Set([target_url]);
+  const queue = [target_url];
 
   const normalizedScope = (scope || []).map(s => {
     if (s.type === 'url') {
@@ -78,43 +80,81 @@ export async function crawlAndCapture({
   });
 
   /**
-   * 3️⃣ Initial navigation
+   * 4️⃣ Crawling loop
    */
-  await safeGoto(page, target_url, normalizedScope, visitedUrls);
+  while (queue.length > 0) {
+    const url = queue.shift();
+    if (exploredUrls.has(url)) continue;
 
-  /**
-   * 4️⃣ Controlled crawling loop
-   */
-  let clicks = 0;
+    console.log("[+] Exploring URL: ", url);
 
-  while (clicks < maxClicks) {
-    console.log("[+] VISITED URLS : ", visitedUrls);
+    try {
+      if (page.url() !== url) {
+        await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      }
+      visitedUrls.add(url);
+    } catch (e) {
+      console.log(`[-] Failed to navigate to ${url}: ${e.message}`);
+      exploredUrls.add(url);
+      continue;
+    }
 
-    const clickables = await getInScopeClickables(page, normalizedScope);
+    let hasNewItems = true;
+    while (hasNewItems) {
+      const clickables = await getInScopeClickables(page, normalizedScope);
+      let clickedAny = false;
 
-    console.log("[+] FOUND ", clickables.length, " clickables");
+      for (const el of clickables) {
+        const signature = await getElementSignature(el, page.url());
+        if (!signature || clickedSignatures.has(signature)) continue;
 
-    if (!clickables.length) break;
+        clickedSignatures.add(signature);
+        clickedAny = true;
 
-    for (const el of clickables) {
-      if (clicks >= maxClicks) break;
+        try {
+          const href = await el.getAttribute('href');
+          if (href) {
+            const resolved = new URL(href, page.url()).href;
+            if (isInScope(resolved, normalizedScope) && !discoveredUrls.has(resolved)) {
+              discoveredUrls.add(resolved);
+              queue.push(resolved);
+            }
+          }
 
-      try {
-        await el.click({ timeout: 2000, trial: true });
-        await el.click({ timeout: 2000 });
+          console.log("[+] Clicking: ", signature);
+          await el.click({ timeout: 3000, trial: true });
+          await el.click({ timeout: 3000 });
 
-        clicks++;
+          await page.waitForTimeout(500);
+          await captureSpaNavigation(page, visitedUrls);
 
-        await page.waitForTimeout(400);
-        await captureSpaNavigation(page, visitedUrls);
+          const currentUrl = page.url();
+          if (isInScope(currentUrl, normalizedScope) && !discoveredUrls.has(currentUrl)) {
+            discoveredUrls.add(currentUrl);
+            queue.push(currentUrl);
+          }
 
-      } catch {
-        /* ignore */
+          break; // Re-scan DOM after click
+        } catch {
+          continue;
+        }
+      }
+
+      if (!clickedAny) {
+        hasNewItems = false;
+      }
+    }
+
+    exploredUrls.add(url);
+
+    // Sync queue with newly discovered visitedUrls
+    for (const vUrl of visitedUrls) {
+      if (!discoveredUrls.has(vUrl)) {
+        discoveredUrls.add(vUrl);
+        queue.push(vUrl);
       }
     }
   }
-
-  return Array.from(requests.values());
 }
 
 
@@ -136,25 +176,58 @@ async function captureSpaNavigation(page, visitedUrls) {
 
 
 async function getInScopeClickables(page, scope) {
-  const elements = await page.$$('a, button, [role="button"], [onclick]');
-  const inScope = [];
+  try {
+    const elements = await page.$$('a, button, [role="button"], [onclick]');
+    const inScope = [];
 
-  for (const el of elements) {
-    try {
-      const href = await el.getAttribute('href');
+    for (const el of elements) {
+      try {
+        const isVisible = await el.isVisible();
+        if (!isVisible) continue;
+
+        const href = await el.getAttribute('href');
+
+        if (href) {
+          const resolved = new URL(href, page.url()).href;
+          if (!isInScope(resolved, scope)) continue;
+        }
+
+        inScope.push(el);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    return inScope;
+  } catch {
+    return [];
+  }
+}
+
+
+async function getElementSignature(el, currentUrl) {
+  try {
+    return await el.evaluate((node, url) => {
+      const tag = node.tagName;
+      const text = (node.innerText || node.value || "").trim().substring(0, 50);
+      const href = node.getAttribute('href');
+      const id = node.id || '';
+      const className = node.className || '';
+      const role = node.getAttribute('role') || '';
 
       if (href) {
-        const resolved = new URL(href, page.url()).href;
-        if (!isInScope(resolved, scope)) continue;
+        try {
+          return new URL(href, url).href;
+        } catch {
+          return href;
+        }
       }
 
-      inScope.push(el);
-    } catch {
-      /* ignore */
-    }
+      return `${url}|${tag}|${text}|${id}|${className}|${role}`;
+    }, currentUrl);
+  } catch {
+    return null;
   }
-
-  return inScope;
 }
 
 

@@ -71,7 +71,7 @@ export async function browserWorker(payload, msg, channel) {
 
     // console.log("Auth Context: ", authContext);
 
-    const capturedRequests = await crawlAndCapture({
+    await crawlAndCapture({
       page,
       context: { project, scan },
       target_url,
