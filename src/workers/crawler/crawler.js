@@ -53,6 +53,22 @@ export async function crawlAndCapture({
     return route.continue();
   });
 
+  // Handle new tabs/pages opened by clicks
+  page.context().on('page', async (newPage) => {
+    try {
+      await newPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { });
+      const newUrl = canonicalizeUrl(newPage.url());
+      if (isInScope(newUrl, normalizedScope) && !discoveredUrls.has(newUrl)) {
+        console.log(`[CRAWLER][${newUrl}] + Found new page in new tab: ${newUrl}`);
+        discoveredUrls.add(newUrl);
+        queue.push(newUrl);
+      }
+      await newPage.close();
+    } catch {
+      /* ignore */
+    }
+  });
+
   page.on('request', async (req) => {
     // if (!['xhr', 'fetch'].includes(req.resourceType())) return;
 
@@ -133,6 +149,13 @@ export async function crawlAndCapture({
       let clickedAny = false;
 
       for (const el of clickables) {
+        // CRITICAL: Ensure we are still on the correct page before interacting
+        const nowUrl = canonicalizeUrl(page.url());
+        if (nowUrl !== url) {
+          console.log(`[CRAWLER][${nowUrl}] Off-track, returning to ${url} before next interaction`);
+          await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+        }
+
         const signature = await getElementSignature(el, page.url());
         if (!signature || clickedSignatures.has(signature)) continue;
 
@@ -152,19 +175,21 @@ export async function crawlAndCapture({
           await fillAllVisibleInputs(page);
 
           // Perform the click
-          await el.click({ timeout: 3000, trial: true });
-          await el.click({ timeout: 3000 });
+          await el.click({ timeout: 5000, trial: true });
+          await el.click({ timeout: 5000 });
 
-          // Wait for potential DOM changes/animations
-          await page.waitForTimeout(800);
+          // Wait for potential DOM changes/animations/redirections
+          // We wait for either a URL change or a short timeout
+          await page.waitForTimeout(1500);
           await captureSpaNavigation(page, visitedUrls);
 
-          console.log(`[CRAWLER][${currentUrl}] Navigated to ${postClickUrl}`);
+          const postClickUrl = canonicalizeUrl(page.url());
 
-          // print scope currently
-          console.log(`[CRAWLER][${currentUrl}] Scope: ${normalizedScope.map(s => s.value).join(', ')}`);
+          if (postClickUrl !== currentUrl) {
+            console.log(`[CRAWLER][${currentUrl}] Navigated to ${postClickUrl}`);
+          }
 
-          // If we navigated away, record it and decide whether to go back
+          // If we navigated away, record it
           if (isInScope(postClickUrl, normalizedScope) && !discoveredUrls.has(postClickUrl)) {
             console.log(`[CRAWLER][${postClickUrl}] + Found new page: ${postClickUrl}`);
             discoveredUrls.add(postClickUrl);
@@ -172,11 +197,16 @@ export async function crawlAndCapture({
           }
 
           if (postClickUrl !== currentUrl) {
-            // If we navigated to a new URL, we should go back to finish the current page
-            // unless the new URL is just a canonical variation
+            // If we navigated to a new URL that is in scope, let it settle for a moment
+            // to capture any initial requests (XHR/Fetch)
+            if (isInScope(postClickUrl, normalizedScope)) {
+              await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { });
+            }
+
+            // If we are not on the original URL anymore, go back to finish the scan
             if (postClickUrl !== url) {
-              console.log(`[CRAWLER][${postClickUrl}] Navigated away, returning to ${url} to finish scan...`);
-              await page.goto(url, { waitUntil: 'networkidle' });
+              console.log(`[CRAWLER][${postClickUrl}] Returning to ${url} to finish remaining elements...`);
+              await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
             }
           }
 
