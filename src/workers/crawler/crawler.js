@@ -54,7 +54,7 @@ export async function crawlAndCapture({
     const canon = canonicalizeRequest(req);
     canon.orgId = context?.project?.orgId;
 
-    console.log("[+] CREATED REQUEST: ", canon);
+    // console.log("[+] CREATED REQUEST: ", canon);
 
     const request = await RawRequest.findOneAndUpdate(
       {

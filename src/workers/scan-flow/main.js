@@ -13,7 +13,6 @@ async function handleRequestScan(payload, msg, channel) {
     }
 }
 
-
 export async function handleScanFlow() {
     await mqbroker.consume("apisec", "apisec.scanflow.initiate", handleRequestScan, "scanFlowQueue", { prefetchCount: 1 });
 }
