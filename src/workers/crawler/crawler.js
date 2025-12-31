@@ -63,7 +63,10 @@ export async function crawlAndCapture({
         source: canon.source,
         orgId: canon.orgId
       },
-      canon,
+      {
+        $set: canon,
+        $addToSet: { projectIds: context?.project?._id }
+      },
       {
         upsert: true,
         new: true

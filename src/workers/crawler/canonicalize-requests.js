@@ -73,6 +73,10 @@ export function canonicalizeRequest(req) {
 }
 
 function filterHeaders(headers) {
+
+  // dont filter headers - let rules do their job.
+  return headers;
+
   const allowed = {};
   const sensitiveHeaders = ['cookie', 'authorization', 'proxy-authorization', 'content-length', 'host'];
 
