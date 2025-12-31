@@ -8,7 +8,7 @@ import yaml from "js-yaml";
 class RuleController {
     constructor() {
         this.ruleService = new RuleService();
-        
+
         // Bind methods to maintain context
         this.createRule = this.createRule.bind(this);
         this.getRules = this.getRules.bind(this);

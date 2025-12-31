@@ -36,7 +36,7 @@ const globalErrorHandler = (err, req, res, next) => {
             field: e.path,
             message: e.message
         }));
-        
+
         return res.sendApiResponse(
             ApiResponse.error('Validation error', errors, 400)
         );
@@ -58,13 +58,21 @@ const globalErrorHandler = (err, req, res, next) => {
     }
 
     // Default error
-    res.sendApiResponse(
-        ApiResponse.error(
-            err.message || 'Internal server error',
-            null,
-            err.statusCode || 500
-        )
-    );
+    const statusCode = err.statusCode || 500;
+    const message = err.message || 'Internal server error';
+
+    if (typeof res.sendApiResponse === 'function') {
+        res.sendApiResponse(
+            ApiResponse.error(message, null, statusCode)
+        );
+    } else {
+        res.status(statusCode).json({
+            status: 'error',
+            message: message,
+            statusCode: statusCode,
+            data: null
+        });
+    }
 };
 
 // Export all functions at the end
