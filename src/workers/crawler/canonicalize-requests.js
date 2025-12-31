@@ -88,7 +88,7 @@ function generateRawHttp(method, url, headers, body) {
   let raw = `${method} ${url.pathname}${url.search} HTTP/1.1\n`;
   raw += `Host: ${url.host}\n`;
 
-  for (const [k, v] of Object.entries(headers)) {
+  for (const [k, v] of Object.entries(filterHeaders(headers))) {
     raw += `${k}: ${v}\n`;
   }
 
