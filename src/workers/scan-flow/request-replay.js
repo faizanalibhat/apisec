@@ -1,8 +1,8 @@
-import { EngineService } from "../../services/engine/engine.service";
-import Rule from "../../models/rule.model";
-import RawRequest from "../../models/rawRequest.model";
-import TransformedRequest from "../../models/transformedRequest.model";
-import TemplateEngine from "../../utils/template";
+import { EngineService } from "../../services/engine/engine.service.js";
+import Rule from "../../models/rule.model.js";
+import RawRequest from "../../models/rawRequest.model.js";
+import TransformedRequest from "../../models/transformedRequest.model.js";
+import TemplateEngine from "../../utils/template.js";
 
 
 export async function requestReplay({ requestIds = [], scan, project }) {
