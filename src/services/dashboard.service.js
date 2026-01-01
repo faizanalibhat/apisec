@@ -187,7 +187,7 @@ class DashboardService {
             high: 0,
             medium: 0,
             low: 0,
-            informational: 0
+            info: 0
         };
 
         severityAgg.forEach(item => {

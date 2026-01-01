@@ -150,6 +150,14 @@ export class TransformedRequestsController {
                         $ifNull: [{ $arrayElemAt: ["$rule", 0] }, {}]
                     }
                 }
+            },
+
+
+            // ------- FINAL MATCH -------
+            {
+                $match: {
+                    vulnerabilityDetected: hasVulns === 'true'
+                }
             }
         ];
 
@@ -161,6 +169,7 @@ export class TransformedRequestsController {
 
         supported_filters.method = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
         supported_filters.statusCode = await TransformedRequest.distinct("executionResult.responseStatus", { orgId });
+        supported_filters.has_vulns = ['true', 'false'];
 
         return res.json({ requests, total, filters: supported_filters });
     }

@@ -115,13 +115,9 @@ export async function crawlAndCapture({
       }
     );
 
-    // flow execute
     await mqbroker.publish('apisec', "apisec.scanflow.initiate", { request, ...context });
   });
 
-  /**
-   * 4️⃣ Crawling loop
-   */
   while (queue.length > 0) {
     const rawUrl = queue.shift();
     const url = canonicalizeUrl(rawUrl);
