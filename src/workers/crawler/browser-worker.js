@@ -1,5 +1,7 @@
 import { chromium } from 'playwright';
 import Scan from '../../models/scan.model.js';
+import Vuln from '../../models/vulnerability.model.js';
+import RawRequest from '../../models/rawRequest.model.js';
 import vm from "vm";
 import fs from "fs/promises";
 import { crawlAndCapture } from './crawler.js';
@@ -9,6 +11,8 @@ import { CrawlerAuthContext } from '../../models/crawler-auth-context.model.js';
 export async function browserWorker(payload, msg, channel) {
   let browser;
   const { project, scan } = payload;
+
+  const orgId = project.orgId;
   
   try {
 
@@ -83,8 +87,21 @@ export async function browserWorker(payload, msg, channel) {
       exclude_scope
     });
 
+    // total requests
+    const totalRequests = await RawRequest.countDocuments({ scanId: scan._id });
+
+    // count total vulns
+    // const totalVulns = await Vuln.countDocuments({ scanId: scan._id });
+    const [totalVulns, totalCritical, totalHigh, totalMedium, totalLow] = await Promise.all([
+      Vuln.countDocuments({ orgId, scanId: scan._id }),
+      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'critical' }),
+      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'high' }),
+      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'medium' }),
+      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'low' })
+    ]);
+
     // set scan to completed
-    await Scan.updateOne({ _id: scan._id }, { status: 'completed' });
+    await Scan.updateOne({ orgId, _id: scan._id }, { $set: { status: 'completed' }, $inc: { 'metrics.total_requests': totalRequests, 'metrics.total_vulns': totalVulns, 'metrics.total_critical': totalCritical, 'metrics.total_high': totalHigh, 'metrics.total_medium': totalMedium, 'metrics.total_low': totalLow } });
 
     // console.log("[+] capturedRequests ", capturedRequests);
   }
