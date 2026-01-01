@@ -72,7 +72,7 @@ const schema = new mongoose.Schema({
 
     // Scan configuration
     scanSettings: {
-        frequency: { type: String, enum: ["daily", "weekly", "monthly"], default: "daily" },
+        frequency: { type: String, enum: ["once", "daily", "weekly", "monthly"], default: "once" },
         assessmentId: { type: String },
         time: { type: Date },
         weekday: { type: Number, enum: [0, 1, 2, 3, 4, 5, 6], default: 0 },
