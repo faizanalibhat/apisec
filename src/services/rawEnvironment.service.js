@@ -1,5 +1,5 @@
 import RawEnvironment from '../models/rawEnvironment.model.js';
-import Integration from '../models/integration.model.js';
+import { Integration } from '../models/integration.model.js';
 import { ApiError } from '../utils/ApiError.js';
 
 class RawEnvironmentService {
