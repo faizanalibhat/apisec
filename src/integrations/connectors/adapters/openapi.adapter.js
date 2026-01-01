@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { OpenApiParser } from '../parsers/all/openapi.parser.js';
+import { OpenApiParser } from '../../parsers/all/openapi.parser.js';
 
 const swaggerApiClient = axios.create({
     timeout: 30000, // 30 seconds
