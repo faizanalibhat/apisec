@@ -105,7 +105,7 @@ export const getSeverityDistribution = async (projectId, orgId, startDate) => {
         });
 
         // Remove 'info' if not needed in UI
-        delete distribution.info;
+        // delete distribution.info;
 
         return distribution;
     } catch (error) {
