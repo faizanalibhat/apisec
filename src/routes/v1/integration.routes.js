@@ -1,50 +1,29 @@
 import express from 'express';
-import * as controller from '../../controllers/integration-controller/integration.controller.js';
-import IntegrationValidator from '../../middleware/integrationValidator.js';
+import { IntegrationController } from '../../controllers/integration-controller/integration.controller.js';
 
 const router = express.Router();
 
 // Create new integration
-router.post('/', 
-    // IntegrationValidator.validateCreate,
-    controller.createIntegration
+router.post('/:type', 
+    IntegrationController.createIntegration
 );
 
 // Get all integrations (with pagination validation)
 router.get('/', 
-    // IntegrationValidator.validatePagination,
-    controller.getIntegrations
-);
-
-// Get single integration
-router.get('/:id', 
-    // IntegrationValidator.validateId,
-    controller.getIntegration
+    IntegrationController.getIntegrations
 );
 
 // Update integration (mainly for metadata like name, description)
-router.put('/:id', 
-    // IntegrationValidator.validateId,
-    // IntegrationValidator.validateUpdate,
-    controller.updateIntegration
+router.put('/:integrationId', 
+    IntegrationController.updateIntegration
 );
 
-// Delete integration and all associated raw_requests
-router.delete('/:id', 
-    // IntegrationValidator.validateId,
-    controller.deleteIntegration
+router.delete('/:integrationId', 
+    IntegrationController.deleteIntegration
 );
 
-// Refresh integration (re-sync from Postman)
-router.post('/:id/refresh', 
-    // IntegrationValidator.validateId,
-    controller.refreshIntegration
-);
-
-// Get available workspaces for an API key
-router.post('/workspaces', 
-    // IntegrationValidator.validateGetWorkspaces,
-    controller.getWorkspaces
+router.post('/:integrationId/refresh', 
+    IntegrationController.refreshIntegration
 );
 
 export default router;
