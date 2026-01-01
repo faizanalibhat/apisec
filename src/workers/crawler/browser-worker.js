@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import Scan from '../../models/scan.model.js';
 import vm from "vm";
 import fs from "fs/promises";
 import { crawlAndCapture } from './crawler.js';
@@ -7,9 +8,9 @@ import { CrawlerAuthContext } from '../../models/crawler-auth-context.model.js';
 
 export async function browserWorker(payload, msg, channel) {
   let browser;
-
+  const { project, scan } = payload;
+  
   try {
-    const { project, scan } = payload;
 
     console.log("[+] BROWSER SCAN LAUNCHED : ", scan?.name);
 
@@ -71,6 +72,9 @@ export async function browserWorker(payload, msg, channel) {
 
     // console.log("Auth Context: ", authContext);
 
+    // set scan to running
+    await Scan.updateOne({ _id: scan._id }, { status: 'running' });
+
     await crawlAndCapture({
       page,
       context: { project, scan },
@@ -79,10 +83,14 @@ export async function browserWorker(payload, msg, channel) {
       exclude_scope
     });
 
+    // set scan to completed
+    await Scan.updateOne({ _id: scan._id }, { status: 'completed' });
+
     // console.log("[+] capturedRequests ", capturedRequests);
   }
   catch (err) {
     console.log(err);
+    await Scan.updateOne({ _id: scan._id }, { status: 'failed' });
   }
   finally {
     channel.ack(msg);
