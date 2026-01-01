@@ -78,7 +78,9 @@ const schema = new mongoose.Schema({
         weekday: { type: Number, enum: [0, 1, 2, 3, 4, 5, 6], default: 0 },
         date: { type: Date },
         auto_sync: { type: Boolean, default: false },
-    }
+    },
+
+    last_scan: { type: Date },
 
 }, { timestamps: true });
 

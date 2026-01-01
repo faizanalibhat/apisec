@@ -746,9 +746,14 @@ class ProjectsController {
                 orgId,
                 projectId,
                 status: 'pending',
+                start_date: new Date(),
             });
 
             await scan.save();
+
+            // update last scan on project
+            project.last_scan = scan.start_date;
+            await project.save();
 
             await mqbroker.publish("apisec", "apisec.project.scan.launched", { project, scan });
 
