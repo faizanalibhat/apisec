@@ -109,7 +109,7 @@ export class IntegrationService {
             throw ApiError.notFound('Integration not found');
         }
 
-        await mqbroker.publish("apisec", "apisec.integration.sync", { integration });
+        await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.REFRESH_INTEGRATION, { integration });
 
         return { message: 'Integration refreshed successfully' };
     }
