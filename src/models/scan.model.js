@@ -26,7 +26,7 @@ const scanSchema = new mongoose.Schema({
     default: 'pending',
   },
   start_date: {
-    type: Date
+    type: Date,
     default: Date.now
   },
   end_date: {
