@@ -25,6 +25,8 @@ router.post("/:projectId/scan-settings", authenticateService(), projectsControll
 
 router.post("/:projectId/scan-settings/execute", authenticateService(), projectsController.executeScan);
 
+router.get("/:projectId/scan-history", authenticateService(), projectsController.getScanHistory);
+
 // Collection management routes
 router.post('/:projectId/collections/add', authenticateService(), projectsController.addCollection);
 router.post('/:projectId/collections/remove', authenticateService(), projectsController.removeCollection);

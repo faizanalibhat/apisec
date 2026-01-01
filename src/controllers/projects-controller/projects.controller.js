@@ -43,6 +43,8 @@ class ProjectsController {
         this.configureProject = this.configureProject.bind(this);
         this.uploadAuthScript = this.uploadAuthScript.bind(this);
         this.updateScanSetting = this.updateScanSetting.bind(this);
+        this.getScanHistory = this.getScanHistory.bind(this);
+        this.executeScan = this.executeScan.bind(this);
     }
 
     async getProjects(req, res, next) {
@@ -756,6 +758,24 @@ class ProjectsController {
         }
     }
 
+    async getScanHistory(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
+
+            const project = await Projects.findOne({ _id: projectId, orgId });
+
+            if (!project) {
+                throw ApiError.notFound('Project not found');
+            }
+
+            const scans = await Scan.find({ projectId });
+
+            res.sendApiResponse(ApiResponse.success('Scan history', scans));
+        } catch (error) {
+            next(error);
+        }
+    }
 
 
 }
@@ -783,5 +803,7 @@ export const {
     toggleCollectionStatus,
     configureProject,
     uploadAuthScript,
-    updateScanSetting
+    updateScanSetting,
+    getScanHistory,
+    executeScan
 } = controller;
