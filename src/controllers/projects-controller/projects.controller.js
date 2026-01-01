@@ -40,6 +40,7 @@ class ProjectsController {
         this.toggleCollectionStatus = this.toggleCollectionStatus.bind(this);
         this.configureProject = this.configureProject.bind(this);
         this.uploadAuthScript = this.uploadAuthScript.bind(this);
+        this.updateScanSetting = this.updateScanSetting.bind(this);
     }
 
     async getProjects(req, res, next) {
@@ -704,7 +705,28 @@ class ProjectsController {
     }
 
 
+    async updateScanSetting(req, res, next) {
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
 
+            const project = await Projects.findOne({ _id: projectId, orgId });
+
+            if (!project) {
+                throw ApiError.notFound('Project not found');
+            }
+
+            const scanSettings = req.body;
+
+            project.scanSettings = scanSettings;
+
+            await project.save();
+
+            res.sendApiResponse(ApiResponse.success('Scan settings updated successfully', project));
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 const controller = new ProjectsController();
@@ -729,5 +751,6 @@ export const {
     getProjectDashboard,
     toggleCollectionStatus,
     configureProject,
-    uploadAuthScript
+    uploadAuthScript,
+    updateScanSetting
 } = controller;

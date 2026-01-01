@@ -135,6 +135,14 @@ class RawRequestService {
                         ],
                         as: "vulnStats"
                     }
+                },
+                {
+                    $lookup: {
+                        from: "projects",
+                        localField: "projectIds",
+                        foreignField: "_id",
+                        as: "projects"
+                    }
                 }
             ];
 
@@ -371,6 +379,14 @@ class RawRequestService {
                             }
                         ],
                         as: "vulnStats"
+                    }
+                },
+                {
+                    $lookup: {
+                        from: "projects",
+                        localField: "projectIds",
+                        foreignField: "_id",
+                        as: "projects"
                     }
                 }
             ];
