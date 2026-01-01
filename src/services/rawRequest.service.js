@@ -39,7 +39,7 @@ class RawRequestService {
         // Ensure projectId is a valid ObjectId
         if (!mongoose.Types.ObjectId.isValid(projectId)) {
             // Or handle as an error, depending on desired behavior
-            return null; 
+            return null;
         }
 
         const objectId = new mongoose.Types.ObjectId(projectId);
@@ -65,7 +65,7 @@ class RawRequestService {
         // 3. Get total requests sent (state: 'complete')
         const totalRequestsSent = await TransformedRequest.countDocuments({
             requestId: { $in: rawRequestIds },
-            state: { $in: ["complete", "failed" ] }
+            state: { $in: ["complete", "failed"] }
         });
 
         // 4. Get total vulnerabilities found
@@ -225,7 +225,7 @@ class RawRequestService {
                                                         $filter: {
                                                             input: {
                                                                 $reduce: {
-                                                                    input: "$integration.workspaces",
+                                                                    input: { $ifNull: ["$integration.workspaces", []] },
                                                                     initialValue: [],
                                                                     in: {
                                                                         $concatArrays: [
@@ -258,8 +258,8 @@ class RawRequestService {
                                         },
                                         in: {
                                             $cond: {
-                                                if: { $and: [ { $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] } ] },
-                                                then: { $concat: [ { $arrayElemAt: [ { $split: ["$$collectionData.postmanUrl", "/collection/"] }, 0 ] }, "/request/", "$collectionUid", "-", "$postmanId" ] },
+                                                if: { $and: [{ $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] }] },
+                                                then: { $concat: [{ $arrayElemAt: [{ $split: ["$$collectionData.postmanUrl", "/collection/"] }, 0] }, "/request/", "$collectionUid", "-", "$postmanId"] },
                                                 else: "$$collectionData.postmanUrl"
                                             }
                                         }
@@ -403,18 +403,18 @@ class RawRequestService {
             // Now, add the vulnCounts field
             pipeline.push({
                 $addFields: {
-                vulnCounts: {
-                    $arrayToObject: {
-                    $map: {
-                        input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
-                        as: "item",
-                        in: { k: "$$item.k", v: "$$item.v" }
+                    vulnCounts: {
+                        $arrayToObject: {
+                            $map: {
+                                input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
+                                as: "item",
+                                in: { k: "$$item.k", v: "$$item.v" }
+                            }
+                        }
                     }
-                    }
-                }
                 }
             });
-            
+
 
             // Add severity filtering
             if (severity) {
@@ -458,7 +458,7 @@ class RawRequestService {
                                                         $filter: {
                                                             input: {
                                                                 $reduce: {
-                                                                    input: "$integration.workspaces",
+                                                                    input: { $ifNull: ["$integration.workspaces", []] },
                                                                     initialValue: [],
                                                                     in: {
                                                                         $concatArrays: [
@@ -491,8 +491,8 @@ class RawRequestService {
                                         },
                                         in: {
                                             $cond: {
-                                                if: { $and: [ { $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] } ] },
-                                                then: { $concat: [ { $arrayElemAt: [ { $split: ["$$collectionData.postmanUrl", "/collection/"] }, 0 ] }, "/request/", "$collectionUid", "-", "$postmanId" ] },
+                                                if: { $and: [{ $ne: ["$$collectionData.postmanUrl", null] }, { $ne: ["$postmanId", null] }] },
+                                                then: { $concat: [{ $arrayElemAt: [{ $split: ["$$collectionData.postmanUrl", "/collection/"] }, 0] }, "/request/", "$collectionUid", "-", "$postmanId"] },
                                                 else: "$$collectionData.postmanUrl"
                                             }
                                         }
