@@ -151,14 +151,6 @@ export class TransformedRequestsController {
                     }
                 }
             },
-
-
-            // ------- FINAL MATCH -------
-            {
-                $match: {
-                    vulnerabilityDetected: hasVulns === 'true'
-                }
-            }
         ];
 
         const requests = await TransformedRequest.aggregate(pipeline);
