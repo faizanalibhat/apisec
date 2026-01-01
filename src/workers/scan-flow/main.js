@@ -2,6 +2,7 @@ import { mqbroker } from "../../services/rabbitmq.service.js";
 import { transformation } from "./transformation.js";
 import { requestReplay } from "./request-replay.js";
 import Vulnerability from "../../models/vulnerability.model.js";
+import TransformedRequest from "../../models/transformedRequest.model.js";
 import Scan from "../../models/scan.model.js";
 
 
@@ -31,6 +32,13 @@ async function handleRequestScan(payload, msg, channel) {
                 query,
                 { $set: vuln },
                 { upsert: true, new: true, setDefaultsOnInsert: true, rawResult: true }
+            );
+
+            // update the transformed request
+            await TransformedRequest.findOneAndUpdate(
+                { _id: vuln.transformedRequestSnapshot._id },
+                { $set: { vulnerabilityDetected: true } },
+                { new: true }
             );
         }
     }
