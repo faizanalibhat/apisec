@@ -1,6 +1,7 @@
 import Rule from '../models/rule.model.js';
 import RawRequest from '../models/rawRequest.model.js';
 import Scan from '../models/scan.model.js';
+import { Projects } from '../models/projects.model.js';
 import Vulnerability from '../models/vulnerability.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import { resolveCweToType } from '../utils/cwe.util.js';
@@ -37,7 +38,7 @@ class DashboardService {
             const [
                 totalRequests,
                 totalVulns,
-                totalRules,
+                totalProjects,
                 totalScans,
                 vulnTimeline,
                 topVulns,
@@ -47,7 +48,7 @@ class DashboardService {
             ] = await Promise.all([
                 this.getTotalRequests(orgId),
                 this.getTotalVulnerabilities(orgId),
-                this.getTotalRules(orgId),
+                this.getTotalProjects(orgId),
                 this.getTotalScans(orgId),
                 this.getVulnerabilityTimeline(orgId, startDate),
                 this.getTopVulnerabilities(orgId),
@@ -59,7 +60,7 @@ class DashboardService {
             return {
                 totalRequests,
                 totalVulns,
-                totalRules,
+                totalProjects,
                 totalScans,
                 vulnTimeline,
                 topVulns,
@@ -81,8 +82,8 @@ class DashboardService {
         return await Vulnerability.countDocuments({ orgId });
     }
 
-    async getTotalRules(orgId) {
-        return await Rule.countDocuments({ orgId });
+    async getTotalProjects(orgId) {
+        return await Projects.countDocuments({ orgId });
     }
 
     async getTotalScans(orgId) {
