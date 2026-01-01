@@ -406,7 +406,13 @@ class RawRequestService {
                     vulnCounts: {
                         $arrayToObject: {
                             $map: {
-                                input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
+                                input: {
+                                    $filter: {
+                                        input: { $ifNull: [{ $arrayElemAt: ["$vulnStats.stats", 0] }, []] },
+                                        as: "statsItem",
+                                        cond: { $ne: ["$$statsItem.k", null] }
+                                    }
+                                },
                                 as: "item",
                                 in: { k: "$$item.k", v: "$$item.v" }
                             }
