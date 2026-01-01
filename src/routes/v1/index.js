@@ -16,7 +16,6 @@ import collectionsRoutes from "./collections.routes.js";
 import configRoutes from "./config.routes.js";
 import projectRoutes from "./projects.routes.js";
 import authProfileRoute from "./auth-profile.routes.js";
-import swaggerIntegrationRoutes from './swagger-integration.routes.js';
 
 import { authenticateService } from '../../middleware/auth.js';
 
@@ -35,7 +34,6 @@ router.use("/collections", authenticateService(), collectionsRoutes);
 router.use("/config", authenticateService(), configRoutes);
 router.use("/projects", projectRoutes);
 router.use("/auth-profiles", authenticateService(), authProfileRoute);
-router.use("/swagger-integrations", authenticateService(), swaggerIntegrationRoutes);
 
 
 export default router;
