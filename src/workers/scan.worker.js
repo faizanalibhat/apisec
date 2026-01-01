@@ -13,10 +13,6 @@ import TemplateEngine from "../utils/template.js";
 import { AuthProfile } from "../models/auth-profile.model.js";
 import { Projects } from "../models/projects.model.js";
 import { NotificationTemplates } from '../utils/notification-templates.js';
-import { SwaggerIntegrationService } from "../services/swagger-integration.service.js";
-
-
-const swaggerIntegrationService = new SwaggerIntegrationService();
 
 
 const parser = new PostmanParser();
@@ -657,26 +653,26 @@ async function runAndMatchRequests(payload, msg, channel) {
 
 
 // sync requests from integration.
-async function syncIntegration(payload, msg, channel) {
-    const { integration, apiKey, sourceUrl, environment } = payload;
-    console.log("[+] SYNCING INTEGRATION : ", integration);
+// async function syncIntegration(payload, msg, channel) {
+//     const { integration, apiKey, sourceUrl, environment } = payload;
+//     console.log("[+] SYNCING INTEGRATION : ", integration);
 
-    try {
-        // Check integration type and call appropriate service
-        if (integration.type === 'swagger') {
-            // Need to import SwaggerIntegrationService at top
-            await swaggerIntegrationService.syncIntegration(integration, sourceUrl, environment);
-        } else {
-            await integrationService.syncIntegration(integration, apiKey, environment);
-        }
-    }
-    catch (err) {
-        console.log(err);
-    }
-    finally {
-        channel.ack(msg);
-    }
-}
+//     try {
+//         // Check integration type and call appropriate service
+//         if (integration.type === 'swagger') {
+//             // Need to import SwaggerIntegrationService at top
+//             await swaggerIntegrationService.syncIntegration(integration, sourceUrl, environment);
+//         } else {
+//             await integrationService.syncIntegration(integration, apiKey, environment);
+//         }
+//     }
+//     catch (err) {
+//         console.log(err);
+//     }
+//     finally {
+//         channel.ack(msg);
+//     }
+// }
 
 
 export async function scanWorker() {
@@ -690,5 +686,5 @@ export async function scanWorker() {
     await mqbroker.consume("apisec", "apisec.scan.execute.single", runAndMatchRequests, 'transformedRequestEventQueue');
 
 
-    await mqbroker.consume("apisec", "apisec.integration.sync", syncIntegration, 'SyncIntegrationEventsQueue');
+    // await mqbroker.consume("apisec", "apisec.integration.sync", syncIntegration, 'SyncIntegrationEventsQueue');
 }
