@@ -1,0 +1,94 @@
+{
+  "integrations": [
+    {
+      "type": "postman",
+      "name": "Postman",
+      "description": "Import Postman collections to automatically discover API endpoints, variables, and authentication flows for security testing.",
+      "supported": true,
+      "is_installable": true,
+      "docs_link": "https://docs.snapsec.co/integrations/postman",
+      "logo_url": "https://cdn.simpleicons.org/postman"
+    },
+    {
+      "type": "swagger",
+      "name": "Swagger / OpenAPI",
+      "description": "Ingest OpenAPI (Swagger) specifications to map API surface area, validate schemas, and perform automated vulnerability analysis.",
+      "supported": true,
+      "is_installable": true,
+      "docs_link": "https://docs.snapsec.co/integrations/swagger",
+      "logo_url": "https://cdn.simpleicons.org/swagger"
+    },
+    {
+      "type": "insomnia",
+      "name": "Insomnia",
+      "description": "Import Insomnia workspaces and request definitions to discover APIs and replay requests for security assessments.",
+      "supported": true,
+      "is_installable": true,
+      "docs_link": "https://docs.snapsec.co/integrations/insomnia",
+      "logo_url": "https://cdn.simpleicons.org/insomnia"
+    },
+    {
+      "type": "curl",
+      "name": "cURL",
+      "description": "Parse and replay cURL commands to identify live API endpoints and test request variations for vulnerabilities.",
+      "supported": true,
+      "is_installable": false,
+      "docs_link": "https://docs.snapsec.co/integrations/curl",
+      "logo_url": "https://cdn.simpleicons.org/curl"
+    },
+    {
+      "type": "github",
+      "name": "GitHub",
+      "description": "Connect GitHub repositories to discover OpenAPI specs, Postman collections, and API definitions stored in source control.",
+      "supported": true,
+      "is_installable": true,
+      "docs_link": "https://docs.snapsec.co/integrations/github",
+      "logo_url": "https://cdn.simpleicons.org/github"
+    },
+    {
+      "type": "gitlab",
+      "name": "GitLab",
+      "description": "Integrate with GitLab repositories to automatically detect and sync API specifications and request collections.",
+      "supported": true,
+      "is_installable": true,
+      "docs_link": "https://docs.snapsec.co/integrations/gitlab",
+      "logo_url": "https://cdn.simpleicons.org/gitlab"
+    },
+    {
+      "type": "bitbucket",
+      "name": "Bitbucket",
+      "description": "Scan Bitbucket repositories to discover API schemas and request definitions for continuous security analysis.",
+      "supported": true,
+      "is_installable": true,
+      "docs_link": "https://docs.snapsec.co/integrations/bitbucket",
+      "logo_url": "https://cdn.simpleicons.org/bitbucket"
+    },
+    {
+      "type": "kong",
+      "name": "Kong API Gateway",
+      "description": "Integrate with Kong to enumerate live APIs, routes, and services directly from the API gateway layer.",
+      "supported": true,
+      "is_installable": false,
+      "docs_link": "https://docs.snapsec.co/integrations/kong",
+      "logo_url": "https://cdn.simpleicons.org/kong"
+    },
+    {
+      "type": "apigee",
+      "name": "Google Apigee",
+      "description": "Connect Apigee to discover managed APIs, policies, and environments for enterprise-scale API security testing.",
+      "supported": true,
+      "is_installable": false,
+      "docs_link": "https://docs.snapsec.co/integrations/apigee",
+      "logo_url": "https://cdn.simpleicons.org/googlecloud"
+    },
+    {
+      "type": "aws_api_gateway",
+      "name": "AWS API Gateway",
+      "description": "Discover REST and HTTP APIs deployed on AWS API Gateway and continuously monitor them for security issues.",
+      "supported": true,
+      "is_installable": false,
+      "docs_link": "https://docs.snapsec.co/integrations/aws-api-gateway",
+      "logo_url": "https://cdn.simpleicons.org/amazonaws"
+    }
+  ]
+}

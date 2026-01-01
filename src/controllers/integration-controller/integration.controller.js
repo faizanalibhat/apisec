@@ -1,162 +1,61 @@
 import { IntegrationService } from '../../services/integration.service.js';
-import { SwaggerIntegrationService } from '../../services/swagger-integration.service.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
+import { catchError } from '../../utils/catch-error.js';
 
-class IntegrationController {
-    constructor() {
-        this.service = new IntegrationService();
-        this.swaggerService = new SwaggerIntegrationService();
 
-        // Bind all methods
-        this.createIntegration = this.createIntegration.bind(this);
-        this.getIntegrations = this.getIntegrations.bind(this);
-        this.getIntegration = this.getIntegration.bind(this);
-        this.updateIntegration = this.updateIntegration.bind(this);
-        this.deleteIntegration = this.deleteIntegration.bind(this);
-        this.refreshIntegration = this.refreshIntegration.bind(this);
-        this.getWorkspaces = this.getWorkspaces.bind(this);
-    }
 
-    async createIntegration(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { type } = req.body;
+export class IntegrationController {
 
-            if (type === 'swagger') {
-                const { domain, name, description } = req.body;
-                const result = await this.swaggerService.createIntegration({
-                    sourceUrl: domain, // Map domain to sourceUrl
-                    name,
-                    description,
-                    orgId
-                });
-                return res.sendApiResponse(ApiResponse.created('Swagger integration created successfully', result));
-            }
+    static createIntegration = catchError(async (req, res, next) => {
+        const { orgId } = req.authenticatedService;
+        const { type } = req.params;
+        const { name, config } = req.body;
 
-            // Default to Postman logic
-            const { apiKey, name, description, workspaceIds, environment } = req.body;
+        const integration = await IntegrationService.createIntegration(orgId, { type, name, config });
 
-            const result = await this.service.createIntegration({
-                apiKey,
-                name,
-                description,
-                workspaceIds,
-                orgId,
-                environment
-            });
+        res.sendApiResponse(ApiResponse.created('Integration created successfully', integration));
+    })
 
-            res.sendApiResponse(ApiResponse.created('Integration created successfully', result));
-        } catch (error) {
-            next(error);
-        }
-    }
+    static getIntegrations = catchError(async (req, res, next) => {
+        const { orgId } = req.authenticatedService;
 
-    async getIntegrations(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { page = 1, limit = 10 } = req.query;
+        const result = await IntegrationService.getIntegrations(orgId, { filters });
 
-            const result = await this.service.getIntegrations(
-                orgId,
-                parseInt(page),
-                parseInt(limit)
-            );
+        res.sendApiResponse(
+            ApiResponse.paginated(
+                'Integrations retrieved successfully',
+                result.integrations,
+            )
+        );
+    })
 
-            res.sendApiResponse(
-                ApiResponse.paginated(
-                    'Integrations retrieved successfully',
-                    result.integrations,
-                    {
-                        currentPage: result.currentPage,
-                        totalPages: result.totalPages,
-                        totalItems: result.totalItems,
-                        itemsPerPage: result.itemsPerPage
-                    }
-                )
-            );
-        } catch (error) {
-            next(error);
-        }
-    }
+    static updateIntegration = catchError(async (req, res, next) => {
+        const { orgId } = req.authenticatedService;
+        const { integrationId } = req.params;
 
-    async getIntegration(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { id } = req.params;
+        const { updates } = req.body;
 
-            const result = await this.service.getIntegration(id, orgId);
+        const result = await IntegrationService.updateIntegration(orgId, { integrationId, updates });
 
-            res.sendApiResponse(ApiResponse.success('Integration retrieved successfully', result));
-        } catch (error) {
-            next(error);
-        }
-    }
+        res.sendApiResponse(ApiResponse.success('Integration updated successfully', result));
+    })
 
-    async updateIntegration(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { id } = req.params;
-            const { name, description } = req.body;
+    static deleteIntegration = catchError(async (req, res, next) => {
+        const { orgId } = req.authenticatedService;
+        const { integrationId } = req.params;
 
-            const result = await this.service.updateIntegration(id, orgId, {
-                name,
-                description
-            });
+        await IntegrationService.deleteIntegration(orgId, { integrationId });
 
-            res.sendApiResponse(ApiResponse.success('Integration updated successfully', result));
-        } catch (error) {
-            next(error);
-        }
-    }
+        res.sendApiResponse(ApiResponse.success('Integration deleted successfully'));
+    })
 
-    async deleteIntegration(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { id } = req.params;
+    static refreshIntegration = catchError(async (req, res, next) => {
+        const { orgId } = req.authenticatedService;
+        const { integrationId } = req.params;
 
-            await this.service.deleteIntegration(id, orgId);
+        const result = await IntegrationService.refreshIntegration(orgId, { integrationId });
 
-            res.sendApiResponse(ApiResponse.success('Integration deleted successfully'));
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    async refreshIntegration(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { id } = req.params;
-
-            const result = await this.service.refreshIntegration(id, orgId);
-
-            res.sendApiResponse(ApiResponse.success('Integration refreshed successfully', result));
-        } catch (error) {
-            next(error);
-        }
-    }
-
-    async getWorkspaces(req, res, next) {
-        try {
-            const { orgId } = req.authenticatedService;
-            const { apiKey } = req.body;
-
-            const workspaces = await this.service.getWorkspaces(apiKey);
-
-            res.sendApiResponse(ApiResponse.success('Workspaces retrieved successfully', workspaces));
-        } catch (error) {
-            next(error);
-        }
-    }
+        res.sendApiResponse(ApiResponse.success('Integration refreshed successfully', result));
+    })
 }
-
-const controller = new IntegrationController();
-export const {
-    createIntegration,
-    getIntegrations,
-    getIntegration,
-    updateIntegration,
-    deleteIntegration,
-    refreshIntegration,
-    getWorkspaces
-} = controller;

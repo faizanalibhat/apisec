@@ -21,12 +21,10 @@ import swaggerIntegrationRoutes from './swagger-integration.routes.js';
 import { authenticateService } from '../../middleware/auth.js';
 
 
-// Health check endpoint
 router.get('/health', healthCheck);
 
-// API Routes - Use Kebab-case for route names
 router.use('/rule', authenticateService(), ruleRoutes);
-router.use('/integration', authenticateService(), integrationRoutes);
+router.use('/integrations', authenticateService(), integrationRoutes);
 router.use('/raw-request', authenticateService(), rawRequestRoutes);
 router.use('/scan', authenticateService(), scanRoutes);
 router.use('/vulnerability', authenticateService(), vulnerabilityRoutes);

@@ -4,6 +4,7 @@ import { requestEventWorker } from "./request-event.worker.js";
 import { vmEventWorker } from "./vm-event.worker.js";
 import { crawler } from "./crawler/main.js";
 import { handleScanFlow } from "./scan-flow/main.js";
+import { integrationEventsWorker } from "./integration-worker/main.worker.js";
 import { connectDB } from "../db/connect-db.js";
 
 
@@ -15,3 +16,4 @@ scanWorker();
 syncRulesFromGithub();
 crawler();
 handleScanFlow();
+integrationEventsWorker();
