@@ -8,6 +8,7 @@ import { RuleService } from '../../services/rule.service.js';
 import { ApiResponse } from '../../utils/ApiResponse.js';
 import { ApiError } from '../../utils/ApiError.js';
 import mongoose from 'mongoose';
+import fs from "fs/promises";
 import { mqbroker } from '../../services/rabbitmq.service.js';
 
 
@@ -697,7 +698,19 @@ class ProjectsController {
                 throw ApiError.badRequest('No file uploaded');
             }
 
+            let existingFile = project.authScript;
+
+            if (existingFile) {
+                try {
+                    await fs.unlink(existingFile.path);
+                }
+                catch(err) {
+                    console.log(err)
+                }
+            }
+
             project.authScript = file;
+
             await project.save();
 
             res.sendApiResponse(ApiResponse.success('Auth script uploaded successfully', project));
@@ -774,7 +787,7 @@ class ProjectsController {
                 throw ApiError.notFound('Project not found');
             }
 
-            const scans = await Scan.find({ projectId });
+            const scans = await Scan.find({ orgId, projectId });
 
             res.sendApiResponse(ApiResponse.success('Scan history', scans));
         } catch (error) {
