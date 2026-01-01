@@ -7,6 +7,7 @@ export async function crawlAndCapture({
   page,
   target_url,
   scope,
+  exclude_scope,
   context
 }) {
   const exploredUrls = new Set();
@@ -20,6 +21,18 @@ export async function crawlAndCapture({
     if (s.type === 'url') {
       try {
         // Use target_url as base for relative paths, then canonicalize
+        const absolute = new URL(s.value, target_url).href;
+        return { ...s, value: canonicalizeUrl(absolute) };
+      } catch {
+        return s;
+      }
+    }
+    return s;
+  });
+
+  const normalizedExcludeScope = (exclude_scope || []).map(s => {
+    if (s.type === 'url') {
+      try {
         const absolute = new URL(s.value, target_url).href;
         return { ...s, value: canonicalizeUrl(absolute) };
       } catch {
@@ -46,7 +59,7 @@ export async function crawlAndCapture({
       }
     }
 
-    if (!isInScope(url, normalizedScope)) {
+    if (!isInScope(url, normalizedScope, normalizedExcludeScope)) {
       return route.abort();
     }
 
@@ -58,7 +71,7 @@ export async function crawlAndCapture({
     try {
       await newPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { });
       const newUrl = canonicalizeUrl(newPage.url());
-      if (isInScope(newUrl, normalizedScope) && !discoveredUrls.has(newUrl)) {
+      if (isInScope(newUrl, normalizedScope, normalizedExcludeScope) && !discoveredUrls.has(newUrl)) {
         discoveredUrls.add(newUrl);
         queue.push(newUrl);
       }
@@ -141,7 +154,7 @@ export async function crawlAndCapture({
         break;
       }
 
-      const clickables = await getInScopeClickables(page, normalizedScope);
+      const clickables = await getInScopeClickables(page, normalizedScope, normalizedExcludeScope);
       let clickedAny = false;
 
       for (const el of clickables) {
@@ -173,7 +186,7 @@ export async function crawlAndCapture({
           const postClickUrl = canonicalizeUrl(page.url());
 
           // If we navigated away, record it
-          if (isInScope(postClickUrl, normalizedScope) && !discoveredUrls.has(postClickUrl)) {
+          if (isInScope(postClickUrl, normalizedScope, normalizedExcludeScope) && !discoveredUrls.has(postClickUrl)) {
             discoveredUrls.add(postClickUrl);
             queue.push(postClickUrl);
           }
@@ -181,7 +194,7 @@ export async function crawlAndCapture({
           if (postClickUrl !== currentUrl) {
             // If we navigated to a new URL that is in scope, let it settle for a moment
             // to capture any initial requests (XHR/Fetch)
-            if (isInScope(postClickUrl, normalizedScope)) {
+            if (isInScope(postClickUrl, normalizedScope, normalizedExcludeScope)) {
               await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { });
             }
 
@@ -217,8 +230,8 @@ export async function crawlAndCapture({
 }
 
 
-async function safeGoto(page, url, scope, visitedUrls) {
-  if (!isInScope(url, scope)) return;
+async function safeGoto(page, url, scope, excludeScope, visitedUrls) {
+  if (!isInScope(url, scope, excludeScope)) return;
   if (visitedUrls.has(url)) return;
 
   visitedUrls.add(url);
@@ -234,7 +247,7 @@ async function captureSpaNavigation(page, visitedUrls) {
 }
 
 
-async function getInScopeClickables(page, scope) {
+async function getInScopeClickables(page, scope, excludeScope) {
   try {
     // Use a script to find all potentially clickable elements, including those with JS handlers
     const clickableSelectors = await page.evaluate(() => {
@@ -253,8 +266,26 @@ async function getInScopeClickables(page, scope) {
       const all = document.querySelectorAll('a, button, input, select, textarea, [role], [onclick], div, span, li, svg');
       const foundIds = [];
 
+      const logoutKeywords = ['logout', 'log-out', 'signout', 'sign-out', 'expire', 'terminate', 'exit'];
+      const isLogoutElement = (el) => {
+        const text = (el.innerText || el.value || "").toLowerCase();
+        const id = (el.id || "").toLowerCase();
+        const className = (typeof el.className === 'string' ? el.className : "").toLowerCase();
+        const name = (el.name || "").toLowerCase();
+        const ariaLabel = (el.getAttribute('aria-label') || "").toLowerCase();
+
+        return logoutKeywords.some(kw =>
+          text.includes(kw) ||
+          id.includes(kw) ||
+          className.includes(kw) ||
+          name.includes(kw) ||
+          ariaLabel.includes(kw)
+        );
+      };
+
       for (const el of all) {
         if (!isVisible(el)) continue;
+        if (isLogoutElement(el)) continue;
 
         let isClickable = false;
         const tagName = el.tagName;
@@ -298,8 +329,12 @@ async function getInScopeClickables(page, scope) {
 
         const rawHref = await el.getAttribute('href');
         if (rawHref) {
-          const resolved = new URL(rawHref, page.url()).href;
-          if (!isInScope(resolved, scope)) continue;
+          try {
+            const resolved = new URL(rawHref, page.url()).href;
+            if (!isInScope(resolved, scope, excludeScope)) continue;
+          } catch {
+            continue;
+          }
         }
 
         inScope.push(el);
@@ -422,11 +457,31 @@ function canonicalizeUrl(urlStr) {
 }
 
 
-function isInScope(url, scope) {
-  if (!scope || !scope.length) return true;
-
+function isInScope(url, scope, excludeScope) {
   try {
     const u = canonicalizeUrl(url);
+
+    // Check exclude scope first
+    if (excludeScope && excludeScope.length > 0) {
+      const isExcluded = excludeScope.some(s => {
+        if (s.type === 'url') {
+          return u.startsWith(s.value);
+        }
+        if (s.type === 'regex') {
+          try {
+            const re = new RegExp(s.value);
+            return re.test(u);
+          } catch {
+            return false;
+          }
+        }
+        return false;
+      });
+      if (isExcluded) return false;
+    }
+
+    if (!scope || !scope.length) return true;
+
     return scope.some(s => {
       if (s.type === 'url') {
         // Scope values are already canonicalized in normalizedScope

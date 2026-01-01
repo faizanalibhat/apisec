@@ -25,6 +25,7 @@ const configurationSchema = new mongoose.Schema({
     owner: { type: ownerSchema },
     tags: { type: [String], default: [] },
     scope: { type: [scopeSchema] },
+    exclude_scope: { type: [scopeSchema] },
     scan_type: { type: String, enum: CRAWLER_SCANS, default: "aggressive" },
     auth_success_string: { type: String },
 });

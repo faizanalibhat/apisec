@@ -13,7 +13,7 @@ export async function browserWorker(payload, msg, channel) {
 
     console.log("[+] BROWSER SCAN LAUNCHED : ", scan?.name);
 
-    const { target_url, scope } = project?.configuration || {};
+    const { target_url, scope, exclude_scope } = project?.configuration || {};
 
     const auth_script = project?.authScript;
 
@@ -75,7 +75,8 @@ export async function browserWorker(payload, msg, channel) {
       page,
       context: { project, scan },
       target_url,
-      scope
+      scope,
+      exclude_scope
     });
 
     // console.log("[+] capturedRequests ", capturedRequests);
