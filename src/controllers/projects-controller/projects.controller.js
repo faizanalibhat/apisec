@@ -1,5 +1,6 @@
 import ProjectsService from '../../services/projects.service.js';
 import { Projects } from '../../models/projects.model.js';
+import Scan from '../../models/scan.model.js';
 import RawRequestService from '../../services/rawRequest.service.js';
 import RawRequest from '../../models/rawRequest.model.js';
 import TransformedRequest from '../../models/transformedRequest.model.js';
@@ -14,6 +15,7 @@ const { ObjectId } = mongoose.Types;
 
 
 class ProjectsController {
+
     constructor() {
         this.projectsService = new ProjectsService();
         this.rawRequestService = new RawRequestService();
@@ -650,7 +652,6 @@ class ProjectsController {
         return requestData;
     }
 
-
     // setup controller
     async configureProject(req, res, next) {
         try {
@@ -676,7 +677,6 @@ class ProjectsController {
             next(error);
         }
     }
-
 
     async uploadAuthScript(req, res, next) {
         try {
@@ -704,7 +704,6 @@ class ProjectsController {
         }
     }
 
-
     async updateScanSetting(req, res, next) {
         try {
             const { orgId } = req.authenticatedService;
@@ -727,6 +726,38 @@ class ProjectsController {
             next(error);
         }
     }
+
+    async executeScan(req, res, next) {
+
+        try {
+            const { orgId } = req.authenticatedService;
+            const { projectId } = req.params;
+
+            const project = await Projects.findOne({ _id: projectId, orgId });
+
+            if (!project) {
+                throw ApiError.notFound('Project not found');
+            }
+
+            // create a scan for this in pending state
+            const scan = new Scan({
+                orgId,
+                projectId,
+                status: 'pending',
+            });
+
+            await scan.save();
+
+            await mqbroker.publish("apisec", "apisec.project.scan.launched", { project, scan });
+
+            res.sendApiResponse(ApiResponse.success('Scan started successfully'));
+        } catch (error) {
+            next(error);
+        }
+    }
+
+
+
 }
 
 const controller = new ProjectsController();

@@ -113,7 +113,6 @@ export class ScanService {
                 }
             }
 
-            // Create scan document
             const scan = await Scan.create({
                 name,
                 description,

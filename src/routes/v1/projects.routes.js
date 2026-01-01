@@ -23,6 +23,8 @@ router.post("/:projectId/configure/upload", authenticateService(), uploadSingle(
 
 router.post("/:projectId/scan-settings", authenticateService(), projectsController.updateScanSetting);
 
+router.post("/:projectId/scan-settings/execute", authenticateService(), projectsController.executeScan);
+
 // Collection management routes
 router.post('/:projectId/collections/add', authenticateService(), projectsController.addCollection);
 router.post('/:projectId/collections/remove', authenticateService(), projectsController.removeCollection);

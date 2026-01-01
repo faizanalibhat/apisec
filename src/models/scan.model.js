@@ -1,159 +1,38 @@
 import mongoose from 'mongoose';
 
-const findingSchema = new mongoose.Schema({
-  ruleId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Rule',
-    required: true
-  },
-  ruleName: String,
-  requestId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'RawRequest',
-    required: true
-  },
-  requestName: String,
-  requestUrl: String,
-  method: String,
-  vulnerability: {
-    type: {
-      type: String,
-      required: true
-    },
-    severity: {
-      type: String,
-      enum: ['low', 'medium', 'high', 'critical'],
-      required: true
-    },
-    description: String,
-    evidence: {
-      request: Object,
-      response: Object,
-      matchedCriteria: String
-    }
-  },
-  detectedAt: {
-    type: Date,
-    default: Date.now
-  }
+const metrics_schema = new mongoose.Schema({
+  total_requests: { type: Number, default: 0 },
+  total_vulns: { type: Number, default: 0 },
+  total_critical_vulns: { type: Number, default: 0 },
+  total_high_vulns: { type: Number, default: 0 },
+  total_medium_vulns: { type: Number, default: 0 },
+  total_low_vulns: { type: Number, default: 0 },
 });
 
 const scanSchema = new mongoose.Schema({
+
   orgId: {
     type: String,
     required: true,
   },
-  originalScanId: {
+  projectId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Scan',
-    required: false,
-  },
-  name: {
-    type: String,
+    ref: 'projects',
     required: true,
-    trim: true
-  },
-  description: {
-    type: String,
-    trim: true
-  },
-  scope: {
-    type: [String],
-    default: []
   },
   status: {
     type: String,
-    enum: ['preparing', 'pending', 'running', 'completed', 'failed', 'cancelled', 'halted', 'paused'],
-    default: 'preparing',
-    index: true
+    enum: ['pending', 'running', 'completed', 'failed', 'cancelled'],
+    default: 'pending',
   },
-  ruleIds: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'Rule',
-    required: false,
-    default: [] 
+  start_date: {
+    type: Date,
   },
-  requestIds: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'RawRequest',
-    default: [] 
+  end_date: {
+    type: Date,
   },
-  collectionIds: {
-    type: [String],
-    // ref: 'collections',
-    default: [] 
-  },
-  // Environment for variable substitution
-  environmentId: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'RawEnvironment',
-    required: false
-  },
-  authProfileId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'auth_profiles',
-    required: false
-  },
-  // Statistics
-  stats: {
-    totalRequests: { type: Number, default: 0 },
-    totalRules: { type: Number, default: 0 },
-    totalTransformedRequests: { type: Number, default: 0 },
-    processedRequests: { type: Number, default: 0 },
-    failedRequests: { type: Number, default: 0 },
-    vulnerabilitiesFound: { type: Number, default: 0 }
-  },
-  // Vulnerability summary by severity
-  vulnerabilitySummary: {
-    critical: { type: Number, default: 0 },
-    high: { type: Number, default: 0 },
-    medium: { type: Number, default: 0 },
-    low: { type: Number, default: 0 }
-  },
-  // Findings array - stores detected vulnerabilities
-  findings: [findingSchema],
-  // Execution details
-  startedAt: Date,
-  completedAt: Date,
-  executionTime: Number, // in milliseconds
-  error: {
-    message: String,
-    stack: String,
-    occurredAt: Date
-  },
-  // Metadata
-  createdBy: String, // Will be populated from auth token later
-  cancelledBy: String,
-  cancelledAt: Date
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Indexes for search and performance
-scanSchema.index({ name: 'text', description: 'text' });
-scanSchema.index({ orgId: 1, status: 1, createdAt: -1 });
-scanSchema.index({ orgId: 1, 'vulnerabilitySummary.critical': -1 });
-scanSchema.index({ orgId: 1, 'vulnerabilitySummary.high': -1 });
-
-// Virtual for execution status
-scanSchema.virtual('isActive').get(function() {
-  return ['pending', 'running'].includes(this.status);
-});
-
-// Virtual for has vulnerabilities
-scanSchema.virtual('hasVulnerabilities').get(function() {
-  return this.stats.vulnerabilitiesFound > 0;
-});
-
-// Pre-save hook to calculate execution time
-scanSchema.pre('save', function(next) {
-  if (this.startedAt && this.completedAt) {
-    this.executionTime = this.completedAt - this.startedAt;
-  }
-  next();
-});
+  metrics: { type: metrics_schema }
+}, { timestamps: true });
 
 const Scan = mongoose.model('Scan', scanSchema);
 
