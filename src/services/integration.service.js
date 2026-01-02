@@ -92,7 +92,7 @@ export class IntegrationService {
     }
 
     static deleteIntegration = async (orgId, { integrationId }) => {
-        const integration = await Integration.findOne({
+        const integration = await Integration.findOneAndDelete({
             _id: integrationId,
             orgId
         });
@@ -113,7 +113,6 @@ export class IntegrationService {
             orgId
         });
 
-        await integration.deleteOne();
 
         return { message: 'Integration and associated data deleted successfully' };
     }
