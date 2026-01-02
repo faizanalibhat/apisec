@@ -13,7 +13,7 @@ export class IntegrationService {
 
         const encryptedApiKey = await encryptApiKey(config.api_key);
 
-        const integrationData = integrations_data.find(integration => integration.type === type);
+        const integrationData = integrations_data.integrations.find(integration => integration.type === type);
 
         if (!integrationData) {
             throw ApiError.badRequest('Invalid integration type');
