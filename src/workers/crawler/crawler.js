@@ -134,6 +134,16 @@ export async function crawlAndCapture({
         await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
       }
       visitedUrls.add(url);
+
+      // Extract URLs from text/HTML content
+      const textUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+      for (const tUrl of textUrls) {
+        if (!discoveredUrls.has(tUrl)) {
+          discoveredUrls.add(tUrl);
+          queue.push(tUrl);
+          console.log(`[CRAWLER][${url}] + Discovered from content: ${tUrl}`);
+        }
+      }
     } catch (e) {
       console.log(`[CRAWLER][${url}] !!! Failed to navigate: ${e.message}`);
       exploredUrls.add(url);
@@ -194,9 +204,29 @@ export async function crawlAndCapture({
               await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { });
             }
 
+            // Extract URLs from content after navigation/interaction
+            const postClickTextUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+            for (const tUrl of postClickTextUrls) {
+              if (!discoveredUrls.has(tUrl)) {
+                discoveredUrls.add(tUrl);
+                queue.push(tUrl);
+                console.log(`[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`);
+              }
+            }
+
             // If we are not on the original URL anymore, go back to finish the scan
             if (postClickUrl !== url) {
               await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+            }
+          } else {
+            // Even if URL didn't change, content might have. Extract URLs again.
+            const postClickTextUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+            for (const tUrl of postClickTextUrls) {
+              if (!discoveredUrls.has(tUrl)) {
+                discoveredUrls.add(tUrl);
+                queue.push(tUrl);
+                console.log(`[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`);
+              }
             }
           }
 
@@ -495,5 +525,30 @@ function isInScope(url, scope, excludeScope) {
     });
   } catch {
     return false;
+  }
+}
+
+async function extractUrlsFromText(page, scope, excludeScope) {
+  try {
+    const content = await page.content();
+    // Regex to find absolute URLs
+    const urlRegex = /https?:\/\/[^\s"'<>()[\]{}|\\^`]+[^\s"'<>()[\]{}|\\^`.,!?;:]/g;
+    const matches = content.match(urlRegex) || [];
+
+    const discovered = new Set();
+    for (const match of matches) {
+      try {
+        const canon = canonicalizeUrl(match);
+        if (isInScope(canon, scope, excludeScope)) {
+          discovered.add(canon);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    return Array.from(discovered);
+  } catch (e) {
+    console.error("[-] Error extracting URLs from text: ", e.message);
+    return [];
   }
 }
