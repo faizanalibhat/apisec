@@ -13,6 +13,14 @@ export async function browserWorker(payload, msg, channel) {
   const { project, scan } = payload;
 
   const orgId = project.orgId;
+
+  const { configuration } = project;
+
+  // if collection id & environment is set, send to scanflow.collection
+  if (configuration?.collection_id && configuration?.environment_id) {
+      await mqbroker.publish("apisec", "apisec.scanflow.collection", { project, scan });
+      return;
+  }
   
   try {
 
