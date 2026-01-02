@@ -5,8 +5,8 @@ export const INTEGRATION_STATUS = ['installing', 'installed', 'refreshing', 'fai
 
 
 const configSchema = new mongoose.Schema({
-    api_key: { type: String, required: true },
-    url: { type: String, required: true }
+    api_key: { type: String },
+    url: { type: String }
 }, { _id: false });
 
 
