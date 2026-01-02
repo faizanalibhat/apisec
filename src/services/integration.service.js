@@ -69,16 +69,7 @@ export class IntegrationService {
             }
         });
 
-        if (filters.installed == 'true') {
-            integrations = integrations_data.integrations.map(i => {
-                const integrationData = integrations.find(integration => integration.type === i.type) || {};
-
-                return {
-                    ...i,
-                    ...integrationData,
-                }
-            });
-
+        if (filters.installed == true || filters.installed == "true") {
             return { integrations: integrations.filter(integration => integration.status == "installed") }
         }
 
