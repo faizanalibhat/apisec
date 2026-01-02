@@ -109,7 +109,9 @@ export class IntegrationService {
             throw ApiError.notFound('Integration not found');
         }
 
-        await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.REFRESH_INTEGRATION, { integration });
+        const full_integration = await Integration.findOne({ _id: integration._id, orgId }).select("+config").lean();
+
+        await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.REFRESH_INTEGRATION, { integration: full_integration });
 
         return { message: 'Integration refreshed successfully' };
     }
