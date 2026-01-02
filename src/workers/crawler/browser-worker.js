@@ -29,12 +29,12 @@ export async function browserWorker(payload, msg, channel) {
     const { target_url, scope, exclude_scope } = project?.configuration || {};
 
     const auth_script = project?.authScript;
+    let auth_script_content = "";
 
-    if (!auth_script) {
-      throw Error("Auth Script not provided");
+    if (auth_script) {
+      auth_script_content = await fs.readFile(auth_script?.path, "utf-8");
     }
 
-    const auth_script_content = await fs.readFile(auth_script?.path, "utf-8");
 
     browser = await chromium.launch({
       headless: true, args: [
@@ -60,20 +60,24 @@ export async function browserWorker(payload, msg, channel) {
       module: { exports: exports }
     }
 
-    vm.createContext(sandbox);
-    vm.runInContext(auth_script_content, sandbox);
+    if (auth_script_content) {
+      vm.createContext(sandbox);
+      vm.runInContext(auth_script_content, sandbox);
 
-    // auth function from user
-    const authenticate = sandbox.module.exports.authenticate || sandbox.exports.authenticate || sandbox.authenticate;
+      // auth function from user
+      const authenticate = sandbox.module.exports.authenticate || sandbox.exports.authenticate || sandbox.authenticate;
 
-    if (typeof authenticate !== 'function') {
-      throw Error("Auth script must provide an 'authenticate' function");
+      if (typeof authenticate !== 'function') {
+        throw Error("Auth script must provide an 'authenticate' function");
+      }
+
+      await authenticate({ page, target_url, scope });
+
+      // extract auth context
+      const authContext = await extractAuthContext(page);
     }
 
-    await authenticate({ page, target_url, scope });
 
-    // extract auth context
-    const authContext = await extractAuthContext(page);
 
     // save the auth context inside mongodb for this scan.
     // await CrawlerAuthContext.create({
