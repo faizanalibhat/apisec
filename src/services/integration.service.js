@@ -112,7 +112,7 @@ export class IntegrationService {
             throw ApiError.notFound('Integration not found');
         }
 
-        const full_integration = await Integration.findOne({ _id: integration._id, orgId }).select("+config").lean();
+        const full_integration = await Integration.findOneAndUpdate({ _id: integration._id, orgId }, { $set: { status: 'refreshing' } }, { new: true }).select("+config").lean();
 
         // decrypt the config
         full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
