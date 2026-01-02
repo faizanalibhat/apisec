@@ -661,7 +661,7 @@ class ProjectsController {
             const { orgId } = req.authenticatedService;
             const { projectId } = req.params;
 
-            const { collectionUids, owner, ...configuration } = req.body;
+            const { collectionUids, owner, environment_id, ...configuration } = req.body;
 
             const project = await Projects.findOne({ _id: projectId, orgId });
 
@@ -670,8 +670,11 @@ class ProjectsController {
             }
 
             project.configuration = configuration;
-            project.collectionUids = collectionUids;
             project.owner = owner;
+
+            if (environment_id) {
+                project?.configuration?.environment_id = environment_id;
+            }
 
             await project.save();
 
