@@ -60,7 +60,6 @@ export class IntegrationService {
             .lean();
 
 
-        // add installation status, enrich
         integrations = integrations_data.integrations.map(i => {
             const integrationData = integrations.find(integration => integration.type === i.type) || {};
 
@@ -71,10 +70,19 @@ export class IntegrationService {
         });
 
         if (filters.installed == 'true') {
+            integrations = integrations_data.integrations.map(i => {
+                const integrationData = integrations.find(integration => integration.type === i.type) || {};
+
+                return {
+                    ...i,
+                    ...integrationData,
+                }
+            });
+
             return { integrations: integrations.filter(integration => integration.status == "installed") }
         }
 
-        return { integrations }
+        return { integrations: integrations_data.integrations }
     }
 
     static updateIntegration = async (orgId, { integrationId, updates }) => {
