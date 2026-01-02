@@ -22,7 +22,7 @@ export class PostmanAdapter {
             for (const col of collections) {
                 const detail = await this._fetchCollectionDetail(api_key, col.uid);
                 if (detail) {
-                    const requests = await PostmanParser.parseRequests(detail);
+                    const requests = await PostmanParser.parseRequests(detail, col.uid);
 
                     console.log("[+] REQUEST FOUND : ", requests[0]?.method, requests[0]?.url);
 
@@ -72,7 +72,7 @@ export class PostmanAdapter {
             for (const col of collections) {
                 const detail = await this._fetchCollectionDetail(api_key, col.uid);
                 if (detail) {
-                    const info = await PostmanParser.parseCollections(detail);
+                    const info = await PostmanParser.parseCollections(detail, col.uid);
 
                     console.log("[+] COLLECTION FOUND : ", info?.name);
 

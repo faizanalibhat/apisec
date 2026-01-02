@@ -1,4 +1,4 @@
-import { PostmanCollections } from "../../models/postman-collections.model.js"
+import { Collections } from "../../models/collections.model.js"
 
 
 export class CollectionsController {
@@ -25,29 +25,29 @@ export class CollectionsController {
 
         const pipeline = [
             // 1️⃣ Filter by orgId and any other filters
-            { 
-                $match: { orgId, ...filters } 
+            {
+                $match: { orgId, ...filters }
             },
 
             // 2️⃣ Lookup to count related requests
             {
                 $lookup: {
                     from: "raw_requests",
-                    let: { 
-                    collection_uid: "$collectionUid", 
-                    org_id: "$orgId" 
+                    let: {
+                        collection_uid: "$collection_uid",
+                        org_id: "$orgId"
                     },
                     pipeline: [
-                    {
-                        $match: {
-                        $expr: {
-                            $and: [
-                            { $eq: ["$collectionUid", "$$collection_uid"] },
-                            { $eq: ["$orgId", "$$org_id"] }
-                            ]
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$collectionUid", "$$collection_uid"] },
+                                        { $eq: ["$orgId", "$$org_id"] }
+                                    ]
+                                }
+                            }
                         }
-                        }
-                    }
                     ],
                     as: "requests"
                 }
@@ -82,9 +82,9 @@ export class CollectionsController {
         ];
 
 
-        const collections = await PostmanCollections.aggregate(pipeline);
+        const collections = await Collections.aggregate(pipeline);
 
-        const total = await PostmanCollections.countDocuments({ orgId });
+        const total = await Collections.countDocuments({ orgId });
 
         return res.json({ data: collections, total: total });
     }

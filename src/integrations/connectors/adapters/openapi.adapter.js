@@ -26,7 +26,7 @@ export class OpenApiAdapter {
 
         const { spec } = await this._fetchSwaggerSpec(integration);
 
-        return OpenApiParser.parseRequests(spec);
+        return OpenApiParser.parseRequests(spec, integration._id.toString());
 
     };
 
@@ -44,7 +44,9 @@ export class OpenApiAdapter {
 
         const { spec } = await this._fetchSwaggerSpec(integration);
 
-        return OpenApiParser.parseCollections(spec);
+        const col = await OpenApiParser.parseCollections(spec);
+        col.collection_uid = integration._id.toString();
+        return [col];
 
     };
 
