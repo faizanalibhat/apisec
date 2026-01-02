@@ -6,9 +6,9 @@ export class PostmanParser {
      * @param {Object} collection - The Postman collection object
      * @returns {Promise<Array>} Array of parsed request objects
      */
-    static parseRequests = async (collection) => {
+    static parseRequests = async (collection, uid) => {
         if (!collection || !collection.item) return [];
-        return this._parseItems(collection.item, collection.info?.name || 'Postman Collection');
+        return this._parseItems(collection.item, collection.info?.name || 'Postman Collection', '', uid);
     }
 
     /**
@@ -37,7 +37,7 @@ export class PostmanParser {
      * @param {Object} collection - The Postman collection object
      * @returns {Promise<Object>} Metadata object
      */
-    static parseCollections = async (collection) => {
+    static parseCollections = async (collection, uid) => {
         const info = collection.info || {};
         const items = collection.item || [];
 
@@ -51,6 +51,7 @@ export class PostmanParser {
         countEndpoints(items);
 
         return {
+            collection_uid: uid,
             name: info.name || 'Untitled Collection',
             version: '1.0.0', // Postman collections don't always have a version in info
             description: typeof info.description === 'string' ? info.description : (info.description?.content || ''),
@@ -60,25 +61,25 @@ export class PostmanParser {
 
     // ================== PRIVATE HELPERS ================== //
 
-    static _parseItems = (items, collectionName, folderPath = '') => {
+    static _parseItems = (items, collectionName, folderPath = '', uid) => {
         const requests = [];
 
         for (const item of items) {
             if (item.request) {
-                const parsed = this._parseRequest(item, collectionName, folderPath);
+                const parsed = this._parseRequest(item, collectionName, folderPath, uid);
                 if (parsed) requests.push(parsed);
             }
 
             if (item.item && Array.isArray(item.item)) {
                 const currentPath = folderPath ? `${folderPath}/${item.name}` : item.name;
-                requests.push(...this._parseItems(item.item, collectionName, currentPath));
+                requests.push(...this._parseItems(item.item, collectionName, currentPath, uid));
             }
         }
 
         return requests;
     }
 
-    static _parseRequest = (item, collectionName, folderPath) => {
+    static _parseRequest = (item, collectionName, folderPath, uid) => {
         try {
             const req = item.request;
             const headers = {};
@@ -141,7 +142,8 @@ export class PostmanParser {
                 folderName: folderPath || null,
                 collectionName,
                 description: typeof req.description === 'string' ? req.description : (req.description?.content || null),
-                postmanId: item._postman_id || item.id || null
+                postmanId: item._postman_id || item.id || null,
+                collectionUid: uid
             };
 
             // Build Raw HTTP

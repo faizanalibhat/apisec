@@ -1,7 +1,7 @@
 
 export class OpenApiParser {
 
-    static parseRequests = async (spec) => {
+    static parseRequests = async (spec, uid) => {
         const requests = [];
         const isOpenApi3 = spec.openapi?.startsWith('3.');
 
@@ -35,7 +35,8 @@ export class OpenApiParser {
                         deprecated: operation.deprecated || false,
                         security: operation.security || spec.security || [],
                         pathPattern: path
-                    }
+                    },
+                    collectionUid: uid
                 };
 
                 // Extract parameters (path, query, header)
