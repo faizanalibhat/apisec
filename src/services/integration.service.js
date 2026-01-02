@@ -10,14 +10,25 @@ import { APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS } from "../co
 
 export class IntegrationService {
 
-    static createIntegration = async (orgId, { type, name, config }) => {
-
-        const encryptedApiKey = await encryptApiKey(config.api_key);
-
+    static createIntegration = async (orgId, { type, name, description, config }) => {
         const integrationData = integrations_data.integrations.find(integration => integration.type === type);
 
         if (!integrationData) {
             throw ApiError.badRequest('Invalid integration type');
+        }
+
+        const integrationConfig = {};
+
+        if (config.api_key) {
+            integrationConfig.api_key = await encryptApiKey(config.api_key);
+        }
+
+        if (config.domain) {
+            integrationConfig.url = config.domain;
+        }
+
+        if (config.url) {
+            integrationConfig.url = config.url;
         }
 
         // Create integration with user info
@@ -25,16 +36,17 @@ export class IntegrationService {
             orgId,
             ...integrationData,
             name,
-            config: {
-                api_key: encryptedApiKey,
-            }
+            description,
+            config: integrationConfig
         });
 
         // full integration object
         const full_integration = await Integration.findOne({ _id: integration._id, orgId }).select("+config").lean();
 
         // decrypt the config
-        full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
+        if (full_integration.config.api_key) {
+            full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
+        }
 
         await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.INSTALL_INTEGRATION, { integration: full_integration });
 
@@ -116,7 +128,9 @@ export class IntegrationService {
         const full_integration = await Integration.findOneAndUpdate({ _id: integration._id, orgId }, { $set: { status: 'refreshing' } }, { new: true }).select("+config").lean();
 
         // decrypt the config
-        full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
+        if (full_integration.config.api_key) {
+            full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
+        }
 
         await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.REFRESH_INTEGRATION, { integration: full_integration });
 
