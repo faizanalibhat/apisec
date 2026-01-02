@@ -19,6 +19,9 @@ export class IntegrationController {
 
     static getIntegrations = catchError(async (req, res, next) => {
         const { orgId } = req.authenticatedService;
+        const { installed } = req.query;
+
+        const filters = { installed };
 
         const result = await IntegrationService.getIntegrations(orgId, { filters });
 

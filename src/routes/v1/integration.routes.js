@@ -8,12 +8,10 @@ router.post('/:type',
     IntegrationController.createIntegration
 );
 
-// Get all integrations (with pagination validation)
 router.get('/', 
     IntegrationController.getIntegrations
 );
 
-// Update integration (mainly for metadata like name, description)
 router.put('/:integrationId', 
     IntegrationController.updateIntegration
 );
