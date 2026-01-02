@@ -32,42 +32,33 @@ class DashboardService {
 
     async getDashboardStats(orgId, period) {
         try {
-            const startDate = this.getPeriodStartDate(period);
-
             // Execute all queries in parallel for performance
             const [
-                totalRequests,
-                totalVulns,
                 totalProjects,
-                totalScans,
-                vulnTimeline,
-                topVulns,
+                activeScanProjects,
+                totalVulns,
                 vulnBySeverity,
-                vulnByCWE,
-                vulnByStatus
+                projectVulnDist,
+                topVulns
             ] = await Promise.all([
-                this.getTotalRequests(orgId),
-                this.getTotalVulnerabilities(orgId),
                 this.getTotalProjects(orgId),
-                this.getTotalScans(orgId),
-                this.getVulnerabilityTimeline(orgId, startDate),
-                this.getTopVulnerabilities(orgId),
+                this.getActiveScanProjectsCount(orgId),
+                this.getTotalVulnerabilities(orgId),
                 this.getVulnerabilitiesBySeverity(orgId),
-                this.getVulnerabilitiesByCWE(orgId),
-                this.getVulnerabilitiesByStatus(orgId)
+                this.getProjectVulnerabilityDistribution(orgId),
+                this.getTopVulnerabilities(orgId),
             ]);
 
             return {
-                totalRequests,
-                totalVulns,
-                totalProjects,
-                totalScans,
-                vulnTimeline,
-                topVulns,
-                vulnBySeverity,
-                vulnByCWE,
-                vulnByStatus,
-                vulnByCWEDetails: this._resolvedCweNames
+                metrics: {
+                    total_applications: totalProjects,
+                    applications_with_active_scans: activeScanProjects,
+                    total_vulns: totalVulns,
+                    total_critical: vulnBySeverity.critical || 0
+                },
+                distribution_by_severity: vulnBySeverity,
+                project_vuln_distribution: projectVulnDist,
+                top_vulns: topVulns
             };
         } catch (error) {
             this.handleError(error);
@@ -84,6 +75,14 @@ class DashboardService {
 
     async getTotalProjects(orgId) {
         return await Projects.countDocuments({ orgId });
+    }
+
+    async getActiveScanProjectsCount(orgId) {
+        const projectIds = await Scan.distinct('projectId', {
+            orgId,
+            status: { $in: ['running', 'pending'] }
+        });
+        return projectIds.length;
     }
 
     async getTotalScans(orgId) {
@@ -149,24 +148,45 @@ class DashboardService {
             orgId,
             status: 'active'
         })
-            .sort({ severity: 1, createdAt: -1 }) // Sort by severity (critical first) then by date
-            .limit(5)
-            // .populate('ruleId', 'ruleName category')
-            // .populate('requestId', 'name url method collectionName')
-            // .populate('transformedRequestId', 'method url')
+            .populate('projectId', 'name')
             .lean();
 
-        // console.log("rule: ", topVulns.map(vuln => vuln.ruleId));
-        // console.log("request: ", topVulns.map(vuln => vuln.requestId));
-        // console.log("transformed req: ", topVulns.map(vuln => vuln.transformedRequestId));
+        // Sort by severity manually since we want a custom order
+        // Severity enum is ['critical', 'high', 'medium', 'low', 'info']
+        const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 
-        // Map severity to numeric value for proper sorting
-        const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, informational: 4 };
-
-        return topVulns.sort((a, b) => {
+        topVulns.sort((a, b) => {
             const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
             if (severityDiff !== 0) return severityDiff;
             return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+
+        // Take top 5 after sorting
+        const limitedVulns = topVulns.slice(0, 5);
+
+        return limitedVulns.map(v => {
+            // Determine endpoint from requestDetails or evidence
+            let endpoint = '';
+            if (v.requestDetails && v.requestDetails.url) {
+                endpoint = v.requestDetails.url;
+            } else if (v.evidence && v.evidence.request && v.evidence.request.url) {
+                endpoint = v.evidence.request.url;
+            }
+
+            // Determine application name (projectId is active array)
+            const appName = (v.projectId && v.projectId.length > 0 && v.projectId[0].name)
+                ? v.projectId[0].name
+                : 'Unknown';
+
+            return {
+                title: v.title,
+                description: v.description,
+                severity: v.severity,
+                createdAt: v.createdAt,
+                application_name: appName,
+                endpoint: endpoint,
+                cvss: v.cvss
+            };
         });
     }
 
@@ -199,6 +219,54 @@ class DashboardService {
         return severityMap;
     }
 
+    async getProjectVulnerabilityDistribution(orgId) {
+        const dist = await Vulnerability.aggregate([
+            { $match: { orgId } },
+            { $unwind: "$projectId" },
+            {
+                $group: {
+                    _id: { projectId: "$projectId", severity: "$severity" },
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $group: {
+                    _id: "$_id.projectId",
+                    severities: {
+                        $push: {
+                            k: "$_id.severity",
+                            v: "$count"
+                        }
+                    }
+                }
+            },
+            {
+                $lookup: {
+                    from: "projects",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "project"
+                }
+            },
+            { $unwind: "$project" },
+            {
+                $project: {
+                    name: "$project.name",
+                    counts: { $arrayToObject: "$severities" }
+                }
+            }
+        ]);
+
+        return dist.map(d => ({
+            name: d.name,
+            critical: d.counts.critical || 0,
+            high: d.counts.high || 0,
+            medium: d.counts.medium || 0,
+            low: d.counts.low || 0,
+            info: d.counts.info || 0
+        }));
+    }
+
     async getVulnerabilitiesByCWE(orgId) {
         const cweAgg = await Vulnerability.aggregate([
             {
@@ -226,18 +294,6 @@ class DashboardService {
         cweAgg.forEach(item => {
             cweMap[item._id] = item.count;
         });
-
-        const resolvedCwes = await Promise.all(cweAgg.map(async (item) => {
-            const name = await resolveCweToType(item._id);
-            return {
-                cwe: item._id,
-                name: name,
-                count: item.count
-            };
-        }));
-
-        // Store resolved names in a class property if needed for future use
-        this._resolvedCweNames = resolvedCwes;
 
         return cweMap;
     }
