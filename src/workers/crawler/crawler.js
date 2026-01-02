@@ -134,6 +134,16 @@ export async function crawlAndCapture({
         await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
       }
       visitedUrls.add(url);
+
+      // Extract URLs from text/HTML content
+      const textUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+      for (const tUrl of textUrls) {
+        if (!discoveredUrls.has(tUrl)) {
+          discoveredUrls.add(tUrl);
+          queue.push(tUrl);
+          console.log(`[CRAWLER][${url}] + Discovered from content: ${tUrl}`);
+        }
+      }
     } catch (e) {
       console.log(`[CRAWLER][${url}] !!! Failed to navigate: ${e.message}`);
       exploredUrls.add(url);
@@ -194,9 +204,29 @@ export async function crawlAndCapture({
               await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { });
             }
 
+            // Extract URLs from content after navigation/interaction
+            const postClickTextUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+            for (const tUrl of postClickTextUrls) {
+              if (!discoveredUrls.has(tUrl)) {
+                discoveredUrls.add(tUrl);
+                queue.push(tUrl);
+                console.log(`[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`);
+              }
+            }
+
             // If we are not on the original URL anymore, go back to finish the scan
             if (postClickUrl !== url) {
               await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+            }
+          } else {
+            // Even if URL didn't change, content might have. Extract URLs again.
+            const postClickTextUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+            for (const tUrl of postClickTextUrls) {
+              if (!discoveredUrls.has(tUrl)) {
+                discoveredUrls.add(tUrl);
+                queue.push(tUrl);
+                console.log(`[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`);
+              }
             }
           }
 
@@ -299,7 +329,11 @@ async function getInScopeClickables(page, scope, excludeScope) {
           const style = window.getComputedStyle(el);
           if (style.cursor === 'pointer') {
             // Avoid large containers that just inherit pointer; check if it's a leaf-ish node
-            if (el.children.length < 5) isClickable = true;
+            if (el.children.length < 10) isClickable = true;
+          }
+          // Also check if it's an input with a URL-like value that might be clickable/interactive
+          if (tagName === 'INPUT' && /https?:\/\//.test(el.value || '')) {
+            isClickable = true;
           }
         }
 
@@ -411,19 +445,29 @@ async function getElementSignature(el, currentUrl) {
       const id = node.id || '';
       const className = node.className || '';
       const role = node.getAttribute('role') || '';
+      const name = node.getAttribute('name') || '';
+
+      // Get a simple path to the element to make it more unique
+      let path = '';
+      let current = node;
+      try {
+        for (let i = 0; i < 5 && current && current !== document.body; i++) {
+          const index = current.parentNode ? Array.from(current.parentNode.children).indexOf(current) : 0;
+          path = `${current.tagName}[${index}]>${path}`;
+          current = current.parentNode;
+        }
+      } catch (e) { /* ignore */ }
 
       if (href) {
         try {
           const resolved = new URL(href, url).href;
-          // We don't canonicalize here to keep hrefs precise, 
-          // but the base URL is already canonicalized.
-          return resolved;
+          return `HREF:${resolved}`;
         } catch {
-          return href;
+          return `HREF:${href}`;
         }
       }
 
-      return `${url}|${tag}|${text}|${id}|${className}|${role}`;
+      return `${url}|${path}|${tag}|${text}|${id}|${className}|${role}|${name}`;
     }, canonical);
   } catch {
     return null;
@@ -495,5 +539,51 @@ function isInScope(url, scope, excludeScope) {
     });
   } catch {
     return false;
+  }
+}
+
+async function extractUrlsFromText(page, scope, excludeScope) {
+  try {
+    // Extract URLs from HTML, attributes, and properties
+    const discoveredUrls = await page.evaluate(() => {
+      const urls = new Set();
+      const urlRegex = /https?:\/\/[^\s"'<>()[\]{}|\\^`]+[^\s"'<>()[\]{}|\\^`.,!?;:]/g;
+
+      // 1. Check the entire HTML content
+      const content = document.documentElement.outerHTML;
+      const matches = content.match(urlRegex);
+      if (matches) matches.forEach(m => urls.add(m));
+
+      // 2. Check all attributes of all elements (handles data-*, value, etc.)
+      const allElements = document.querySelectorAll('*');
+      for (const el of allElements) {
+        if (el.attributes) {
+          for (const attr of el.attributes) {
+            const m = attr.value.match(urlRegex);
+            if (m) m.forEach(url => urls.add(url));
+          }
+        }
+        // 3. Check value property (handles dynamic input values)
+        if (el.value && typeof el.value === 'string') {
+          const m = el.value.match(urlRegex);
+          if (m) m.forEach(url => urls.add(url));
+        }
+      }
+      return Array.from(urls);
+    });
+
+    const inScope = new Set();
+    for (const url of discoveredUrls) {
+      try {
+        const canon = canonicalizeUrl(url);
+        if (isInScope(canon, scope, excludeScope)) {
+          inScope.add(canon);
+        }
+      } catch { /* ignore */ }
+    }
+    return Array.from(inScope);
+  } catch (e) {
+    console.error("[-] Error extracting URLs from text: ", e.message);
+    return [];
   }
 }

@@ -55,12 +55,13 @@ export class IntegrationService {
 
     static getIntegrations = async (orgId, { filters }) => {
 
+        console.log(filters);
+
         let integrations = await Integration.find({ orgId })
             .sort({ createdAt: -1 })
             .lean();
 
 
-        // add installation status, enrich
         integrations = integrations_data.integrations.map(i => {
             const integrationData = integrations.find(integration => integration.type === i.type) || {};
 
@@ -70,11 +71,11 @@ export class IntegrationService {
             }
         });
 
-        if (filters.installed == 'true') {
+        if (filters.installed == true || filters.installed == "true") {
             return { integrations: integrations.filter(integration => integration.status == "installed") }
         }
 
-        return { integrations }
+        return { integrations: integrations_data.integrations }
     }
 
     static updateIntegration = async (orgId, { integrationId, updates }) => {
@@ -92,7 +93,7 @@ export class IntegrationService {
     }
 
     static deleteIntegration = async (orgId, { integrationId }) => {
-        const integration = await Integration.findOne({
+        const integration = await Integration.findOneAndDelete({
             _id: integrationId,
             orgId
         });
@@ -113,7 +114,6 @@ export class IntegrationService {
             orgId
         });
 
-        await integration.deleteOne();
 
         return { message: 'Integration and associated data deleted successfully' };
     }

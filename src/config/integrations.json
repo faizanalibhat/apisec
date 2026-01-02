@@ -22,7 +22,7 @@
       "type": "insomnia",
       "name": "Insomnia",
       "description": "Import Insomnia workspaces and request definitions to discover APIs and replay requests for security assessments.",
-      "supported": true,
+      "supported": false,
       "is_installable": true,
       "docs_link": "https://docs.snapsec.co/integrations/insomnia",
       "logo_url": "https://cdn.simpleicons.org/insomnia"
