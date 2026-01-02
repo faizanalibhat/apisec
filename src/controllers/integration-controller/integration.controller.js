@@ -10,9 +10,9 @@ export class IntegrationController {
     static createIntegration = catchError(async (req, res, next) => {
         const { orgId } = req.authenticatedService;
         const { type } = req.params;
-        const { name, config } = req.body;
+        const { name, description, config } = req.body;
 
-        const integration = await IntegrationService.createIntegration(orgId, { type, name, config });
+        const integration = await IntegrationService.createIntegration(orgId, { type, name, description, config });
 
         res.sendApiResponse(ApiResponse.created('Integration created successfully', integration));
     })

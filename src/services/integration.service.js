@@ -10,7 +10,7 @@ import { APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS } from "../co
 
 export class IntegrationService {
 
-    static createIntegration = async (orgId, { type, name, config }) => {
+    static createIntegration = async (orgId, { type, name, description, config }) => {
         const integrationData = integrations_data.integrations.find(integration => integration.type === type);
 
         if (!integrationData) {
@@ -36,6 +36,7 @@ export class IntegrationService {
             orgId,
             ...integrationData,
             name,
+            description,
             config: integrationConfig
         });
 
