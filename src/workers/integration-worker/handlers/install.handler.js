@@ -22,6 +22,10 @@ export async function handleInstallIntegration(payload, msg, channel) {
 
         const collections = await Connector.getCollections(integration.type, { integration });
 
+        console.log("[+] TOTAL REQUESTS : ", requests.length);
+        console.log("[+] TOTAL ENVIRONMENTS : ", environments.length);
+        console.log("[+] TOTAL COLLECTIONS : ", collections.length);
+
         // upsert instead of creating new
         await RawRequest.bulkWrite(requests.map(req => ({
             updateOne: {

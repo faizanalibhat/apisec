@@ -22,6 +22,9 @@ export class PostmanAdapter {
                 const detail = await this._fetchCollectionDetail(apiKey, col.uid);
                 if (detail) {
                     const requests = await PostmanParser.parseRequests(detail);
+
+                    console.log("[+] REQUEST FOUND : ", requests[0]?.method, requests[0]?.url);
+
                     allRequests.push(...requests);
                 }
             }
@@ -43,6 +46,9 @@ export class PostmanAdapter {
                 const detail = await this._fetchEnvironmentDetail(apiKey, env.uid);
                 if (detail) {
                     const parsedEnv = await PostmanParser.parseEnvironments(detail);
+
+                    console.log("[+] ENVIRONMENT FOUND : ", parsedEnv?.name);
+
                     if (parsedEnv) allEnvironments.push(parsedEnv);
                 }
             }
@@ -64,6 +70,9 @@ export class PostmanAdapter {
                 const detail = await this._fetchCollectionDetail(apiKey, col.uid);
                 if (detail) {
                     const info = await PostmanParser.parseCollections(detail);
+
+                    console.log("[+] COLLECTION FOUND : ", info?.name);
+
                     allCollectionsInfo.push(info);
                 }
             }
