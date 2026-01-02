@@ -13,6 +13,8 @@ export class IntegrationService {
     static createIntegration = async (orgId, { type, name, description, config }) => {
         const integrationData = integrations_data.integrations.find(integration => integration.type === type);
 
+        console.log(integrations_data.integrations, type, integrationData);
+
         if (!integrationData) {
             throw ApiError.badRequest('Invalid integration type');
         }
