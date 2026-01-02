@@ -2,6 +2,7 @@ import { Integration } from '../models/integration.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import { encryptApiKey, decryptApiKey } from '../utils/postman/apiKeyEncryption.js';
 import RawRequest from '../models/rawRequest.model.js';
+import RawEnvironment from '../models/rawEnvironment.model.js';
 import { mqbroker } from './rabbitmq.service.js';
 import integrations_data from '../config/integrations.json' with { type: 'json' };
 import { APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS } from "../config/constants.js"
