@@ -72,7 +72,7 @@ export class IntegrationService {
         });
 
         if (filters.installed == true || filters.installed == "true") {
-            return { integrations: integrations.filter(integration => integration.status == "installed") }
+            return { integrations: integrations.filter(integration => !!integration.status) }
         }
 
         return { integrations: integrations_data.integrations }
