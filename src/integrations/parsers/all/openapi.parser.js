@@ -195,7 +195,7 @@ export class OpenApiParser {
         const isOpenApi3 = spec.openapi?.startsWith('3.');
 
         const info = {
-            title: spec.info?.title || 'Untitled API',
+            name: spec.info?.title || 'Untitled API',
             version: spec.info?.version || '1.0.0',
             description: spec.info?.description || '',
             totalEndpoints: 0

@@ -51,9 +51,9 @@ export class PostmanParser {
         countEndpoints(items);
 
         return {
-            title: info.name || 'Untitled Collection',
+            name: info.name || 'Untitled Collection',
             version: '1.0.0', // Postman collections don't always have a version in info
-            description: info.description || '',
+            description: typeof info.description === 'string' ? info.description : (info.description?.content || ''),
             totalEndpoints
         };
     }
@@ -140,7 +140,7 @@ export class PostmanParser {
                 body_format: bodyFormat,
                 folderName: folderPath || null,
                 collectionName,
-                description: req.description || null,
+                description: typeof req.description === 'string' ? req.description : (req.description?.content || null),
                 postmanId: item._postman_id || item.id || null
             };
 

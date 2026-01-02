@@ -30,7 +30,7 @@ export async function handleRefreshIntegration(payload, msg, channel) {
         await RawRequest.bulkWrite(requests.map(req => ({
             updateOne: {
                 filter: { orgId, method: req.method, url: req.url },
-                update: req,
+                update: { $set: { ...req, integrationId: integration._id } },
                 upsert: true
             }
         })));
@@ -38,7 +38,7 @@ export async function handleRefreshIntegration(payload, msg, channel) {
         await RawEnvironment.bulkWrite(environments.map(env => ({
             updateOne: {
                 filter: { orgId, name: env.name, integration_id: integration._id },
-                update: env,
+                update: { $set: env },
                 upsert: true
             }
         })));
@@ -46,7 +46,7 @@ export async function handleRefreshIntegration(payload, msg, channel) {
         await Collections.bulkWrite(collections.map(coll => ({
             updateOne: {
                 filter: { orgId, collection_uid: coll.collection_uid, integration_id: integration._id },
-                update: coll,
+                update: { $set: coll },
                 upsert: true
             }
         })));
@@ -54,7 +54,7 @@ export async function handleRefreshIntegration(payload, msg, channel) {
         // set status complete
         await Integration.updateOne({ _id: integration._id }, { status: 'installed' });
     }
-    catch(err) {
+    catch (err) {
         console.log(err);
         await Integration.updateOne({ _id: integration._id }, { status: 'failed' });
     }
