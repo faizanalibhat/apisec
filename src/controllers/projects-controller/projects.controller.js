@@ -669,11 +669,11 @@ class ProjectsController {
                 throw ApiError.notFound('Project not found');
             }
 
-            project.configuration = configuration;
+            project.configuration = configuration || {};
             project.owner = owner;
 
             if (environment_id) {
-                project?.configuration?.environment_id = environment_id;
+                project.configuration.environment_id = environment_id;
             }
 
             await project.save();
