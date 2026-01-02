@@ -64,12 +64,12 @@ export class IntegrationService {
             .lean();
 
 
-        integrations = integrations_data.integrations.map(i => {
-            const integrationData = integrations.find(integration => integration.type === i.type) || {};
+        integrations = integrations.map(i => {
+            const integrationData = integrations_data.integrations.find(integration => integration.type === i.type) || {};
 
             return {
-                ...i,
                 ...integrationData,
+                ...i,
             }
         });
 
