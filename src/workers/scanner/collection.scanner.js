@@ -5,7 +5,7 @@ import RawEnvironment from "../../models/rawEnvironment.model.js";
 import { substituteUrlVariables, substituteNonUrlVariables } from "../../utils/variableSubstitution.js";
 
 
-export async function scanCollection({ project }) {
+export async function getProcessedCollectionRequests({ project }) {
     
     const collection = await Collections.findOne({ orgId: project.orgId, collection_uid: { $in: project.collection_uids } });
     
