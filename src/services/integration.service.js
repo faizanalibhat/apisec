@@ -25,11 +25,14 @@ export class IntegrationService {
             ...integrationData,
             name,
             config: {
-                apiKey: encryptedApiKey,
+                api_key: encryptedApiKey,
             }
         });
 
-        await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.INSTALL_INTEGRATION, { integration });
+        // full integration object
+        const full_integration = await Integration.findOne({ _id: integration._id, orgId }).select("+config").lean();
+
+        await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.INSTALL_INTEGRATION, { integration: full_integration });
 
         return integration;
     }
