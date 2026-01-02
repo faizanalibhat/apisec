@@ -13,6 +13,8 @@ export class IntegrationService {
     static createIntegration = async (orgId, { type, name, description, config }) => {
         const integrationData = integrations_data.integrations.find(integration => integration.type === type);
 
+        console.log(integrations_data.integrations, type, integrationData);
+
         if (!integrationData) {
             throw ApiError.badRequest('Invalid integration type');
         }
@@ -62,17 +64,17 @@ export class IntegrationService {
             .lean();
 
 
-        integrations = integrations_data.integrations.map(i => {
-            const integrationData = integrations.find(integration => integration.type === i.type) || {};
+        integrations = integrations.map(i => {
+            const integrationData = integrations_data.integrations.find(integration => integration.type === i.type) || {};
 
             return {
-                ...i,
                 ...integrationData,
+                ...i,
             }
         });
 
         if (filters.installed == true || filters.installed == "true") {
-            return { integrations: integrations.filter(integration => integration.status == "installed") }
+            return { integrations: integrations.filter(integration => !!integration.status) }
         }
 
         return { integrations: integrations_data.integrations }
