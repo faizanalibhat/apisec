@@ -1,6 +1,5 @@
 import axios from "axios";
 import { PostmanParser } from "../../parsers/all/postman.parser.js";
-import { decryptApiKey } from "../../../../utils/postman/apiKeyEncryption.js";
 
 const postmanApiClient = axios.create({
     baseURL: "https://api.getpostman.com",
