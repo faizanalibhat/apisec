@@ -9,7 +9,7 @@ import { APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS } from "../co
 
 export class IntegrationService {
 
-    async createIntegration(orgId, { type, name, config }) {
+    static createIntegration = async (orgId, { type, name, config }) => {
 
         const encryptedApiKey = await encryptApiKey(config.api_key);
 
@@ -34,7 +34,7 @@ export class IntegrationService {
         return integration;
     }
 
-    async getIntegrations(orgId, { filters }) {
+    static getIntegrations = async (orgId, { filters }) => {
 
         let integrations = await Integration.find({ orgId })
             .sort({ createdAt: -1 })
@@ -58,7 +58,7 @@ export class IntegrationService {
         return { integrations }
     }
 
-    async updateIntegration(orgId, { integrationId, updates }) {
+    static updateIntegration = async (orgId, { integrationId, updates }) => {
         const integration = await Integration.findOneAndUpdate(
             { _id: integrationId, orgId },
             { $set: updates },
@@ -72,7 +72,7 @@ export class IntegrationService {
         return integration;
     }
 
-    async deleteIntegration(orgId, { integrationId }) {
+    static deleteIntegration = async (orgId, { integrationId }) => {
         const integration = await Integration.findOne({
             _id: integrationId,
             orgId
@@ -99,11 +99,8 @@ export class IntegrationService {
         return { message: 'Integration and associated data deleted successfully' };
     }
 
-    async refreshIntegration(orgId, { integrationId }) {
-        const integration = await Integration.findOne({
-            _id: integrationId,
-            orgId
-        });
+    static refreshIntegration = async (orgId, { integrationId }) => {
+        const integration = await Integration.findOne({ _id: integrationId, orgId });
 
         if (!integration) {
             throw ApiError.notFound('Integration not found');
