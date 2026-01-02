@@ -28,6 +28,9 @@ const configurationSchema = new mongoose.Schema({
     exclude_scope: { type: [scopeSchema] },
     scan_type: { type: String, enum: CRAWLER_SCANS, default: "aggressive" },
     auth_success_string: { type: String },
+
+    collection_uids: { type: [String], ref: 'collections', default: [] },
+    environment_id: { type: mongoose.Schema.Types.ObjectId, ref: 'environments' },
 });
 
 const fileSchema = new mongoose.Schema({
@@ -45,8 +48,6 @@ const schema = new mongoose.Schema({
     name: { type: String, required: true },
     description: { type: String },
 
-    isCollecting: { type: Boolean, default: true },
-
     collaborators: { type: [ownerSchema], default: [] },
 
     owner: { type: ownerSchema },
@@ -55,8 +56,6 @@ const schema = new mongoose.Schema({
 
 
     authScript: { type: fileSchema },
-
-    collectionUids: { type: [String], default: [] },
 
     // Rule management
     includedRuleIds: {
