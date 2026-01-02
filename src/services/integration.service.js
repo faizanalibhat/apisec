@@ -55,6 +55,8 @@ export class IntegrationService {
 
     static getIntegrations = async (orgId, { filters }) => {
 
+        console.log(filters);
+
         let integrations = await Integration.find({ orgId })
             .sort({ createdAt: -1 })
             .lean();
