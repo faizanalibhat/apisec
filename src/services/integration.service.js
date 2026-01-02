@@ -32,6 +32,9 @@ export class IntegrationService {
         // full integration object
         const full_integration = await Integration.findOne({ _id: integration._id, orgId }).select("+config").lean();
 
+        // decrypt the config
+        full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
+
         await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.INSTALL_INTEGRATION, { integration: full_integration });
 
         return integration;
@@ -110,6 +113,9 @@ export class IntegrationService {
         }
 
         const full_integration = await Integration.findOne({ _id: integration._id, orgId }).select("+config").lean();
+
+        // decrypt the config
+        full_integration.config.api_key = await decryptApiKey(full_integration.config.api_key);
 
         await mqbroker.publish(APPLICATION_EXCHANGE_NAME, INTEGRATION_EVENT_ROUTING_KEYS.REFRESH_INTEGRATION, { integration: full_integration });
 

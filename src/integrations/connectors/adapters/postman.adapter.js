@@ -1,5 +1,6 @@
 import axios from "axios";
 import { PostmanParser } from "../../parsers/all/postman.parser.js";
+import { decryptApiKey } from "../../../../utils/postman/apiKeyEncryption.js";
 
 const postmanApiClient = axios.create({
     baseURL: "https://api.getpostman.com",
@@ -10,16 +11,17 @@ const postmanApiClient = axios.create({
 export class PostmanAdapter {
 
     static getRequests = async (integration) => {
-        const { api_key: apiKey } = integration.config;
-        const workspaces = integration.workspaces || [];
+        const { api_key } = integration.config;
+
+        const workspaces = await this._fetchWorkspaces(api_key);
 
         const allRequests = [];
 
         for (const workspace of workspaces) {
-            const collections = await this._fetchCollections(apiKey, workspace.id);
+            const collections = await this._fetchCollections(api_key, workspace.id);
 
             for (const col of collections) {
-                const detail = await this._fetchCollectionDetail(apiKey, col.uid);
+                const detail = await this._fetchCollectionDetail(api_key, col.uid);
                 if (detail) {
                     const requests = await PostmanParser.parseRequests(detail);
 
@@ -34,16 +36,17 @@ export class PostmanAdapter {
     };
 
     static getEnvironments = async (integration) => {
-        const { api_key: apiKey } = integration.config;
-        const workspaces = integration.workspaces || [];
+        const { api_key } = integration.config;
+
+        const workspaces = await this._fetchWorkspaces(api_key);
 
         const allEnvironments = [];
 
         for (const workspace of workspaces) {
-            const environments = await this._fetchEnvironments(apiKey, workspace.id);
+            const environments = await this._fetchEnvironments(api_key, workspace.id);
 
             for (const env of environments) {
-                const detail = await this._fetchEnvironmentDetail(apiKey, env.uid);
+                const detail = await this._fetchEnvironmentDetail(api_key, env.uid);
                 if (detail) {
                     const parsedEnv = await PostmanParser.parseEnvironments(detail);
 
@@ -58,16 +61,17 @@ export class PostmanAdapter {
     };
 
     static getCollections = async (integration) => {
-        const { api_key: apiKey } = integration.config;
-        const workspaces = integration.workspaces || [];
+        const { api_key } = integration.config;
+
+        const workspaces = await this._fetchWorkspaces(api_key);
 
         const allCollectionsInfo = [];
 
         for (const workspace of workspaces) {
-            const collections = await this._fetchCollections(apiKey, workspace.id);
+            const collections = await this._fetchCollections(api_key, workspace.id);
 
             for (const col of collections) {
-                const detail = await this._fetchCollectionDetail(apiKey, col.uid);
+                const detail = await this._fetchCollectionDetail(api_key, col.uid);
                 if (detail) {
                     const info = await PostmanParser.parseCollections(detail);
 
@@ -83,6 +87,10 @@ export class PostmanAdapter {
 
 
     // ============ HELPERS =============================== //
+
+    static _fetchWorkspaces = async (apiKey) => {
+        return this._makeRequest(apiKey, "/workspaces", "workspaces");
+    };
 
     static _fetchCollections = async (apiKey, workspaceId) => {
         return this._makeRequest(apiKey, `/collections?workspace=${workspaceId}`, "collections");
