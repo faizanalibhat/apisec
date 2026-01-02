@@ -37,7 +37,7 @@ export async function handleRefreshIntegration(payload, msg, channel) {
 
         await RawEnvironment.bulkWrite(environments.map(env => ({
             updateOne: {
-                filter: { orgId, name: env.name, integration_id: integration._id },
+                filter: { orgId, name: env.name, integrationId: integration._id },
                 update: { $set: env },
                 upsert: true
             }
@@ -45,7 +45,7 @@ export async function handleRefreshIntegration(payload, msg, channel) {
 
         await Collections.bulkWrite(collections.map(coll => ({
             updateOne: {
-                filter: { orgId, collection_uid: coll.collection_uid, integration_id: integration._id },
+                filter: { orgId, collection_uid: coll.collection_uid, integrationId: integration._id },
                 update: { $set: coll },
                 upsert: true
             }

@@ -74,7 +74,7 @@ export class PostmanAdapter {
                 if (detail) {
                     const info = await PostmanParser.parseCollections(detail);
 
-                    console.log("[+] COLLECTION FOUND : ", info?.title);
+                    console.log("[+] COLLECTION FOUND : ", info?.name);
 
                     allCollectionsInfo.push(info);
                 }
