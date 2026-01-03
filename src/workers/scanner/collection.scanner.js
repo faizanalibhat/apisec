@@ -44,6 +44,8 @@ export async function getProcessedCollectionRequests({ project }) {
     }
   }
 
+  console.log("[+] ENV OBJECT : ", environmentVariables);
+
   const processed_requests = [];
 
   for (let request of requests) {
@@ -55,6 +57,17 @@ export async function getProcessedCollectionRequests({ project }) {
       urlResolvedRequest,
       environmentVariables,
     );
+
+    // perform check on url to see if its valid
+    try {
+      let url = new URL(urlResolvedRequest.url);
+    } catch (err) {
+      console.log(
+        "[+] INVALID URL AFTER SUBSTITUTION: ",
+        urlResolvedRequest.url,
+      );
+      continue;
+    }
 
     console.log("Processed the request : ", request.url);
 

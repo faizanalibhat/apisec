@@ -1,16 +1,12 @@
-import _ from 'lodash';
-
+import _ from "lodash";
 
 function normalizeParams(query) {
-    const normalized = {};
-    for (let [key, value] of Object.entries(query)) {
-      normalized[key.toLowerCase()] = value;
-    }
-    return normalized;
+  const normalized = {};
+  for (let [key, value] of Object.entries(query)) {
+    normalized[key.toLowerCase()] = value;
+  }
+  return normalized;
 }
-
-
-
 
 // helper functions one for each operation
 function add(params, newParams) {
@@ -18,7 +14,7 @@ function add(params, newParams) {
 }
 
 function remove(params, removeParams) {
-  removeParams.forEach(param => delete params[param]);
+  removeParams.forEach((param) => delete params[param]);
 }
 
 function modify(params, modifyParams) {
@@ -28,11 +24,10 @@ function modify(params, modifyParams) {
 }
 
 function replace_all_values(params, value) {
-  Object.keys(params).forEach(key => {
+  Object.keys(params).forEach((key) => {
     params[key] = value;
   });
 }
-
 
 function replace_all_values_one_by_one(params, value) {
   const paramKeys = Object.keys(params);
@@ -49,7 +44,6 @@ function replace_all_values_one_by_one(params, value) {
   return clonedList;
 }
 
-
 function handleTransformation(params, transformations) {
   const allParams = [];
 
@@ -61,14 +55,11 @@ function handleTransformation(params, transformations) {
   return allParams;
 }
 
-
-
 function applyRules(params, rules) {
   let allParams = [];
 
   params = normalizeParams(params);
   const original = _.cloneDeep(params);
-
 
   if (rules.add) {
     add(params, rules.add);
@@ -87,19 +78,23 @@ function applyRules(params, rules) {
   }
 
   if (rules.replace_all_values_one_by_one) {
-    allParams = replace_all_values_one_by_one(params, rules.replace_all_values_one_by_one);
+    allParams = replace_all_values_one_by_one(
+      params,
+      rules.replace_all_values_one_by_one,
+    );
   }
 
   if (rules.transformations) {
     if (allParams.length) {
-      let transformedParams = []
+      let transformedParams = [];
       for (let p of allParams) {
-        transformedParams.push(...(handleTransformation(p, rules.transformations) || []));
+        transformedParams.push(
+          ...(handleTransformation(p, rules.transformations) || []),
+        );
       }
 
       allParams.push(...transformedParams);
-    }
-    else {
+    } else {
       allParams = handleTransformation(params, rules.transformations);
     }
 
@@ -108,8 +103,6 @@ function applyRules(params, rules) {
 
   // const changed = !_.isEqual(params, original);
 
-  // console.log("[+] Params CHANGED : ", changed, params);
-
   // if (!allParams.length && !changed) {
   //   return [];
   // }
@@ -117,12 +110,8 @@ function applyRules(params, rules) {
   return allParams?.length > 0 ? allParams : [params];
 }
 
-
-
-
 export default {
   transform(request, queryRules, authProfile) {
-
     if (!queryRules) return [];
 
     let requests = [];
@@ -133,17 +122,17 @@ export default {
 
     const transformedParams = applyRules(targetParams, queryRules);
 
-    requests = transformedParams.map(params => {
+    requests = transformedParams.map((params) => {
       const newRequest = _.cloneDeep(request);
       newRequest.params = params;
-      
+
       // add auth profile
       if (authProfile) {
         let newHeaders = { ...(newRequest.headers || {}) };
 
         // newHeaders.authorization = authProfile.authValue;
 
-        authProfile?.customHeaders?.map?.(({key, value}) => {
+        authProfile?.customHeaders?.map?.(({ key, value }) => {
           newHeaders[key] = value;
         });
 
@@ -154,5 +143,5 @@ export default {
     });
 
     return requests;
-  }
+  },
 };
