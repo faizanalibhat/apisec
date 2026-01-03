@@ -6,6 +6,7 @@ import vm from "vm";
 import fs from "fs/promises";
 import { crawlAndCapture } from "./crawler.js";
 import { CrawlerAuthContext } from "../../models/crawler-auth-context.model.js";
+import { mqbroker } from "../../services/rabbitmq.service.js";
 
 export async function browserWorker(payload, msg, channel) {
   let browser;
