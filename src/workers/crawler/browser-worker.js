@@ -16,16 +16,19 @@ export async function browserWorker(payload, msg, channel) {
 
   const { configuration } = project;
 
-  // if collection id & environment is set, send to scanflow.collection
-  if (configuration?.collection_uids?.length && configuration?.environment_id) {
-    await mqbroker.publish("apisec", "apisec.scanflow.collection", {
-      project,
-      scan,
-    });
-    return;
-  }
-
   try {
+    // if collection id & environment is set, send to scanflow.collection
+    if (
+      configuration?.collection_uids?.length &&
+      configuration?.environment_id
+    ) {
+      await mqbroker.publish("apisec", "apisec.scanflow.collection", {
+        project,
+        scan,
+      });
+      return;
+    }
+
     console.log("[+] BROWSER SCAN LAUNCHED : ", scan?.name);
 
     const { target_url, scope, exclude_scope } = project?.configuration || {};
