@@ -1,14 +1,13 @@
-import { canonicalizeRequest } from './canonicalize-requests.js';
-import RawRequest from '../../models/rawRequest.model.js';
+import { canonicalizeRequest } from "./canonicalize-requests.js";
+import RawRequest from "../../models/rawRequest.model.js";
 import { mqbroker } from "../../services/rabbitmq.service.js";
-
 
 export async function crawlAndCapture({
   page,
   target_url,
   scope,
   exclude_scope,
-  context
+  context,
 }) {
   const exploredUrls = new Set();
   const clickedSignatures = new Set();
@@ -17,8 +16,8 @@ export async function crawlAndCapture({
   const queue = [canonicalTarget];
   const visitedUrls = new Set();
 
-  const normalizedScope = (scope || []).map(s => {
-    if (s.type === 'url') {
+  const normalizedScope = (scope || []).map((s) => {
+    if (s.type === "url") {
       try {
         // Use target_url as base for relative paths, then canonicalize
         const absolute = new URL(s.value, target_url).href;
@@ -30,8 +29,8 @@ export async function crawlAndCapture({
     return s;
   });
 
-  const normalizedExcludeScope = (exclude_scope || []).map(s => {
-    if (s.type === 'url') {
+  const normalizedExcludeScope = (exclude_scope || []).map((s) => {
+    if (s.type === "url") {
       try {
         const absolute = new URL(s.value, target_url).href;
         return { ...s, value: canonicalizeUrl(absolute) };
@@ -43,15 +42,19 @@ export async function crawlAndCapture({
   });
 
   // Always include target_url in scope
-  if (!normalizedScope.some(s => s.type === 'url' && canonicalTarget.startsWith(s.value))) {
-    normalizedScope.push({ type: 'url', value: canonicalTarget });
+  if (
+    !normalizedScope.some(
+      (s) => s.type === "url" && canonicalTarget.startsWith(s.value),
+    )
+  ) {
+    normalizedScope.push({ type: "url", value: canonicalTarget });
   }
 
-  await page.route('**/*', route => {
+  await page.route("**/*", (route) => {
     const url = route.request().url();
     const resourceType = route.request().resourceType();
 
-    if (['stylesheet', 'script', 'image', 'font'].includes(resourceType)) {
+    if (["stylesheet", "script", "image", "font"].includes(resourceType)) {
       const u = new URL(url);
       const t = new URL(target_url);
       if (u.origin === t.origin) {
@@ -67,11 +70,16 @@ export async function crawlAndCapture({
   });
 
   // Handle new tabs/pages opened by clicks
-  page.context().on('page', async (newPage) => {
+  page.context().on("page", async (newPage) => {
     try {
-      await newPage.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { });
+      await newPage
+        .waitForLoadState("networkidle", { timeout: 10000 })
+        .catch(() => {});
       const newUrl = canonicalizeUrl(newPage.url());
-      if (isInScope(newUrl, normalizedScope, normalizedExcludeScope) && !discoveredUrls.has(newUrl)) {
+      if (
+        isInScope(newUrl, normalizedScope, normalizedExcludeScope) &&
+        !discoveredUrls.has(newUrl)
+      ) {
         discoveredUrls.add(newUrl);
         queue.push(newUrl);
       }
@@ -81,7 +89,7 @@ export async function crawlAndCapture({
     }
   });
 
-  page.on('request', async (req) => {
+  page.on("request", async (req) => {
     // if (!['xhr', 'fetch'].includes(req.resourceType())) return;
 
     const canon = canonicalizeRequest(req);
@@ -93,7 +101,8 @@ export async function crawlAndCapture({
       method: canon.method,
       url: canon.url,
       source: canon.source,
-      orgId: canon.orgId
+      orgId: canon.orgId,
+      projectIds: canon.projectId,
     });
 
     if (exists) return;
@@ -103,19 +112,22 @@ export async function crawlAndCapture({
         method: canon.method,
         url: canon.url,
         source: canon.source,
-        orgId: canon.orgId
+        orgId: canon.orgId,
       },
       {
         $set: canon,
-        $addToSet: { projectIds: context?.project?._id }
+        $addToSet: { projectIds: context?.project?._id },
       },
       {
         upsert: true,
-        new: true
-      }
+        new: true,
+      },
     );
 
-    await mqbroker.publish('apisec', "apisec.scanflow.initiate", { request, ...context });
+    await mqbroker.publish("apisec", "apisec.scanflow.initiate", {
+      request,
+      ...context,
+    });
   });
 
   while (queue.length > 0) {
@@ -131,12 +143,16 @@ export async function crawlAndCapture({
 
     try {
       if (canonicalizeUrl(page.url()) !== url) {
-        await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+        await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
       }
       visitedUrls.add(url);
 
       // Extract URLs from text/HTML content
-      const textUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+      const textUrls = await extractUrlsFromText(
+        page,
+        normalizedScope,
+        normalizedExcludeScope,
+      );
       for (const tUrl of textUrls) {
         if (!discoveredUrls.has(tUrl)) {
           discoveredUrls.add(tUrl);
@@ -156,18 +172,26 @@ export async function crawlAndCapture({
 
       // If we've navigated to a DIFFERENT page that is already fully explored, stop here
       if (exploredUrls.has(currentUrl) && currentUrl !== url) {
-        console.log(`[CRAWLER][${currentUrl}] Navigated to explored page, returning to ${url}`);
+        console.log(
+          `[CRAWLER][${currentUrl}] Navigated to explored page, returning to ${url}`,
+        );
         break;
       }
 
-      const clickables = await getInScopeClickables(page, normalizedScope, normalizedExcludeScope);
+      const clickables = await getInScopeClickables(
+        page,
+        normalizedScope,
+        normalizedExcludeScope,
+      );
       let clickedAny = false;
 
       for (const el of clickables) {
         // CRITICAL: Ensure we are still on the correct page before interacting
         const nowUrl = canonicalizeUrl(page.url());
         if (nowUrl !== url) {
-          await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+          await page
+            .goto(url, { waitUntil: "networkidle", timeout: 30000 })
+            .catch(() => {});
         }
 
         const signature = await getElementSignature(el, page.url());
@@ -192,7 +216,10 @@ export async function crawlAndCapture({
           const postClickUrl = canonicalizeUrl(page.url());
 
           // If we navigated away, record it
-          if (isInScope(postClickUrl, normalizedScope, normalizedExcludeScope) && !discoveredUrls.has(postClickUrl)) {
+          if (
+            isInScope(postClickUrl, normalizedScope, normalizedExcludeScope) &&
+            !discoveredUrls.has(postClickUrl)
+          ) {
             discoveredUrls.add(postClickUrl);
             queue.push(postClickUrl);
           }
@@ -200,32 +227,50 @@ export async function crawlAndCapture({
           if (postClickUrl !== currentUrl) {
             // If we navigated to a new URL that is in scope, let it settle for a moment
             // to capture any initial requests (XHR/Fetch)
-            if (isInScope(postClickUrl, normalizedScope, normalizedExcludeScope)) {
-              await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => { });
+            if (
+              isInScope(postClickUrl, normalizedScope, normalizedExcludeScope)
+            ) {
+              await page
+                .waitForLoadState("networkidle", { timeout: 5000 })
+                .catch(() => {});
             }
 
             // Extract URLs from content after navigation/interaction
-            const postClickTextUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+            const postClickTextUrls = await extractUrlsFromText(
+              page,
+              normalizedScope,
+              normalizedExcludeScope,
+            );
             for (const tUrl of postClickTextUrls) {
               if (!discoveredUrls.has(tUrl)) {
                 discoveredUrls.add(tUrl);
                 queue.push(tUrl);
-                console.log(`[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`);
+                console.log(
+                  `[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`,
+                );
               }
             }
 
             // If we are not on the original URL anymore, go back to finish the scan
             if (postClickUrl !== url) {
-              await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 }).catch(() => { });
+              await page
+                .goto(url, { waitUntil: "networkidle", timeout: 30000 })
+                .catch(() => {});
             }
           } else {
             // Even if URL didn't change, content might have. Extract URLs again.
-            const postClickTextUrls = await extractUrlsFromText(page, normalizedScope, normalizedExcludeScope);
+            const postClickTextUrls = await extractUrlsFromText(
+              page,
+              normalizedScope,
+              normalizedExcludeScope,
+            );
             for (const tUrl of postClickTextUrls) {
               if (!discoveredUrls.has(tUrl)) {
                 discoveredUrls.add(tUrl);
                 queue.push(tUrl);
-                console.log(`[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`);
+                console.log(
+                  `[CRAWLER][${url}] + Discovered from content after interaction: ${tUrl}`,
+                );
               }
             }
           }
@@ -255,15 +300,13 @@ export async function crawlAndCapture({
   console.log("[CRAWLER] SCAN COMPLETED >>> Explored: ", exploredUrls.size);
 }
 
-
 async function safeGoto(page, url, scope, excludeScope, visitedUrls) {
   if (!isInScope(url, scope, excludeScope)) return;
   if (visitedUrls.has(url)) return;
 
   visitedUrls.add(url);
-  await page.goto(url, { waitUntil: 'networkidle' });
+  await page.goto(url, { waitUntil: "networkidle" });
 }
-
 
 async function captureSpaNavigation(page, visitedUrls) {
   const currentUrl = page.url();
@@ -272,40 +315,63 @@ async function captureSpaNavigation(page, visitedUrls) {
   }
 }
 
-
 async function getInScopeClickables(page, scope, excludeScope) {
   try {
     // Use a script to find all potentially clickable elements, including those with JS handlers
     const clickableSelectors = await page.evaluate(() => {
       const isVisible = (el) => {
         const style = window.getComputedStyle(el);
-        return style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          style.opacity !== '0' &&
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          style.opacity !== "0" &&
           el.offsetWidth > 0 &&
-          el.offsetHeight > 0;
+          el.offsetHeight > 0
+        );
       };
 
-      const tags = ['A', 'BUTTON', 'DETAILS', 'SUMMARY'];
-      const roles = ['button', 'link', 'menuitem', 'option', 'tab', 'checkbox', 'radio', 'switch'];
+      const tags = ["A", "BUTTON", "DETAILS", "SUMMARY"];
+      const roles = [
+        "button",
+        "link",
+        "menuitem",
+        "option",
+        "tab",
+        "checkbox",
+        "radio",
+        "switch",
+      ];
 
-      const all = document.querySelectorAll('a, button, input, select, textarea, [role], [onclick], div, span, li, svg');
+      const all = document.querySelectorAll(
+        "a, button, input, select, textarea, [role], [onclick], div, span, li, svg",
+      );
       const foundIds = [];
 
-      const logoutKeywords = ['logout', 'log-out', 'signout', 'sign-out', 'expire', 'terminate', 'exit'];
+      const logoutKeywords = [
+        "logout",
+        "log-out",
+        "signout",
+        "sign-out",
+        "expire",
+        "terminate",
+        "exit",
+      ];
       const isLogoutElement = (el) => {
         const text = (el.innerText || el.value || "").toLowerCase();
         const id = (el.id || "").toLowerCase();
-        const className = (typeof el.className === 'string' ? el.className : "").toLowerCase();
+        const className = (
+          typeof el.className === "string" ? el.className : ""
+        ).toLowerCase();
         const name = (el.name || "").toLowerCase();
-        const ariaLabel = (el.getAttribute('aria-label') || "").toLowerCase();
+        const ariaLabel = (el.getAttribute("aria-label") || "").toLowerCase();
 
-        return logoutKeywords.some(kw =>
-          text.includes(kw) ||
-          id.includes(kw) ||
-          className.includes(kw) ||
-          name.includes(kw) ||
-          ariaLabel.includes(kw)
+        return logoutKeywords.some(
+          (kw) =>
+            text.includes(kw) ||
+            id.includes(kw) ||
+            className.includes(kw) ||
+            name.includes(kw) ||
+            ariaLabel.includes(kw),
         );
       };
 
@@ -318,29 +384,32 @@ async function getInScopeClickables(page, scope, excludeScope) {
 
         if (tags.includes(tagName)) {
           isClickable = true;
-        } else if (tagName === 'INPUT' && (el.type === 'submit' || el.type === 'button')) {
+        } else if (
+          tagName === "INPUT" &&
+          (el.type === "submit" || el.type === "button")
+        ) {
           isClickable = true;
-        } else if (roles.includes(el.getAttribute('role'))) {
+        } else if (roles.includes(el.getAttribute("role"))) {
           isClickable = true;
-        } else if (el.hasAttribute('onclick')) {
+        } else if (el.hasAttribute("onclick")) {
           isClickable = true;
         } else {
           // Heuristic for React/SPA: cursor pointer usually means a JS handler is attached
           const style = window.getComputedStyle(el);
-          if (style.cursor === 'pointer') {
+          if (style.cursor === "pointer") {
             // Avoid large containers that just inherit pointer; check if it's a leaf-ish node
             if (el.children.length < 10) isClickable = true;
           }
           // Also check if it's an input with a URL-like value that might be clickable/interactive
-          if (tagName === 'INPUT' && /https?:\/\//.test(el.value || '')) {
+          if (tagName === "INPUT" && /https?:\/\//.test(el.value || "")) {
             isClickable = true;
           }
         }
 
         if (isClickable) {
           // Mark element so we can find it with Playwright
-          const id = 'crawl-' + Math.random().toString(36).substr(2, 9);
-          el.setAttribute('data-crawl-id', id);
+          const id = "crawl-" + Math.random().toString(36).substr(2, 9);
+          el.setAttribute("data-crawl-id", id);
           foundIds.push(id);
         }
       }
@@ -355,9 +424,9 @@ async function getInScopeClickables(page, scope, excludeScope) {
         if (!el) continue;
 
         // Clean up the attribute
-        await el.evaluate(node => node.removeAttribute('data-crawl-id'));
+        await el.evaluate((node) => node.removeAttribute("data-crawl-id"));
 
-        const rawHref = await el.getAttribute('href');
+        const rawHref = await el.getAttribute("href");
         if (rawHref) {
           try {
             const resolved = new URL(rawHref, page.url()).href;
@@ -380,10 +449,11 @@ async function getInScopeClickables(page, scope, excludeScope) {
   }
 }
 
-
 async function fillAllVisibleInputs(page) {
   try {
-    const inputs = await page.$$('input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea');
+    const inputs = await page.$$(
+      'input:not([type="submit"]):not([type="button"]):not([type="hidden"]), select, textarea',
+    );
     for (const input of inputs) {
       try {
         const isVisible = await input.isVisible();
@@ -401,31 +471,40 @@ async function fillAllVisibleInputs(page) {
 
 async function fillSingleInput(input) {
   try {
-    const info = await input.evaluate(el => {
+    const info = await input.evaluate((el) => {
       return {
         tagName: el.tagName,
         type: el.type,
         name: el.name,
         id: el.id,
         placeholder: el.placeholder,
-        role: el.getAttribute('role')
+        role: el.getAttribute("role"),
       };
     });
 
-    if (info.tagName === 'SELECT') {
-      const options = await input.$$('option');
+    if (info.tagName === "SELECT") {
+      const options = await input.$$("option");
       if (options.length > 1) {
         await input.selectOption({ index: 1 });
       }
-    } else if (info.type === 'checkbox' || info.type === 'radio' || info.role === 'switch') {
+    } else if (
+      info.type === "checkbox" ||
+      info.type === "radio" ||
+      info.role === "switch"
+    ) {
       const isChecked = await input.isChecked();
       if (!isChecked) await input.check();
-    } else if (['text', 'email', 'password', 'tel', 'url', 'number', 'search'].includes(info.type) || info.tagName === 'TEXTAREA') {
+    } else if (
+      ["text", "email", "password", "tel", "url", "number", "search"].includes(
+        info.type,
+      ) ||
+      info.tagName === "TEXTAREA"
+    ) {
       let value = "test_data";
-      if (info.type === 'email') value = "test@example.com";
-      if (info.type === 'number') value = "123";
-      if (info.type === 'tel') value = "1234567890";
-      if (info.type === 'url') value = "https://example.com";
+      if (info.type === "email") value = "test@example.com";
+      if (info.type === "number") value = "123";
+      if (info.type === "tel") value = "1234567890";
+      if (info.type === "url") value = "https://example.com";
 
       await input.fill(value);
     }
@@ -434,29 +513,32 @@ async function fillSingleInput(input) {
   }
 }
 
-
 async function getElementSignature(el, currentUrl) {
   try {
     const canonical = canonicalizeUrl(currentUrl);
     return await el.evaluate((node, url) => {
       const tag = node.tagName;
       const text = (node.innerText || node.value || "").trim().substring(0, 50);
-      const href = node.getAttribute('href');
-      const id = node.id || '';
-      const className = node.className || '';
-      const role = node.getAttribute('role') || '';
-      const name = node.getAttribute('name') || '';
+      const href = node.getAttribute("href");
+      const id = node.id || "";
+      const className = node.className || "";
+      const role = node.getAttribute("role") || "";
+      const name = node.getAttribute("name") || "";
 
       // Get a simple path to the element to make it more unique
-      let path = '';
+      let path = "";
       let current = node;
       try {
         for (let i = 0; i < 5 && current && current !== document.body; i++) {
-          const index = current.parentNode ? Array.from(current.parentNode.children).indexOf(current) : 0;
+          const index = current.parentNode
+            ? Array.from(current.parentNode.children).indexOf(current)
+            : 0;
           path = `${current.tagName}[${index}]>${path}`;
           current = current.parentNode;
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        /* ignore */
+      }
 
       if (href) {
         try {
@@ -474,19 +556,18 @@ async function getElementSignature(el, currentUrl) {
   }
 }
 
-
 function canonicalizeUrl(urlStr) {
   try {
     const u = new URL(urlStr);
     // Keep hash routes (e.g. /#/dashboard), remove anchors (e.g. #how-it-works)
-    u.hash = u.hash && u.hash.includes('/') ? u.hash : '';
+    u.hash = u.hash && u.hash.includes("/") ? u.hash : "";
 
     // Remove empty query
-    if (u.search === '?') u.search = '';
+    if (u.search === "?") u.search = "";
 
     // Remove trailing slash from pathname
     let path = u.pathname;
-    if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1);
+    if (path.length > 1 && path.endsWith("/")) path = path.slice(0, -1);
     u.pathname = path;
 
     // Return consistent format
@@ -496,18 +577,17 @@ function canonicalizeUrl(urlStr) {
   }
 }
 
-
 function isInScope(url, scope, excludeScope) {
   try {
     const u = canonicalizeUrl(url);
 
     // Check exclude scope first
     if (excludeScope && excludeScope.length > 0) {
-      const isExcluded = excludeScope.some(s => {
-        if (s.type === 'url') {
+      const isExcluded = excludeScope.some((s) => {
+        if (s.type === "url") {
           return u.startsWith(s.value);
         }
-        if (s.type === 'regex') {
+        if (s.type === "regex") {
           try {
             const re = new RegExp(s.value);
             return re.test(u);
@@ -522,12 +602,12 @@ function isInScope(url, scope, excludeScope) {
 
     if (!scope || !scope.length) return true;
 
-    return scope.some(s => {
-      if (s.type === 'url') {
+    return scope.some((s) => {
+      if (s.type === "url") {
         // Scope values are already canonicalized in normalizedScope
         return u.startsWith(s.value);
       }
-      if (s.type === 'regex') {
+      if (s.type === "regex") {
         try {
           const re = new RegExp(s.value);
           return re.test(u);
@@ -547,26 +627,27 @@ async function extractUrlsFromText(page, scope, excludeScope) {
     // Extract URLs from HTML, attributes, and properties
     const discoveredUrls = await page.evaluate(() => {
       const urls = new Set();
-      const urlRegex = /https?:\/\/[^\s"'<>()[\]{}|\\^`]+[^\s"'<>()[\]{}|\\^`.,!?;:]/g;
+      const urlRegex =
+        /https?:\/\/[^\s"'<>()[\]{}|\\^`]+[^\s"'<>()[\]{}|\\^`.,!?;:]/g;
 
       // 1. Check the entire HTML content
       const content = document.documentElement.outerHTML;
       const matches = content.match(urlRegex);
-      if (matches) matches.forEach(m => urls.add(m));
+      if (matches) matches.forEach((m) => urls.add(m));
 
       // 2. Check all attributes of all elements (handles data-*, value, etc.)
-      const allElements = document.querySelectorAll('*');
+      const allElements = document.querySelectorAll("*");
       for (const el of allElements) {
         if (el.attributes) {
           for (const attr of el.attributes) {
             const m = attr.value.match(urlRegex);
-            if (m) m.forEach(url => urls.add(url));
+            if (m) m.forEach((url) => urls.add(url));
           }
         }
         // 3. Check value property (handles dynamic input values)
-        if (el.value && typeof el.value === 'string') {
+        if (el.value && typeof el.value === "string") {
           const m = el.value.match(urlRegex);
-          if (m) m.forEach(url => urls.add(url));
+          if (m) m.forEach((url) => urls.add(url));
         }
       }
       return Array.from(urls);
@@ -579,7 +660,9 @@ async function extractUrlsFromText(page, scope, excludeScope) {
         if (isInScope(canon, scope, excludeScope)) {
           inScope.add(canon);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
     return Array.from(inScope);
   } catch (e) {
