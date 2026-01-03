@@ -1,12 +1,11 @@
-import { chromium } from 'playwright';
-import Scan from '../../models/scan.model.js';
-import Vuln from '../../models/vulnerability.model.js';
-import RawRequest from '../../models/rawRequest.model.js';
+import { chromium } from "playwright";
+import Scan from "../../models/scan.model.js";
+import Vuln from "../../models/vulnerability.model.js";
+import RawRequest from "../../models/rawRequest.model.js";
 import vm from "vm";
 import fs from "fs/promises";
-import { crawlAndCapture } from './crawler.js';
-import { CrawlerAuthContext } from '../../models/crawler-auth-context.model.js';
-
+import { crawlAndCapture } from "./crawler.js";
+import { CrawlerAuthContext } from "../../models/crawler-auth-context.model.js";
 
 export async function browserWorker(payload, msg, channel) {
   let browser;
@@ -17,13 +16,15 @@ export async function browserWorker(payload, msg, channel) {
   const { configuration } = project;
 
   // if collection id & environment is set, send to scanflow.collection
-  if (configuration?.collection_id && configuration?.environment_id) {
-      await mqbroker.publish("apisec", "apisec.scanflow.collection", { project, scan });
-      return;
+  if (configuration?.collection_uids?.length && configuration?.environment_id) {
+    await mqbroker.publish("apisec", "apisec.scanflow.collection", {
+      project,
+      scan,
+    });
+    return;
   }
-  
-  try {
 
+  try {
     console.log("[+] BROWSER SCAN LAUNCHED : ", scan?.name);
 
     const { target_url, scope, exclude_scope } = project?.configuration || {};
@@ -35,14 +36,14 @@ export async function browserWorker(payload, msg, channel) {
       auth_script_content = await fs.readFile(auth_script?.path, "utf-8");
     }
 
-
     browser = await chromium.launch({
-      headless: true, args: [
+      headless: true,
+      args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-gpu"
-      ]
+        "--disable-gpu",
+      ],
     });
 
     const context = await browser.newContext();
@@ -57,17 +58,20 @@ export async function browserWorker(payload, msg, channel) {
       context: null,
       console: console, // Added console for debugging in scripts
       exports: exports,
-      module: { exports: exports }
-    }
+      module: { exports: exports },
+    };
 
     if (auth_script_content) {
       vm.createContext(sandbox);
       vm.runInContext(auth_script_content, sandbox);
 
       // auth function from user
-      const authenticate = sandbox.module.exports.authenticate || sandbox.exports.authenticate || sandbox.authenticate;
+      const authenticate =
+        sandbox.module.exports.authenticate ||
+        sandbox.exports.authenticate ||
+        sandbox.authenticate;
 
-      if (typeof authenticate !== 'function') {
+      if (typeof authenticate !== "function") {
         throw Error("Auth script must provide an 'authenticate' function");
       }
 
@@ -76,8 +80,6 @@ export async function browserWorker(payload, msg, channel) {
       // extract auth context
       const authContext = await extractAuthContext(page);
     }
-
-
 
     // save the auth context inside mongodb for this scan.
     // await CrawlerAuthContext.create({
@@ -89,14 +91,14 @@ export async function browserWorker(payload, msg, channel) {
     // console.log("Auth Context: ", authContext);
 
     // set scan to running
-    await Scan.updateOne({ _id: scan._id }, { status: 'running' });
+    await Scan.updateOne({ _id: scan._id }, { status: "running" });
 
     await crawlAndCapture({
       page,
       context: { project, scan },
       target_url,
       scope,
-      exclude_scope
+      exclude_scope,
     });
 
     // total requests
@@ -104,24 +106,36 @@ export async function browserWorker(payload, msg, channel) {
 
     // count total vulns
     // const totalVulns = await Vuln.countDocuments({ scanId: scan._id });
-    const [totalVulns, totalCritical, totalHigh, totalMedium, totalLow] = await Promise.all([
-      Vuln.countDocuments({ orgId, scanId: scan._id }),
-      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'critical' }),
-      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'high' }),
-      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'medium' }),
-      Vuln.countDocuments({ orgId, scanId: scan._id, severity: 'low' })
-    ]);
+    const [totalVulns, totalCritical, totalHigh, totalMedium, totalLow] =
+      await Promise.all([
+        Vuln.countDocuments({ orgId, scanId: scan._id }),
+        Vuln.countDocuments({ orgId, scanId: scan._id, severity: "critical" }),
+        Vuln.countDocuments({ orgId, scanId: scan._id, severity: "high" }),
+        Vuln.countDocuments({ orgId, scanId: scan._id, severity: "medium" }),
+        Vuln.countDocuments({ orgId, scanId: scan._id, severity: "low" }),
+      ]);
 
     // set scan to completed
-    await Scan.updateOne({ orgId, _id: scan._id }, { $set: { status: 'completed' }, $inc: { 'metrics.total_requests': totalRequests, 'metrics.total_vulns': totalVulns, 'metrics.total_critical': totalCritical, 'metrics.total_high': totalHigh, 'metrics.total_medium': totalMedium, 'metrics.total_low': totalLow } });
+    await Scan.updateOne(
+      { orgId, _id: scan._id },
+      {
+        $set: { status: "completed" },
+        $inc: {
+          "metrics.total_requests": totalRequests,
+          "metrics.total_vulns": totalVulns,
+          "metrics.total_critical": totalCritical,
+          "metrics.total_high": totalHigh,
+          "metrics.total_medium": totalMedium,
+          "metrics.total_low": totalLow,
+        },
+      },
+    );
 
     // console.log("[+] capturedRequests ", capturedRequests);
-  }
-  catch (err) {
+  } catch (err) {
     console.log(err);
-    await Scan.updateOne({ _id: scan._id }, { status: 'failed' });
-  }
-  finally {
+    await Scan.updateOne({ _id: scan._id }, { status: "failed" });
+  } finally {
     channel.ack(msg);
     if (browser) {
       await browser.close();
@@ -152,7 +166,7 @@ async function extractAuthContext(page) {
 
     return {
       localStorage: local,
-      sessionStorage: session
+      sessionStorage: session,
     };
   });
 
@@ -167,6 +181,6 @@ async function extractAuthContext(page) {
     cookies,
     headers,
     storage,
-    authenticatedAt: new Date().toISOString()
+    authenticatedAt: new Date().toISOString(),
   };
 }
