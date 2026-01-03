@@ -72,46 +72,34 @@ export const sendRequest = async ({ request, rule }) => {
     // ✅ prevent Axios from adding defaults but allow it to handle FormData/serialization
     transformRequest: [
       (data, headers) => {
-        // If data is FormData, let axios handle headers (it needs to set boundary)
-        if (data && data.constructor && data.constructor.name === "FormData") {
+        // FormData must pass through untouched
+        if (data && data.constructor?.name === "FormData") {
           return data;
         }
 
-        // For other types, we want to control headers but let axios serialize if needed (though we mostly did it above)
-        // We already set the headers we want in the config.headers
-        // But axios merges config.headers with defaults.
-        // We want to ensure OUR headers take precedence and unwanted defaults are removed.
+        // Normalize Content-Type lookup
+        const contentType =
+          headers["content-type"] || headers["Content-Type"] || "";
 
-        // However, the original code completely wiped headers.
-        // We should be careful. The 'headers' arg here is the merged headers.
+        // Explicit serialization (REQUIRED)
+        if (data == null) {
+          return data;
+        }
 
-        // Let's stick to the original logic of cleaning up, but we must ensure our computed 'headers' map is applied.
-        // The 'headers' passed to this function is a reference to the request headers.
+        if (typeof data === "string" || Buffer.isBuffer(data)) {
+          return data;
+        }
 
-        // We can just return data and rely on config.headers being set correctly by axios before this?
-        // Actually, axios calls transformRequest BEFORE merging headers in some versions, or after.
-        // In modern axios, it's safer to just rely on the 'headers' object passed here which is the one to be sent.
+        if (contentType.includes("application/json")) {
+          return JSON.stringify(data);
+        }
 
-        // Clear all headers first to remove defaults
-        Object.keys(headers).forEach((key) => delete headers[key]);
+        if (contentType.includes("application/x-www-form-urlencoded")) {
+          return new URLSearchParams(data).toString();
+        }
 
-        // Reapply our computed headers
-        // Note: config.headers is not directly accessible here reliably as 'this' context,
-        // but we can assume the headers passed in `config` are applied to the request object
-        // and we just need to make sure we don't lose them.
-
-        // Actually, the previous code was:
-        // Object.assign(headers, request.headers || {});
-
-        // Now we want to assign our modified 'headers' variable.
-        // Since we can't easily access the 'headers' variable from the outer scope inside this array if it's defined outside
-        // (wait, we CAN access 'headers' from outer scope because it's a closure).
-        // Yes, 'headers' (the const defined at top of function) is accessible here.
-
-        // So:
-        Object.assign(headers, headers); // This assigns the outer 'headers' to the axios 'headers' argument
-
-        return data;
+        // Last-resort fallback
+        return String(data);
       },
     ],
   };
