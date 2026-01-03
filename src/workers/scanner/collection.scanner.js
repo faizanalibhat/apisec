@@ -19,7 +19,7 @@ export async function getProcessedCollectionRequests({ project }) {
 
   const requests = await RawRequest.find({
     orgId: project.orgId,
-    collectionId: collection._id,
+    collectionUid: collection.collection_uid,
   }).lean();
 
   console.log("[+] TOTAL REQUESTS: ", requests.length);

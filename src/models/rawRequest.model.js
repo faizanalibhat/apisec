@@ -1,4 +1,4 @@
-import mongoose, { Schema } from 'mongoose';
+import mongoose, { Schema } from "mongoose";
 
 const rawRequestSchema = new mongoose.Schema(
   {
@@ -9,12 +9,13 @@ const rawRequestSchema = new mongoose.Schema(
     },
     integrationId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Integration',
+      ref: "Integration",
       required: false,
       index: true,
     },
-    workspaceId: { type: String },
+
     collectionUid: { type: String },
+
     projectIds: { type: [mongoose.Schema.Types.ObjectId], default: [] },
 
     name: {
@@ -26,7 +27,7 @@ const rawRequestSchema = new mongoose.Schema(
     method: {
       type: String,
       required: true,
-      enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
+      enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
       uppercase: true,
     },
 
@@ -63,21 +64,16 @@ const rawRequestSchema = new mongoose.Schema(
     collectionName: {
       type: String,
       required: false,
-      default: 'Browser Import',
+      default: "Browser Import",
     },
     folderName: {
       type: String,
       default: null,
     },
-    workspaceName: {
-      type: String,
-      required: false,
-      default: 'Browser Extension',
-    },
     source: {
       type: String,
-      enum: ['postman', 'browser-extension', 'swagger', 'crawler'],
-      default: 'postman',
+      enum: ["postman", "browser-extension", "swagger", "crawler"],
+      default: "postman",
       index: true,
     },
     browserMetadata: {
@@ -104,7 +100,7 @@ const rawRequestSchema = new mongoose.Schema(
         basePath: String,
         host: String,
         schemes: [String],
-        servers: [{ url: String, description: String }]
+        servers: [{ url: String, description: String }],
       },
       default: null,
     },
@@ -127,34 +123,37 @@ const rawRequestSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes for search functionality
-rawRequestSchema.index({ name: 'text', url: 'text', description: 'text' });
+rawRequestSchema.index({ name: "text", url: "text", description: "text" });
 rawRequestSchema.index({ method: 1, orgId: 1 });
 rawRequestSchema.index({ collectionName: 1, orgId: 1 });
 rawRequestSchema.index({ source: 1, orgId: 1 });
 
 // Add compound unique index for project-based uniqueness
-rawRequestSchema.index({ orgId: 1, projectIds: 1, method: 1, url: 1 }, { unique: true, partialFilterExpression: { source: 'browser-extension' } });
+rawRequestSchema.index(
+  { orgId: 1, projectIds: 1, method: 1, url: 1 },
+  { unique: true, partialFilterExpression: { source: "browser-extension" } },
+);
 
 rawRequestSchema.index(
-    { 
-        orgId: 1, 
-        method: 1, 
-        url: 1,
-        projectIds: 1,
-        source: 1
-    },
-    { 
-        unique: true,
-        background: true 
-    }
+  {
+    orgId: 1,
+    method: 1,
+    url: 1,
+    projectIds: 1,
+    source: 1,
+  },
+  {
+    unique: true,
+    background: true,
+  },
 );
 
 // Mark as edited when updating
-rawRequestSchema.pre('findOneAndUpdate', function () {
+rawRequestSchema.pre("findOneAndUpdate", function () {
   const update = this.getUpdate();
   if (!update.$set) update.$set = {};
   update.$set.isEdited = true;
@@ -165,6 +164,10 @@ rawRequestSchema.pre('findOneAndUpdate', function () {
   }
 });
 
-const RawRequest = mongoose.model('RawRequest', rawRequestSchema, 'raw_requests');
+const RawRequest = mongoose.model(
+  "RawRequest",
+  rawRequestSchema,
+  "raw_requests",
+);
 
 export default RawRequest;
